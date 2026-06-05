@@ -209,6 +209,101 @@
     }
     .add-product-btn:hover { background: #C4795A; color: white; }
 
+    /* ── ORDER MANAGEMENT ─────────────────────────── */
+    .order-stat-card {
+      background: #FDFAF4;
+      border: 1.5px solid #E5D9C5;
+      border-radius: 12px;
+      padding: 14px 16px;
+      text-align: center;
+    }
+    .order-card {
+      background: #FDFAF4;
+      border: 1.5px solid #E5D9C5;
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .order-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px 8px;
+      gap: 8px;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 100px;
+      white-space: nowrap;
+    }
+    .status-new      { background:#EDF6FF; color:#1A6DB5; }
+    .status-confirmed{ background:#EEF8EE; color:#2A7A2A; }
+    .status-ready    { background:#FFF8E6; color:#A06000; }
+    .status-done     { background:#F0F0F0; color:#666; }
+    .order-items-row {
+      padding: 0 14px 8px;
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.78rem;
+      color: #6B5D4E;
+      line-height: 1.6;
+    }
+    .order-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px 12px;
+      border-top: 1px solid #EDE5D0;
+      flex-wrap: wrap;
+    }
+    .btn-status {
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 100px;
+      border: 1.5px solid #D5C9B5;
+      background: transparent;
+      color: #6B3A2A;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-status:hover { background: #EDE5D0; border-color: #C4795A; }
+    .btn-status.active { background: #6B3A2A; color: #F7F2E8; border-color: #6B3A2A; }
+    .btn-wa {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.75rem; font-weight: 600;
+      padding: 5px 12px; border-radius: 100px;
+      background: #25D366; color: white; border: none;
+      cursor: pointer; margin-right: auto;
+      transition: opacity 0.15s;
+    }
+    .btn-wa:hover { opacity: 0.85; }
+    .btn-delete-order {
+      background: transparent; border: none;
+      color: #B45032; cursor: pointer; padding: 5px;
+      border-radius: 6px; transition: background 0.15s;
+    }
+    .btn-delete-order:hover { background: #FDECEA; }
+    .baking-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 14px;
+      border-bottom: 1px solid #EDE5D0;
+    }
+    .baking-row:last-child { border-bottom: none; }
+
+    /* Print styles */
+    @media print {
+      body > *:not(#print-area) { display: none !important; }
+      #print-area { display: block !important; }
+    }
+
     /* Delete button */
     .delete-product-btn {
       background: transparent;
@@ -1051,13 +1146,58 @@
       ✓ השינויים נשמרו בהצלחה!
     </div>
 
-    <!-- Order log -->
-    <div style="margin-top:32px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <h3 style="font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-size:1.1rem;font-weight:700;margin:0;">יומן הזמנות</h3>
-        <button onclick="clearOrderLog()" style="font-family:'Assistant',sans-serif;font-size:0.75rem;color:#B45032;background:transparent;border:1px solid #E5C5B0;border-radius:100px;padding:4px 12px;cursor:pointer;">נקה הכל</button>
+    <!-- ═══ ORDER MANAGEMENT SECTION ═══ -->
+    <div style="margin-top:36px;padding-top:28px;border-top:2px solid #E5D9C5;">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <div>
+          <h2 style="font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-size:1.3rem;font-weight:700;margin:0 0 2px;">ניהול הזמנות</h2>
+          <p style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.78rem;margin:0;">הזמנות נשמרות אוטומטית ועוברות לארכיון לאחר 7 ימים</p>
+        </div>
+        <button onclick="printBakingList()" style="display:flex;align-items:center;gap:6px;font-family:'Assistant',sans-serif;font-size:0.78rem;font-weight:600;background:#F0E9D8;border:1.5px solid #D5C9B5;color:#6B3A2A;padding:7px 14px;border-radius:100px;cursor:pointer;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          הדפסת רשימת אפייה
+        </button>
       </div>
-      <div id="order-log-list"></div>
+
+      <!-- Stats -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;" id="order-stats"></div>
+
+      <!-- Baking summary -->
+      <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:14px;margin-bottom:20px;overflow:hidden;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #EDE5D0;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:1.1rem;">🍞</span>
+            <span style="font-family:'Frank Ruhl Libre',serif;font-weight:700;color:#6B3A2A;font-size:0.95rem;">רשימת אפייה שבועית</span>
+          </div>
+          <span style="font-family:'Assistant',sans-serif;font-size:0.75rem;color:#9B8B75;">סה"כ לאפות</span>
+        </div>
+        <div id="baking-summary-list"></div>
+      </div>
+
+      <!-- Filter tabs -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+        <button onclick="filterOrders('all')"       id="filter-all"       class="btn-status active">הכל</button>
+        <button onclick="filterOrders('new')"       id="filter-new"       class="btn-status">🆕 חדשות</button>
+        <button onclick="filterOrders('confirmed')" id="filter-confirmed" class="btn-status">✅ אושרו</button>
+        <button onclick="filterOrders('ready')"     id="filter-ready"     class="btn-status">🍞 מוכנות</button>
+        <button onclick="filterOrders('done')"      id="filter-done"      class="btn-status">✔️ נמסרו</button>
+        <button onclick="filterOrders('delivery')"  id="filter-delivery"  class="btn-status">📦 משלוח</button>
+        <button onclick="filterOrders('pickup')"    id="filter-pickup"    class="btn-status">🏠 איסוף</button>
+      </div>
+
+      <!-- Orders list -->
+      <div id="order-management-list"></div>
+
+      <!-- Archive toggle -->
+      <div style="margin-top:20px;">
+        <button onclick="toggleArchive()" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:transparent;border:1.5px solid #D5C9B5;border-radius:12px;padding:11px 16px;cursor:pointer;font-family:'Assistant',sans-serif;color:#8B7260;font-size:0.82rem;" id="archive-toggle-btn">
+          <span>🗂️ ארכיון הזמנות ישנות</span>
+          <span id="archive-count" style="background:#EDE5D0;border-radius:100px;padding:2px 8px;font-size:0.72rem;"></span>
+        </button>
+        <div id="archive-list" style="display:none;margin-top:10px;opacity:0.7;"></div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -1570,10 +1710,17 @@ function submitOrder(method) {
     window.open(`mailto:${OWNER_EMAIL}?subject=${subject}&body=${body}`, '_blank');
   }
 
+  // Build structured items array for baking summary
+  const itemsArr = Object.entries(cart).map(([id, qty]) => {
+    const p = PRODUCTS.find(p => p.id === +id);
+    return p ? { name: p.nameHe, qty, price: p.price } : null;
+  }).filter(Boolean);
+
   // Save to order log
   saveOrderToLog({
     name, phone,
     items: lines.join(' | '),
+    itemsArr,
     total: grandTotal,
     delivery: deliveryMethod,
     address: deliveryMethod === 'delivery' ? address : '',
@@ -1672,7 +1819,7 @@ function openAdminPanel() {
   }
 
   renderAdminProducts();
-  renderOrderLog();
+  renderOrderManagement();
   document.getElementById('admin-panel').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -1820,42 +1967,250 @@ function updateOrdersOpenBanner() {
   }
 }
 
-// ─── ORDER LOG ──────────────────────────────────────
+// ─── ORDER MANAGEMENT ──────────────────────────────
+let currentFilter = 'all';
+
 function saveOrderToLog(orderData) {
   const log = JSON.parse(localStorage.getItem('nuika_order_log') || '[]');
-  log.unshift({ ...orderData, date: new Date().toLocaleString('he-IL') });
-  if (log.length > 50) log.pop(); // Keep last 50
+  const entry = {
+    ...orderData,
+    id: Date.now(),
+    date: new Date().toLocaleString('he-IL'),
+    timestamp: Date.now(),
+    status: 'new',
+    archived: false
+  };
+  log.unshift(entry);
+  if (log.length > 200) log.pop();
   localStorage.setItem('nuika_order_log', JSON.stringify(log));
 }
 
-function renderOrderLog() {
+function getOrders() {
   const log = JSON.parse(localStorage.getItem('nuika_order_log') || '[]');
-  const el = document.getElementById('order-log-list');
+  const now = Date.now();
+  const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+  // Auto-archive orders older than 7 days
+  let changed = false;
+  log.forEach(o => {
+    if (!o.archived && o.status === 'done' && (now - o.timestamp) > SEVEN_DAYS) {
+      o.archived = true; changed = true;
+    }
+  });
+  if (changed) localStorage.setItem('nuika_order_log', JSON.stringify(log));
+  return log;
+}
+
+function updateOrderStatus(id, status) {
+  const log = getOrders();
+  const o = log.find(o => o.id === id);
+  if (o) { o.status = status; if (status === 'done') o.doneAt = Date.now(); }
+  localStorage.setItem('nuika_order_log', JSON.stringify(log));
+  renderOrderManagement();
+}
+
+function deleteOrder(id) {
+  if (!confirm('למחוק הזמנה זו?')) return;
+  const log = getOrders().filter(o => o.id !== id);
+  localStorage.setItem('nuika_order_log', JSON.stringify(log));
+  renderOrderManagement();
+}
+
+function filterOrders(f) {
+  currentFilter = f;
+  document.querySelectorAll('[id^="filter-"]').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('filter-' + f);
+  if (btn) btn.classList.add('active');
+  renderOrderList();
+}
+
+function renderOrderManagement() {
+  renderOrderStats();
+  renderBakingSummary();
+  renderOrderList();
+  renderArchive();
+}
+
+function renderOrderStats() {
+  const orders = getOrders().filter(o => !o.archived);
+  const total   = orders.length;
+  const revenue = orders.reduce((s, o) => s + (o.total || 0), 0);
+  const delivery= orders.filter(o => o.delivery === 'delivery').length;
+  const pickup  = orders.filter(o => o.delivery === 'pickup').length;
+  const el = document.getElementById('order-stats');
   if (!el) return;
-  if (log.length === 0) {
-    el.innerHTML = `<div style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.82rem;text-align:center;padding:16px 0;">אין הזמנות עדיין</div>`;
-    return;
-  }
-  el.innerHTML = log.map((o, i) => `
-    <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:12px;padding:14px;margin-bottom:10px;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
-        <div style="font-family:'Frank Ruhl Libre',serif;font-weight:700;color:#2C1810;font-size:0.92rem;">${o.name}</div>
-        <div style="font-family:'Assistant',sans-serif;font-size:0.72rem;color:#9B8B75;">${o.date}</div>
-      </div>
-      <div style="font-family:'Assistant',sans-serif;font-size:0.78rem;color:#6B5D4E;margin-bottom:4px;">${o.items}</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div style="font-family:'Assistant',sans-serif;font-size:0.78rem;color:#8B7260;">${o.delivery === 'delivery' ? '📦 משלוח — ' + (o.address || '') : '🏠 איסוף עצמי'}</div>
-        <div style="font-family:'Frank Ruhl Libre',serif;font-weight:700;color:#6B3A2A;font-size:0.95rem;">₪${o.total}</div>
-      </div>
-      ${o.notes ? `<div style="font-family:'Assistant',sans-serif;font-size:0.75rem;color:#9B8B75;margin-top:4px;">הערה: ${o.notes}</div>` : ''}
+  el.innerHTML = [
+    { label:'הזמנות', value: total,        icon:'📋', color:'#1A6DB5' },
+    { label:'הכנסה',  value:'₪'+revenue,   icon:'💰', color:'#2A7A2A' },
+    { label:'משלוח',  value: delivery,      icon:'📦', color:'#A06000' },
+    { label:'איסוף',  value: pickup,        icon:'🏠', color:'#6B3A2A' },
+  ].map(s => `
+    <div class="order-stat-card">
+      <div style="font-size:1.3rem;margin-bottom:4px;">${s.icon}</div>
+      <div style="font-family:'Frank Ruhl Libre',serif;font-size:1.3rem;font-weight:700;color:${s.color};">${s.value}</div>
+      <div style="font-family:'Assistant',sans-serif;font-size:0.72rem;color:#9B8B75;">${s.label}</div>
     </div>
   `).join('');
 }
 
+function renderBakingSummary() {
+  const orders = getOrders().filter(o => !o.archived && o.status !== 'done');
+  // Aggregate items
+  const summary = {};
+  orders.forEach(o => {
+    if (!o.itemsArr) return;
+    o.itemsArr.forEach(item => {
+      if (!summary[item.name]) summary[item.name] = 0;
+      summary[item.name] += item.qty;
+    });
+  });
+  const el = document.getElementById('baking-summary-list');
+  if (!el) return;
+  const entries = Object.entries(summary);
+  if (entries.length === 0) {
+    el.innerHTML = `<div style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.82rem;text-align:center;padding:16px;">אין הזמנות פעילות</div>`;
+    return;
+  }
+  el.innerHTML = entries.sort((a,b) => b[1]-a[1]).map(([name, qty]) => `
+    <div class="baking-row">
+      <div style="font-family:'Assistant',sans-serif;font-size:0.88rem;color:#2C1810;font-weight:600;">${name}</div>
+      <div style="font-family:'Frank Ruhl Libre',serif;font-size:1.1rem;font-weight:700;color:#6B3A2A;">${qty} <span style="font-size:0.75rem;font-family:'Assistant',sans-serif;color:#9B8B75;font-weight:400;">יח'</span></div>
+    </div>
+  `).join('');
+}
+
+function renderOrderList() {
+  const all = getOrders().filter(o => !o.archived);
+  let orders = all;
+  if (currentFilter === 'delivery') orders = all.filter(o => o.delivery === 'delivery');
+  else if (currentFilter === 'pickup') orders = all.filter(o => o.delivery === 'pickup');
+  else if (['new','confirmed','ready','done'].includes(currentFilter)) orders = all.filter(o => o.status === currentFilter);
+
+  const el = document.getElementById('order-management-list');
+  if (!el) return;
+
+  if (orders.length === 0) {
+    el.innerHTML = `<div style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.85rem;text-align:center;padding:24px 0;">אין הזמנות להצגה</div>`;
+    return;
+  }
+
+  const statusLabels = { new:'🆕 חדשה', confirmed:'✅ אושרה', ready:'🍞 מוכנה', done:'✔️ נמסרה' };
+  const statusClasses = { new:'status-new', confirmed:'status-confirmed', ready:'status-ready', done:'status-done' };
+  const nextStatus = { new:'confirmed', confirmed:'ready', ready:'done' };
+  const nextLabel  = { new:'אשרי', confirmed:'מוכנה', ready:'נמסרה' };
+
+  el.innerHTML = orders.map(o => `
+    <div class="order-card" id="ocard-${o.id}">
+      <div class="order-card-header">
+        <div>
+          <div style="font-family:'Frank Ruhl Libre',serif;font-weight:700;color:#2C1810;font-size:0.95rem;">${o.name}</div>
+          <div style="font-family:'Assistant',sans-serif;font-size:0.72rem;color:#9B8B75;">${o.date}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="status-badge ${statusClasses[o.status]||'status-new'}">${statusLabels[o.status]||'חדשה'}</span>
+          <span style="font-family:'Frank Ruhl Libre',serif;font-weight:700;color:#6B3A2A;font-size:1rem;">₪${o.total}</span>
+        </div>
+      </div>
+
+      <div class="order-items-row">
+        ${(o.items || '').replace(/\|/g, '<br>')}
+        <div style="margin-top:4px;color:#8B7260;">
+          ${o.delivery === 'delivery' ? `📦 משלוח — ${o.address||''}` : '🏠 איסוף עצמי'}
+          ${o.notes ? ` · הערה: ${o.notes}` : ''}
+        </div>
+      </div>
+
+      <div class="order-actions">
+        <a href="https://wa.me/972${(o.phone||'').replace(/\D/g,'').replace(/^0/,'')}" target="_blank" class="btn-wa">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.096.547 4.142 1.588 5.945L0 24l6.305-1.654A11.882 11.882 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.013-1.375l-.36-.213-3.732.979.997-3.636-.235-.373A9.818 9.818 0 1112 21.818z"/></svg>
+          ${o.phone}
+        </a>
+        ${nextStatus[o.status] ? `
+        <button onclick="updateOrderStatus(${o.id},'${nextStatus[o.status]}')" class="btn-status">
+          ${nextLabel[o.status]} ←
+        </button>` : ''}
+        <button onclick="deleteOrder(${o.id})" class="btn-delete-order" aria-label="מחק הזמנה">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderArchive() {
+  const archived = getOrders().filter(o => o.archived);
+  const btn = document.getElementById('archive-count');
+  if (btn) btn.textContent = archived.length ? archived.length + ' הזמנות' : 'ריק';
+}
+
+function toggleArchive() {
+  const el = document.getElementById('archive-list');
+  if (el.style.display === 'none') {
+    const archived = getOrders().filter(o => o.archived);
+    el.innerHTML = archived.length === 0
+      ? `<div style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.82rem;text-align:center;padding:12px;">הארכיון ריק</div>`
+      : archived.map(o => `
+          <div style="background:#FDFAF4;border:1px solid #E5D9C5;border-radius:10px;padding:10px 12px;margin-bottom:8px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+              <span style="font-family:'Frank Ruhl Libre',serif;font-weight:700;color:#8B7260;font-size:0.88rem;">${o.name}</span>
+              <span style="font-family:'Frank Ruhl Libre',serif;color:#8B7260;font-size:0.88rem;">₪${o.total}</span>
+            </div>
+            <div style="font-family:'Assistant',sans-serif;font-size:0.72rem;color:#9B8B75;">${o.date} · ${o.delivery==='delivery'?'משלוח':'איסוף'}</div>
+          </div>`).join('');
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+function printBakingList() {
+  const orders = getOrders().filter(o => !o.archived && o.status !== 'done');
+  const summary = {};
+  orders.forEach(o => {
+    if (!o.itemsArr) return;
+    o.itemsArr.forEach(item => {
+      if (!summary[item.name]) summary[item.name] = 0;
+      summary[item.name] += item.qty;
+    });
+  });
+  const entries = Object.entries(summary).sort((a,b) => b[1]-a[1]);
+  const date = new Date().toLocaleDateString('he-IL');
+
+  let area = document.getElementById('print-area');
+  if (!area) { area = document.createElement('div'); area.id='print-area'; document.body.appendChild(area); }
+
+  area.innerHTML = `
+    <div style="font-family:'Frank Ruhl Libre',serif;max-width:400px;margin:0 auto;padding:24px;direction:rtl;">
+      <div style="text-align:center;margin-bottom:20px;">
+        <img src="logo.png.png" style="height:60px;mix-blend-mode:multiply;" alt="נואיקה" />
+        <h1 style="font-size:1.4rem;color:#6B3A2A;margin:8px 0 4px;">רשימת אפייה</h1>
+        <p style="font-size:0.85rem;color:#9B8B75;margin:0;">${date} · ${orders.length} הזמנות פעילות</p>
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        <tr style="border-bottom:2px solid #6B3A2A;">
+          <th style="text-align:right;padding:6px 0;font-size:0.88rem;color:#6B3A2A;">מנה</th>
+          <th style="text-align:left;padding:6px 0;font-size:0.88rem;color:#6B3A2A;">כמות</th>
+        </tr>
+        ${entries.map(([n,q]) => `
+          <tr style="border-bottom:1px solid #EDE5D0;">
+            <td style="padding:8px 0;font-size:1rem;">${n}</td>
+            <td style="padding:8px 0;font-size:1.1rem;font-weight:700;color:#6B3A2A;text-align:left;">${q}</td>
+          </tr>`).join('')}
+      </table>
+      <div style="margin-top:20px;padding-top:12px;border-top:1px solid #EDE5D0;">
+        ${orders.filter(o=>o.delivery==='delivery').length ? `<p style="font-size:0.82rem;color:#9B8B75;">📦 ${orders.filter(o=>o.delivery==='delivery').length} משלוחים</p>` : ''}
+        ${orders.filter(o=>o.delivery==='pickup').length ? `<p style="font-size:0.82rem;color:#9B8B75;">🏠 ${orders.filter(o=>o.delivery==='pickup').length} איסופים עצמיים</p>` : ''}
+      </div>
+    </div>`;
+
+  window.print();
+}
+
+// Legacy compat
+function renderOrderLog() { renderOrderManagement(); }
 function clearOrderLog() {
-  if (!confirm('למחוק את כל יומן ההזמנות?')) return;
+  if (!confirm('למחוק את כל ההזמנות?')) return;
   localStorage.removeItem('nuika_order_log');
-  renderOrderLog();
+  renderOrderManagement();
 }
 
 // ─── EDIT / ADD / DELETE PRODUCT ───────────────────
