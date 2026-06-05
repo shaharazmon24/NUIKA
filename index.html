@@ -754,6 +754,107 @@
     body.dark .dark-toggle-btn { background: #2A2218; border-color: #4A3A2A; color: #D4A96A; }
     body.dark .dark-toggle-btn:hover { border-color: #D4A96A; }
 
+    /* ── ADMIN TABS ──────────────────────────────── */
+    .admin-top-bar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: #F0E9D8;
+      border-bottom: 1.5px solid #E5D9C5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px 12px;
+    }
+    body.dark .admin-top-bar { background: #1C1610; border-color: #3A2E24; }
+
+    .admin-tab-nav {
+      display: flex;
+      gap: 4px;
+      background: #EDE5D0;
+      border-radius: 12px;
+      padding: 4px;
+      overflow-x: auto;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .admin-tab-nav::-webkit-scrollbar { display: none; }
+    body.dark .admin-tab-nav { background: #2A2218; }
+
+    .admin-tab-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 8px 14px;
+      border-radius: 9px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #8B7260;
+      white-space: nowrap;
+      transition: background 0.18s, color 0.18s;
+      flex-shrink: 0;
+    }
+    .admin-tab-btn svg { opacity: 0.65; transition: opacity 0.18s; }
+    .admin-tab-btn:hover { background: rgba(107,58,42,0.08); color: #6B3A2A; }
+    .admin-tab-btn.active {
+      background: #FDFAF4;
+      color: #6B3A2A;
+      box-shadow: 0 1px 4px rgba(107,58,42,0.12);
+    }
+    .admin-tab-btn.active svg { opacity: 1; }
+    body.dark .admin-tab-btn { color: #7A6A58; }
+    body.dark .admin-tab-btn.active { background: #3A2E24; color: #D4A96A; }
+    body.dark .admin-tab-btn:hover { background: rgba(212,169,106,0.1); color: #D4A96A; }
+
+    .admin-tab-content { display: none; padding: 20px 16px 80px; max-width: 600px; margin: 0 auto; }
+    .admin-tab-content.active { display: block; }
+
+    /* Dashboard quick-action cards */
+    .dash-action-card {
+      background: #FDFAF4;
+      border: 1.5px solid #E5D9C5;
+      border-radius: 14px;
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.18s;
+      text-decoration: none;
+    }
+    .dash-action-card:hover { border-color: #C4795A; transform: translateY(-1px); }
+    body.dark .dash-action-card { background: #241E18; border-color: #3A2E24; }
+    body.dark .dash-action-card:hover { border-color: #C4795A; }
+
+    .dash-action-icon {
+      width: 44px; height: 44px;
+      border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 1.3rem;
+    }
+
+    /* Badge on tab */
+    .tab-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #C4795A;
+      color: white;
+      border-radius: 100px;
+      font-size: 0.62rem;
+      font-weight: 700;
+      min-width: 16px;
+      height: 16px;
+      padding: 0 4px;
+      margin-top: -2px;
+    }
+
     /* Dark mode toggle button */
     .dark-toggle-btn {
       background: transparent;
@@ -1135,25 +1236,56 @@
 
 <!-- ============ ADMIN PANEL ============ -->
 <div id="admin-panel" role="main" aria-label="לוח ניהול">
-  <div style="max-width:600px;margin:0 auto;padding:24px 16px 60px;">
 
-    <!-- Header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;padding-top:8px;">
-      <div>
-        <h1 style="font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-size:1.6rem;font-weight:700;margin:0;">לוח ניהול</h1>
-        <p style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.82rem;margin:2px 0 0;">נואיקה — לחם בוטיק</p>
-      </div>
-      <button onclick="closeAdminPanel()" style="background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;" aria-label="סגור">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B3A2A" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  <!-- ── Sticky Top Bar ── -->
+  <div class="admin-top-bar">
+    <div>
+      <div style="font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-size:1.25rem;font-weight:700;line-height:1.1;">לוח ניהול</div>
+      <div style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.75rem;">נואיקה — לחם בוטיק</div>
+    </div>
+    <button onclick="closeAdminPanel()" style="background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;" aria-label="סגור">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B3A2A" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+
+  <!-- ── Tab Navigation ── -->
+  <div style="padding:10px 12px 0;background:#F0E9D8;border-bottom:1.5px solid #E5D9C5;position:sticky;top:57px;z-index:9;">
+    <div class="admin-tab-nav" role="tablist">
+      <button class="admin-tab-btn active" id="atab-dash"      onclick="switchAdminTab('dash')"      role="tab">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        בית
+      </button>
+      <button class="admin-tab-btn" id="atab-orders" onclick="switchAdminTab('orders')" role="tab">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        הזמנות
+        <span class="tab-badge" id="orders-tab-badge" style="display:none;">0</span>
+      </button>
+      <button class="admin-tab-btn" id="atab-menu"   onclick="switchAdminTab('menu')"   role="tab">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 2h18"/><path d="M3 7h18"/><rect x="3" y="11" width="18" height="10" rx="2"/></svg>
+        תפריט
+      </button>
+      <button class="admin-tab-btn" id="atab-customers" onclick="switchAdminTab('customers')" role="tab">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        לקוחות
+      </button>
+      <button class="admin-tab-btn" id="atab-settings" onclick="switchAdminTab('settings')" role="tab">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        הגדרות
       </button>
     </div>
+  </div>
 
-    <!-- Orders ON/OFF -->
-    <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:14px;padding:18px;margin-bottom:14px;">
+  <!-- ══════════════════════════════════════════ -->
+  <!-- TAB: בית (Dashboard)                      -->
+  <!-- ══════════════════════════════════════════ -->
+  <div id="admin-tab-dash" class="admin-tab-content active">
+
+    <!-- Orders toggle — most important control -->
+    <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:16px;padding:20px;margin-bottom:16px;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
         <div>
-          <div style="font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-weight:700;font-size:1rem;margin-bottom:3px;">קבלת הזמנות</div>
-          <div id="orders-status-text" style="font-family:'Assistant',sans-serif;color:#7A9A50;font-size:0.82rem;">פתוחה — לקוחות יכולים להזמין</div>
+          <div style="font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-weight:700;font-size:1.05rem;margin-bottom:3px;">קבלת הזמנות</div>
+          <div id="orders-status-text" style="font-family:'Assistant',sans-serif;color:#7A9A50;font-size:0.85rem;">פתוחה — לקוחות יכולים להזמין</div>
         </div>
         <label class="admin-toggle" aria-label="הפעלת קבלת הזמנות" style="width:56px;height:30px;">
           <input type="checkbox" id="orders-toggle" checked onchange="toggleOrdersStatus(this)" />
@@ -1162,30 +1294,176 @@
       </div>
     </div>
 
-    <!-- Bit link -->
-    <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:14px;padding:18px;margin-bottom:20px;">
-      <label style="display:block;font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-weight:700;font-size:1rem;margin-bottom:8px;">
-        🔗 קישור Bit לתשלום
-      </label>
-      <input
-        id="admin-bit-link"
-        type="url"
-        class="field"
-        placeholder="https://bit.ly/..."
-        dir="ltr"
-        style="font-size:0.88rem;"
-      />
-      <p style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.78rem;margin-top:6px;">
-        אפליקציית Bit ← "קבלת כסף" ← "שלח קישור"
-      </p>
+    <!-- Quick stats -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;" id="order-stats"></div>
+
+    <!-- Quick nav cards -->
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button onclick="switchAdminTab('orders')" class="dash-action-card" style="border:none;width:100%;text-align:right;">
+        <div class="dash-action-icon" style="background:#EDF6FF;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A6DB5" stroke-width="1.8" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        </div>
+        <div style="flex:1;">
+          <div style="font-family:'Frank Ruhl Libre',serif;font-weight:700;color:#2C1810;font-size:0.95rem;">ניהול הזמנות</div>
+          <div style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.78rem;">רשימת אפייה, סטטוסים, ארכיון</div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C4B89A" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+
+      <button onclick="switchAdminTab('menu')" class="dash-action-card" style="border:none;width:100%;text-align:right;">
+        <div class="dash-action-icon" style="background:#FFF8E6;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A06000" stroke-width="1.8" stroke-linecap="round"><path d="M3 2h18"/><path d="M3 7h18"/><rect x="3" y="11" width="18" height="10" rx="2"/></svg>
+        </div>
+        <div style="flex:1;">
+          <div style="font-family:'Frank Ruhl Libre',serif;font-weight:700;color:#2C1810;font-size:0.95rem;">תפריט שבועי</div>
+          <div style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.78rem;">עריכת מנות, מחירים, זמינות</div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C4B89A" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+
+      <button onclick="switchAdminTab('customers')" class="dash-action-card" style="border:none;width:100%;text-align:right;">
+        <div class="dash-action-icon" style="background:#EEF8EE;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2A7A2A" stroke-width="1.8" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        </div>
+        <div style="flex:1;">
+          <div style="font-family:'Frank Ruhl Libre',serif;font-weight:700;color:#2C1810;font-size:0.95rem;">לקוחות</div>
+          <div style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.78rem;">היסטוריה, WhatsApp, CRM קטן</div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C4B89A" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+
+      <button onclick="switchAdminTab('settings')" class="dash-action-card" style="border:none;width:100%;text-align:right;">
+        <div class="dash-action-icon" style="background:#F5EDE8;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6B3A2A" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        </div>
+        <div style="flex:1;">
+          <div style="font-family:'Frank Ruhl Libre',serif;font-weight:700;color:#2C1810;font-size:0.95rem;">הגדרות</div>
+          <div style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.78rem;">Bit, מועד סגירה, סיסמה</div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C4B89A" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- TAB: הזמנות (Orders)                      -->
+  <!-- ══════════════════════════════════════════ -->
+  <div id="admin-tab-orders" class="admin-tab-content">
+
+    <!-- Header row -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div>
+        <h2 style="font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-size:1.2rem;font-weight:700;margin:0 0 2px;">ניהול הזמנות</h2>
+        <p style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.75rem;margin:0;">ארכיון אוטומטי לאחר 7 ימים</p>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="exportOrdersCSV()" style="display:flex;align-items:center;gap:5px;font-family:'Assistant',sans-serif;font-size:0.76rem;font-weight:600;background:#EEF8EE;border:1.5px solid #B0D9B0;color:#2A7A2A;padding:7px 12px;border-radius:100px;cursor:pointer;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          CSV
+        </button>
+        <button onclick="printBakingList()" style="display:flex;align-items:center;gap:5px;font-family:'Assistant',sans-serif;font-size:0.76rem;font-weight:600;background:#F0E9D8;border:1.5px solid #D5C9B5;color:#6B3A2A;padding:7px 12px;border-radius:100px;cursor:pointer;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          הדפס
+        </button>
+      </div>
     </div>
 
-    <!-- Deadline settings -->
-    <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:14px;padding:18px;margin-bottom:20px;">
-      <label style="display:block;font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-weight:700;font-size:1rem;margin-bottom:8px;">
+    <!-- Baking summary -->
+    <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:14px;margin-bottom:16px;overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #EDE5D0;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:1.1rem;">🍞</span>
+          <span style="font-family:'Frank Ruhl Libre',serif;font-weight:700;color:#6B3A2A;font-size:0.92rem;">רשימת אפייה שבועית</span>
+        </div>
+        <span style="font-family:'Assistant',sans-serif;font-size:0.72rem;color:#9B8B75;">סה"כ לאפות</span>
+      </div>
+      <div id="baking-summary-list"></div>
+    </div>
+
+    <!-- Filter tabs -->
+    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;">
+      <button onclick="filterOrders('all')"       id="filter-all"       class="btn-status active">הכל</button>
+      <button onclick="filterOrders('new')"       id="filter-new"       class="btn-status">🆕 חדשות</button>
+      <button onclick="filterOrders('confirmed')" id="filter-confirmed" class="btn-status">✅ אושרו</button>
+      <button onclick="filterOrders('ready')"     id="filter-ready"     class="btn-status">🍞 מוכנות</button>
+      <button onclick="filterOrders('done')"      id="filter-done"      class="btn-status">✔️ נמסרו</button>
+      <button onclick="filterOrders('delivery')"  id="filter-delivery"  class="btn-status">📦 משלוח</button>
+      <button onclick="filterOrders('pickup')"    id="filter-pickup"    class="btn-status">🏠 איסוף</button>
+    </div>
+
+    <!-- Orders list -->
+    <div id="order-management-list"></div>
+
+    <!-- Archive -->
+    <div style="margin-top:16px;">
+      <button onclick="toggleArchive()" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:transparent;border:1.5px solid #D5C9B5;border-radius:12px;padding:11px 16px;cursor:pointer;font-family:'Assistant',sans-serif;color:#8B7260;font-size:0.82rem;" id="archive-toggle-btn">
+        <span>🗂️ ארכיון הזמנות ישנות</span>
+        <span id="archive-count" style="background:#EDE5D0;border-radius:100px;padding:2px 8px;font-size:0.72rem;"></span>
+      </button>
+      <div id="archive-list" style="display:none;margin-top:10px;opacity:0.7;"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- TAB: תפריט (Menu / Products)              -->
+  <!-- ══════════════════════════════════════════ -->
+  <div id="admin-tab-menu" class="admin-tab-content">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div>
+        <h2 style="font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-size:1.2rem;font-weight:700;margin:0 0 2px;">תפריט שבועי</h2>
+        <p style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.75rem;margin:0;">עריכה, הוספה וזמינות מנות</p>
+      </div>
+      <button onclick="openAddProduct()" style="display:flex;align-items:center;gap:6px;font-family:'Assistant',sans-serif;font-size:0.8rem;font-weight:600;background:#6B3A2A;color:#F7F2E8;border:none;padding:9px 16px;border-radius:100px;cursor:pointer;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        הוסף מנה
+      </button>
+    </div>
+
+    <div id="admin-products-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;"></div>
+
+    <button onclick="saveAdminSettings()" class="admin-save-btn" style="width:100%;font-size:1rem;padding:14px;">
+      שמור שינויים ✓
+    </button>
+    <div id="admin-saved-msg" style="text-align:center;font-family:'Assistant',sans-serif;color:#6B3A2A;font-size:0.88rem;margin-top:10px;opacity:0;transition:opacity 0.3s;">
+      ✓ השינויים נשמרו!
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- TAB: לקוחות (Customers)                   -->
+  <!-- ══════════════════════════════════════════ -->
+  <div id="admin-tab-customers" class="admin-tab-content">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div>
+        <h2 style="font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-size:1.2rem;font-weight:700;margin:0 0 2px;">לקוחות</h2>
+        <p style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.75rem;margin:0;">מבוסס על כל ההזמנות הקיימות</p>
+      </div>
+      <button onclick="renderCustomers()" style="font-family:'Assistant',sans-serif;font-size:0.78rem;font-weight:600;background:#F0E9D8;border:1.5px solid #D5C9B5;color:#6B3A2A;padding:7px 14px;border-radius:100px;cursor:pointer;">רענן</button>
+    </div>
+    <div id="customers-list"></div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- TAB: הגדרות (Settings)                    -->
+  <!-- ══════════════════════════════════════════ -->
+  <div id="admin-tab-settings" class="admin-tab-content">
+    <h2 style="font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-size:1.2rem;font-weight:700;margin:0 0 18px;">הגדרות</h2>
+
+    <!-- Bit link -->
+    <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:14px;padding:18px;margin-bottom:14px;">
+      <label style="display:block;font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-weight:700;font-size:0.95rem;margin-bottom:8px;">
+        🔗 קישור Bit לתשלום
+      </label>
+      <input id="admin-bit-link" type="url" class="field" placeholder="https://bit.ly/..." dir="ltr" style="font-size:0.88rem;" />
+      <p style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.78rem;margin-top:6px;">אפליקציית Bit ← "קבלת כסף" ← "שלח קישור"</p>
+    </div>
+
+    <!-- Deadline -->
+    <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:14px;padding:18px;margin-bottom:14px;">
+      <label style="display:block;font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-weight:700;font-size:0.95rem;margin-bottom:10px;">
         ⏰ מועד סגירת הזמנות
       </label>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
         <div>
           <label style="font-family:'Assistant',sans-serif;font-size:0.8rem;color:#9B8B75;display:block;margin-bottom:4px;">תאריך</label>
           <input id="admin-deadline-date" type="date" class="field" style="font-size:0.88rem;" dir="ltr" />
@@ -1195,105 +1473,19 @@
           <input id="admin-deadline-time" type="time" class="field" style="font-size:0.88rem;" dir="ltr" value="17:00" />
         </div>
       </div>
-      <div style="display:flex;gap:8px;">
-        <button onclick="clearDeadline()" style="flex:1;background:transparent;border:1.5px solid #D5C9B5;color:#9B8B75;font-family:'Assistant',sans-serif;font-size:0.8rem;padding:7px;border-radius:8px;cursor:pointer;">חזור לברירת מחדל (שלישי 17:00)</button>
-      </div>
+      <button onclick="clearDeadline()" style="width:100%;background:transparent;border:1.5px solid #D5C9B5;color:#9B8B75;font-family:'Assistant',sans-serif;font-size:0.8rem;padding:8px;border-radius:8px;cursor:pointer;">חזור לברירת מחדל (שלישי 17:00)</button>
       <p id="admin-deadline-preview" style="font-family:'Assistant',sans-serif;color:#7A9A50;font-size:0.78rem;margin-top:8px;"></p>
     </div>
 
-    <!-- Products section -->
-    <h3 style="font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-size:1.1rem;font-weight:700;margin-bottom:12px;">מנות התפריט</h3>
-    <div id="admin-products-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;"></div>
-
-    <!-- Add product -->
-    <button onclick="openAddProduct()" class="add-product-btn" style="margin-bottom:24px;">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-      הוסף מנה חדשה לתפריט
+    <!-- Save settings -->
+    <button onclick="saveAdminSettings()" class="admin-save-btn" style="width:100%;font-size:1rem;padding:14px;">
+      שמור הגדרות ✓
     </button>
-
-    <!-- Save button -->
-    <button onclick="saveAdminSettings()" class="admin-save-btn" style="width:100%;font-size:1.05rem;padding:15px;">
-      שמור את כל השינויים ✓
-    </button>
-
-    <!-- Saved feedback -->
-    <div id="admin-saved-msg" style="text-align:center;font-family:'Assistant',sans-serif;color:#6B3A2A;font-size:0.88rem;margin-top:12px;opacity:0;transition:opacity 0.3s;">
-      ✓ השינויים נשמרו בהצלחה!
+    <div id="admin-settings-saved-msg" style="text-align:center;font-family:'Assistant',sans-serif;color:#6B3A2A;font-size:0.88rem;margin-top:10px;opacity:0;transition:opacity 0.3s;">
+      ✓ ההגדרות נשמרו!
     </div>
-
-    <!-- ═══ ORDER MANAGEMENT SECTION ═══ -->
-    <div style="margin-top:36px;padding-top:28px;border-top:2px solid #E5D9C5;">
-
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-        <div>
-          <h2 style="font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-size:1.3rem;font-weight:700;margin:0 0 2px;">ניהול הזמנות</h2>
-          <p style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.78rem;margin:0;">הזמנות נשמרות אוטומטית ועוברות לארכיון לאחר 7 ימים</p>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
-          <button onclick="exportOrdersCSV()" style="display:flex;align-items:center;gap:6px;font-family:'Assistant',sans-serif;font-size:0.78rem;font-weight:600;background:#EEF8EE;border:1.5px solid #B0D9B0;color:#2A7A2A;padding:7px 14px;border-radius:100px;cursor:pointer;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            ייצוא CSV
-          </button>
-          <button onclick="printBakingList()" style="display:flex;align-items:center;gap:6px;font-family:'Assistant',sans-serif;font-size:0.78rem;font-weight:600;background:#F0E9D8;border:1.5px solid #D5C9B5;color:#6B3A2A;padding:7px 14px;border-radius:100px;cursor:pointer;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-            הדפסת רשימת אפייה
-          </button>
-        </div>
-      </div>
-
-      <!-- Stats -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;" id="order-stats"></div>
-
-      <!-- Baking summary -->
-      <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:14px;margin-bottom:20px;overflow:hidden;">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #EDE5D0;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:1.1rem;">🍞</span>
-            <span style="font-family:'Frank Ruhl Libre',serif;font-weight:700;color:#6B3A2A;font-size:0.95rem;">רשימת אפייה שבועית</span>
-          </div>
-          <span style="font-family:'Assistant',sans-serif;font-size:0.75rem;color:#9B8B75;">סה"כ לאפות</span>
-        </div>
-        <div id="baking-summary-list"></div>
-      </div>
-
-      <!-- Filter tabs -->
-      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
-        <button onclick="filterOrders('all')"       id="filter-all"       class="btn-status active">הכל</button>
-        <button onclick="filterOrders('new')"       id="filter-new"       class="btn-status">🆕 חדשות</button>
-        <button onclick="filterOrders('confirmed')" id="filter-confirmed" class="btn-status">✅ אושרו</button>
-        <button onclick="filterOrders('ready')"     id="filter-ready"     class="btn-status">🍞 מוכנות</button>
-        <button onclick="filterOrders('done')"      id="filter-done"      class="btn-status">✔️ נמסרו</button>
-        <button onclick="filterOrders('delivery')"  id="filter-delivery"  class="btn-status">📦 משלוח</button>
-        <button onclick="filterOrders('pickup')"    id="filter-pickup"    class="btn-status">🏠 איסוף</button>
-      </div>
-
-      <!-- Orders list -->
-      <div id="order-management-list"></div>
-
-      <!-- Archive toggle -->
-      <div style="margin-top:20px;">
-        <button onclick="toggleArchive()" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:transparent;border:1.5px solid #D5C9B5;border-radius:12px;padding:11px 16px;cursor:pointer;font-family:'Assistant',sans-serif;color:#8B7260;font-size:0.82rem;" id="archive-toggle-btn">
-          <span>🗂️ ארכיון הזמנות ישנות</span>
-          <span id="archive-count" style="background:#EDE5D0;border-radius:100px;padding:2px 8px;font-size:0.72rem;"></span>
-        </button>
-        <div id="archive-list" style="display:none;margin-top:10px;opacity:0.7;"></div>
-      </div>
-
-    </div>
-
-    <!-- ═══ CUSTOMER MANAGEMENT ═══ -->
-    <div style="margin-top:36px;padding-top:28px;border-top:2px solid #E5D9C5;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-        <div>
-          <h2 style="font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-size:1.3rem;font-weight:700;margin:0 0 2px;">לקוחות</h2>
-          <p style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.78rem;margin:0;">מבוסס על כל ההזמנות הקיימות</p>
-        </div>
-        <button onclick="renderCustomers()" style="font-family:'Assistant',sans-serif;font-size:0.78rem;font-weight:600;background:#F0E9D8;border:1.5px solid #D5C9B5;color:#6B3A2A;padding:7px 14px;border-radius:100px;cursor:pointer;">רענן</button>
-      </div>
-      <div id="customers-list"></div>
-    </div>
-
   </div>
+
 </div>
 
 <!-- ============ EDIT PRODUCT MODAL ============ -->
@@ -1913,10 +2105,11 @@ function openAdminPanel() {
   }
 
   renderAdminProducts();
-  renderOrderManagement();
+  renderOrderStats();
   document.getElementById('admin-panel').classList.add('open');
   document.body.style.overflow = 'hidden';
-  setTimeout(() => { loadDeadlineIntoAdmin(); renderCustomers(); }, 0);
+  switchAdminTab('dash');
+  setTimeout(() => { loadDeadlineIntoAdmin(); updateOrdersTabBadge(); }, 0);
 }
 
 function renderAdminProducts() {
@@ -1974,10 +2167,11 @@ function saveAdminSettings() {
   renderProducts();
   updateCartBar();
 
-  // Show saved confirmation
-  const msg = document.getElementById('admin-saved-msg');
-  msg.style.opacity = '1';
-  setTimeout(() => { msg.style.opacity = '0'; }, 2500);
+  // Show saved confirmation (tab-aware)
+  const msgId = currentAdminTab === 'settings' ? 'admin-settings-saved-msg' : 'admin-saved-msg';
+  const msg = document.getElementById(msgId);
+  if (msg) { msg.style.opacity = '1'; setTimeout(() => { msg.style.opacity = '0'; }, 2500); }
+  updateOrdersTabBadge();
 }
 
 function closeAdminPanel() {
@@ -2466,6 +2660,37 @@ function toggleLang() {
   document.getElementById('lang-btn').textContent = isEn ? 'עב' : 'EN';
   renderOrderSummary();
   updateCountdown();
+}
+
+// ─── ADMIN TAB SWITCHING ───────────────────────────
+let currentAdminTab = 'dash';
+
+function switchAdminTab(tab) {
+  // Deactivate all
+  document.querySelectorAll('.admin-tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.admin-tab-btn').forEach(el => el.classList.remove('active'));
+  // Activate chosen
+  document.getElementById('admin-tab-' + tab).classList.add('active');
+  document.getElementById('atab-' + tab).classList.add('active');
+  currentAdminTab = tab;
+  // Scroll to top of panel
+  document.getElementById('admin-panel').scrollTop = 0;
+  // Render relevant content
+  if (tab === 'orders') renderOrderManagement();
+  if (tab === 'customers') renderCustomers();
+  if (tab === 'dash') renderOrderStats();
+}
+
+function updateOrdersTabBadge() {
+  const orders = getOrders ? getOrders().filter(o => !o.archived && o.status === 'new') : [];
+  const badge = document.getElementById('orders-tab-badge');
+  if (!badge) return;
+  if (orders.length > 0) {
+    badge.textContent = orders.length;
+    badge.style.display = 'inline-flex';
+  } else {
+    badge.style.display = 'none';
+  }
 }
 
 // ─── INIT ──────────────────────────────────────────
