@@ -335,15 +335,7 @@
       transform: translateY(-100vh);
     }
 
-    /* Grain texture overlay */
-    #landing::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-      pointer-events: none;
-      opacity: 0.5;
-    }
+    /* Grain texture — now handled globally by body::after */
 
     /* Floating botanical elements */
     .floater {
@@ -716,6 +708,18 @@
       flex: 1;
       height: 1px;
       background: linear-gradient(to right, transparent, #C4B89A 40%, #C4B89A 60%, transparent);
+    }
+
+    /* ── PAPER TEXTURE ──────────────────────────── */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.68' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23p)'/%3E%3C/svg%3E");
+      opacity: 0.042;
+      mix-blend-mode: multiply;
     }
 
     /* ── PROGRESS BAR (minimum order) ───────────── */
