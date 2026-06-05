@@ -1,0 +1,2025 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>נואיקה — לחם בוטיק ביתי</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#6B3A2A" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="נואיקה" />
+  <link rel="apple-touch-icon" href="logo.png.png" />
+
+  <!-- OG / WhatsApp sharing -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:title"       content="נואיקה — לחם בוטיק ביתי" />
+  <meta property="og:description" content="מחמצת ביתית, קמחים איכותיים, אפייה שבועית ברחובות. הזמינו עד שלישי 17:00" />
+  <meta property="og:image"       content="logo.png.png" />
+  <meta property="og:locale"      content="he_IL" />
+  <meta name="description"        content="לחם בוטיק ביתי ברחובות. מחמצת, שיפון, כוסמין ומאפים. הזמנות שבועיות." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@300;400;500;700;900&family=Assistant:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cream:    '#F7F2E8',
+            parchment:'#EDE5D0',
+            earth:    '#6B3A2A',
+            terracotta:'#C4795A',
+            sand:     '#D4A96A',
+            bark:     '#8B5E3C',
+            ink:      '#2C1810',
+            muted:    '#9B8B75',
+          },
+          fontFamily: {
+            serif:  ['Frank Ruhl Libre', 'serif'],
+            sans:   ['Assistant', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body { background-color: #F7F2E8; }
+
+    /* ── GLOBAL TYPOGRAPHY ─────────────────────────── */
+    h1, h2, h3 { text-wrap: balance; }
+    p { text-wrap: pretty; }
+
+    /* Improved muted color — passes WCAG AA on cream bg */
+    :root {
+      --color-muted-readable: #6B5D4E;
+      --color-desc: #7A6B58;
+    }
+
+    /* RTL scroll */
+    html { scroll-behavior: smooth; }
+
+    /* ── ADMIN PANEL ───────────────────────────────── */
+    #admin-login-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 500;
+      background: rgba(44,24,16,0.7);
+      backdrop-filter: blur(6px);
+      align-items: center;
+      justify-content: center;
+    }
+    #admin-login-overlay.open { display: flex; }
+
+    #admin-panel {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 500;
+      background: #F0E9D8;
+      overflow-y: auto;
+      animation: fadeSlideUp 0.4s ease;
+    }
+    #admin-panel.open { display: block; }
+
+    .admin-toggle {
+      position: relative;
+      width: 48px; height: 26px;
+      flex-shrink: 0;
+    }
+    .admin-toggle input { opacity: 0; width: 0; height: 0; }
+    .admin-toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: #D5C9B5;
+      border-radius: 100px;
+      cursor: pointer;
+      transition: background 0.25s;
+    }
+    .admin-toggle-slider::before {
+      content: '';
+      position: absolute;
+      left: 3px; top: 3px;
+      width: 20px; height: 20px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.25s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+    .admin-toggle input:checked + .admin-toggle-slider { background: #C4795A; }
+    .admin-toggle input:checked + .admin-toggle-slider::before { transform: translateX(22px); }
+
+    .admin-card {
+      background: #FDFAF4;
+      border: 1.5px solid #E5D9C5;
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .admin-card img {
+      width: 56px; height: 56px;
+      object-fit: cover;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+    .admin-save-btn {
+      background: #6B3A2A;
+      color: #F7F2E8;
+      font-family: 'Frank Ruhl Libre', serif;
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 13px 32px;
+      border-radius: 100px;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .admin-save-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(107,58,42,0.25);
+    }
+
+    /* Edit product modal */
+    #edit-product-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 600;
+      background: rgba(44,24,16,0.6);
+      backdrop-filter: blur(4px);
+      align-items: flex-end;
+      justify-content: center;
+    }
+    #edit-product-modal.open { display: flex; }
+    @media (min-width: 640px) { #edit-product-modal { align-items: center; } }
+    .edit-modal-box {
+      background: #FDFAF4;
+      border-radius: 24px 24px 0 0;
+      width: 100%; max-width: 520px;
+      max-height: 90vh; overflow-y: auto;
+      padding: 28px 20px 36px;
+      animation: slideUp 0.3s ease;
+    }
+    @media (min-width: 640px) { .edit-modal-box { border-radius: 24px; } }
+
+    /* Image upload area */
+    .img-upload-area {
+      border: 2px dashed #D5C9B5;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .img-upload-area:hover { border-color: #C4795A; background: #F7F2E8; }
+    .img-upload-area input[type=file] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%;
+    }
+    .img-preview {
+      width: 100%; height: 140px;
+      object-fit: cover; border-radius: 8px;
+      display: none; margin-bottom: 8px;
+    }
+
+    /* Add product button */
+    .add-product-btn {
+      width: 100%;
+      border: 2px dashed #C4795A;
+      background: transparent;
+      color: #C4795A;
+      font-family: 'Frank Ruhl Libre', serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      padding: 14px;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .add-product-btn:hover { background: #C4795A; color: white; }
+
+    /* Delete button */
+    .delete-product-btn {
+      background: transparent;
+      border: 1.5px solid #D5C9B5;
+      color: #B45032;
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.82rem;
+      padding: 6px 14px;
+      border-radius: 100px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .delete-product-btn:hover { background: #FDECEA; border-color: #B45032; }
+
+    /* ── LANDING PAGE ─────────────────────────────── */
+    #landing {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: #F0E9D8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      transition: transform 0.85s cubic-bezier(0.76, 0, 0.24, 1);
+    }
+    #landing.exit {
+      transform: translateY(-100vh);
+    }
+
+    /* Grain texture overlay */
+    #landing::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      opacity: 0.5;
+    }
+
+    /* Floating botanical elements */
+    .floater {
+      position: absolute;
+      opacity: 0;
+      animation: floatUp 12s ease-in-out infinite;
+      pointer-events: none;
+    }
+    @keyframes floatUp {
+      0%   { opacity: 0; transform: translateY(20px) rotate(0deg); }
+      15%  { opacity: 0.55; }
+      85%  { opacity: 0.55; }
+      100% { opacity: 0; transform: translateY(-80px) rotate(15deg); }
+    }
+
+    /* Landing content animations */
+    .land-logo {
+      opacity: 0;
+      transform: translateY(-30px);
+      animation: landLogoIn 0.9s cubic-bezier(0.34,1.56,0.64,1) 0.3s forwards;
+    }
+    @keyframes landLogoIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .land-tagline {
+      opacity: 0;
+      transform: translateY(16px);
+      animation: fadeSlideUp 0.8s ease 0.9s forwards;
+    }
+    .land-sub {
+      opacity: 0;
+      transform: translateY(16px);
+      animation: fadeSlideUp 0.8s ease 1.1s forwards;
+    }
+    .land-countdown {
+      opacity: 0;
+      transform: translateY(16px);
+      animation: fadeSlideUp 0.8s ease 1.3s forwards;
+    }
+    .land-btn {
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+      animation: fadeSlideUp 0.7s cubic-bezier(0.34,1.3,0.64,1) 1.55s forwards;
+    }
+    .land-social {
+      opacity: 0;
+      animation: fadeSlideUp 0.6s ease 1.9s forwards;
+    }
+    @keyframes fadeSlideUp {
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* CTA button shimmer */
+    .land-cta {
+      position: relative;
+      overflow: hidden;
+      background: #6B3A2A;
+      color: #F7F2E8;
+      font-family: 'Frank Ruhl Libre', serif;
+      font-weight: 700;
+      font-size: 1.15rem;
+      padding: 16px 48px;
+      border-radius: 100px;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      letter-spacing: 0.03em;
+    }
+    .land-cta:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 32px rgba(107,58,42,0.3);
+    }
+    .land-cta:active { transform: translateY(0); }
+    .land-cta::after {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 60%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+      animation: shimmer 3.5s ease 2.2s infinite;
+    }
+    @keyframes shimmer {
+      0%   { left: -100%; }
+      50%  { left: 150%; }
+      100% { left: 150%; }
+    }
+
+    /* Countdown timer */
+    .countdown-box {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(107,58,42,0.08);
+      border: 1px solid rgba(107,58,42,0.18);
+      border-radius: 100px;
+      padding: 7px 18px;
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.82rem;
+      color: #6B3A2A;
+    }
+    .countdown-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #C4795A;
+      animation: pulse-dot 1.4s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: 0.4; transform: scale(0.7); }
+    }
+    .countdown-closed {
+      background: rgba(180,80,50,0.1);
+      border-color: rgba(180,80,50,0.25);
+    }
+    .countdown-dot-closed {
+      background: #B45032;
+      animation: none;
+    }
+
+    /* ── SOLD OUT ──────────────────────────────────── */
+    .product-card.sold-out {
+      opacity: 0.55;
+      pointer-events: none;
+      filter: grayscale(0.35);
+    }
+    .sold-out-stamp {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -60%) rotate(-18deg);
+      background: rgba(107,58,42,0.88);
+      color: #F7F2E8;
+      font-family: 'Frank Ruhl Libre', serif;
+      font-weight: 700;
+      font-size: 0.9rem;
+      letter-spacing: 0.12em;
+      padding: 5px 14px;
+      border-radius: 4px;
+      border: 2px solid rgba(247,242,232,0.7);
+      pointer-events: none;
+      z-index: 10;
+      white-space: nowrap;
+    }
+
+    /* ── THANK YOU PAGE ────────────────────────────── */
+    #thankyou-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      background: #F0E9D8;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      text-align: center;
+      padding: 24px;
+    }
+    #thankyou-overlay.open {
+      display: flex;
+    }
+    .ty-icon {
+      opacity: 0;
+      transform: scale(0.5);
+      animation: tyIconIn 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.1s forwards;
+    }
+    .ty-title {
+      opacity: 0;
+      transform: translateY(16px);
+      animation: fadeSlideUp 0.6s ease 0.6s forwards;
+    }
+    .ty-body {
+      opacity: 0;
+      transform: translateY(16px);
+      animation: fadeSlideUp 0.6s ease 0.8s forwards;
+    }
+    .ty-summary {
+      opacity: 0;
+      transform: translateY(16px);
+      animation: fadeSlideUp 0.6s ease 1s forwards;
+    }
+    .ty-btn {
+      opacity: 0;
+      transform: translateY(16px);
+      animation: fadeSlideUp 0.6s ease 1.25s forwards;
+    }
+    @keyframes tyIconIn {
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* Reduce motion */
+    @media (prefers-reduced-motion: reduce) {
+      .floater, .land-cta::after { animation: none !important; }
+      .land-logo, .land-tagline, .land-sub,
+      .land-countdown, .land-btn, .land-social {
+        opacity: 1 !important;
+        transform: none !important;
+        animation: none !important;
+      }
+    }
+
+    /* Product card */
+    .product-card {
+      background: #FDFAF4;
+      border: 1.5px solid #E5D9C5;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: border-color 0.22s ease, transform 0.22s cubic-bezier(0.34,1.2,0.64,1);
+      position: relative;
+      overflow: hidden;
+      user-select: none;
+    }
+    .product-card:hover {
+      transform: translateY(-3px);
+      border-color: #C4795A;
+    }
+    .product-card.in-cart {
+      border-color: #6B3A2A;
+      background: #FDF6EC;
+    }
+    .product-card.pulse {
+      animation: cardPulse 0.4s cubic-bezier(0.34,1.2,0.64,1);
+    }
+    @keyframes cardPulse {
+      0%  { transform: scale(1); }
+      45% { transform: scale(1.035); }
+      100%{ transform: scale(1); }
+    }
+
+    /* Illustration area */
+    .illus-wrap {
+      background: #EDE5D0;
+      border-radius: 12px 12px 0 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      aspect-ratio: 4/3;
+    }
+    .illus-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94);
+    }
+    .product-card:hover .illus-wrap img {
+      transform: scale(1.04);
+    }
+
+    /* Cart badge */
+    .qty-badge {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: #6B3A2A;
+      color: #F7F2E8;
+      font-family: 'Assistant', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transform: scale(0.5);
+      transition: opacity 0.2s cubic-bezier(0.34,1.4,0.64,1), transform 0.2s cubic-bezier(0.34,1.4,0.64,1);
+    }
+    .qty-badge.visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* Sticky cart bar */
+    #cart-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      transform: translateY(100%);
+      transition: transform 0.4s cubic-bezier(0.34,1.1,0.64,1);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    #cart-bar.visible {
+      transform: translateY(0);
+    }
+
+    /* Modal */
+    #order-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(44,24,16,0.55);
+      backdrop-filter: blur(4px);
+      align-items: flex-end;
+      justify-content: center;
+    }
+    #order-modal.open {
+      display: flex;
+    }
+    @media (min-width: 640px) {
+      #order-modal { align-items: center; }
+    }
+    .modal-box {
+      background: #FDFAF4;
+      border-radius: 24px 24px 0 0;
+      max-height: 92vh;
+      overflow-y: auto;
+      width: 100%;
+      max-width: 560px;
+      padding: 32px 24px 40px;
+      animation: slideUp 0.3s ease;
+    }
+    @media (min-width: 640px) {
+      .modal-box { border-radius: 24px; }
+    }
+    @keyframes slideUp {
+      from { transform: translateY(60px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+
+    /* Form inputs */
+    .field {
+      width: 100%;
+      background: #F0E9D8;
+      border: 1.5px solid #D5C9B5;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-family: 'Assistant', sans-serif;
+      font-size: 16px;
+      color: #2C1810;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .field:focus { border-color: #6B3A2A; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #EDE5D0; }
+    ::-webkit-scrollbar-thumb { background: #C4795A; border-radius: 3px; }
+
+    /* English toggle */
+    [lang-content="en"] { display: none; }
+    body.lang-en [lang-content="he"] { display: none; }
+    body.lang-en [lang-content="en"] { display: revert; }
+
+    /* Qty controls inside cart */
+    .qty-btn {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      border: 1.5px solid #6B3A2A;
+      background: transparent;
+      color: #6B3A2A;
+      font-size: 18px;
+      line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .qty-btn:hover { background: #6B3A2A; color: #F7F2E8; }
+
+    .divider-flower {
+      display: flex; align-items: center; gap: 16px;
+      color: #C4795A;
+    }
+    .divider-flower::before, .divider-flower::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, transparent, #C4B89A 40%, #C4B89A 60%, transparent);
+    }
+  </style>
+</head>
+<body class="font-sans text-ink">
+
+<!-- ============ LANDING PAGE ============ -->
+<div id="landing" role="main" aria-label="דף כניסה">
+
+  <!-- Floating botanical SVGs -->
+  <svg class="floater" style="width:52px;top:12%;right:8%;animation-delay:0s;animation-duration:14s;" viewBox="0 0 52 52" fill="none"><g stroke="#8B5E3C" stroke-width="1.1" opacity="0.7"><ellipse cx="26" cy="26" rx="4" ry="11" transform="rotate(0 26 26)"/><ellipse cx="26" cy="26" rx="4" ry="11" transform="rotate(60 26 26)"/><ellipse cx="26" cy="26" rx="4" ry="11" transform="rotate(120 26 26)"/><circle cx="26" cy="26" r="4" fill="#C4795A" opacity="0.5"/></g></svg>
+
+  <svg class="floater" style="width:36px;top:70%;right:15%;animation-delay:3s;animation-duration:16s;" viewBox="0 0 36 36" fill="none"><g stroke="#6B3A2A" stroke-width="1" opacity="0.6"><path d="M18 4 Q22 12 18 20 Q14 12 18 4Z"/><path d="M18 4 Q22 12 18 20 Q14 12 18 4Z" transform="rotate(72 18 18)"/><path d="M18 4 Q22 12 18 20 Q14 12 18 4Z" transform="rotate(144 18 18)"/><path d="M18 4 Q22 12 18 20 Q14 12 18 4Z" transform="rotate(216 18 18)"/><path d="M18 4 Q22 12 18 20 Q14 12 18 4Z" transform="rotate(288 18 18)"/></g></svg>
+
+  <svg class="floater" style="width:44px;top:20%;left:10%;animation-delay:1.5s;animation-duration:18s;" viewBox="0 0 44 44" fill="none"><g stroke="#C4795A" stroke-width="1.2" opacity="0.55"><path d="M22 6 L22 38M6 22 L38 22M9 9 L35 35M35 9 L9 35"/><circle cx="22" cy="22" r="5" stroke="#8B5E3C"/></g></svg>
+
+  <svg class="floater" style="width:28px;top:55%;left:6%;animation-delay:5s;animation-duration:13s;" viewBox="0 0 28 28" fill="none"><ellipse cx="14" cy="14" rx="5" ry="12" fill="none" stroke="#8B5E3C" stroke-width="1" opacity="0.7"/><ellipse cx="14" cy="14" rx="12" ry="5" fill="none" stroke="#8B5E3C" stroke-width="1" opacity="0.7"/></svg>
+
+  <svg class="floater" style="width:20px;top:35%;left:20%;animation-delay:7s;animation-duration:11s;" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3" fill="#D4A96A" opacity="0.6"/><circle cx="10" cy="4" r="2" fill="#C4795A" opacity="0.45"/><circle cx="10" cy="16" r="2" fill="#C4795A" opacity="0.45"/><circle cx="4" cy="10" r="2" fill="#C4795A" opacity="0.45"/><circle cx="16" cy="10" r="2" fill="#C4795A" opacity="0.45"/></svg>
+
+  <svg class="floater" style="width:38px;bottom:20%;right:22%;animation-delay:2s;animation-duration:15s;" viewBox="0 0 38 38" fill="none"><g stroke="#8B5E3C" stroke-width="1.1" opacity="0.6"><path d="M19 2 Q26 10 24 19 Q32 14 36 20 Q28 22 24 30 Q19 22 14 30 Q10 22 2 20 Q6 14 14 19 Q12 10 19 2Z"/><circle cx="19" cy="19" r="3" fill="#D4A96A" opacity="0.5"/></g></svg>
+
+  <svg class="floater" style="width:16px;top:80%;left:35%;animation-delay:9s;animation-duration:10s;" viewBox="0 0 16 16" fill="#8B5E3C" opacity="0.4"><circle cx="8" cy="8" r="3"/><circle cx="8" cy="2" r="1.5"/><circle cx="8" cy="14" r="1.5"/><circle cx="2" cy="8" r="1.5"/><circle cx="14" cy="8" r="1.5"/></svg>
+
+  <svg class="floater" style="width:30px;top:10%;left:45%;animation-delay:4s;animation-duration:17s;" viewBox="0 0 30 30" fill="none"><path d="M15 2 Q20 8 18 15 Q25 10 28 15 Q22 18 20 25 Q15 18 10 25 Q8 18 2 15 Q5 10 12 15 Q10 8 15 2Z" stroke="#C4795A" stroke-width="1" opacity="0.5"/></svg>
+
+  <!-- Center content -->
+  <div class="relative z-10 flex flex-col items-center text-center px-6" style="max-width:480px;">
+
+    <!-- Logo -->
+    <div class="land-logo mb-6">
+      <img
+        src="logo.png.png"
+        alt="לוגו נואיקה"
+        style="height:clamp(160px,32vw,220px);width:auto;object-fit:contain;mix-blend-mode:multiply;"
+      />
+    </div>
+
+    <!-- Tagline -->
+    <h1 class="land-tagline font-serif text-earth mb-2" style="font-size:clamp(1.1rem,3.2vw,1.5rem);font-weight:500;line-height:1.4;" lang-content="he">
+      לחם שנאפה עם אהבה
+    </h1>
+    <h1 class="land-tagline font-serif text-earth mb-2" style="font-size:clamp(1.1rem,3.2vw,1.5rem);font-weight:500;line-height:1.4;" lang-content="en">
+      Bread Baked with Love
+    </h1>
+
+    <!-- Subtitle -->
+    <p class="land-sub font-sans text-muted mb-6" style="font-size:0.95rem;line-height:1.65;" lang-content="he">
+      מחמצת ביתית · קמחים איכותיים · אפייה שבועית<br>
+      <span style="font-size:0.82rem;color:#9B8B75;">רחובות והסביבה</span>
+    </p>
+    <p class="land-sub font-sans text-muted mb-6" style="font-size:0.95rem;line-height:1.65;" lang-content="en">
+      Sourdough · Quality Flour · Weekly Baking<br>
+      <span style="font-size:0.82rem;color:#9B8B75;">Rehovot & surroundings</span>
+    </p>
+
+    <!-- Countdown -->
+    <div class="land-countdown mb-8">
+      <div class="countdown-box" id="landing-countdown">
+        <span class="countdown-dot" id="countdown-dot"></span>
+        <span id="countdown-text" lang-content="he">טוען...</span>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="land-btn">
+      <button class="land-cta" onclick="enterSite()" aria-label="התחל הזמנה">
+        <span lang-content="he">התחל הזמנה</span>
+        <span lang-content="en">Start Order</span>
+        &nbsp;→
+      </button>
+    </div>
+
+    <!-- Social -->
+    <div class="land-social mt-8 flex items-center gap-3">
+      <a href="https://www.instagram.com/nuika_bread" target="_blank" rel="noopener"
+         class="flex items-center gap-1.5 text-muted hover:text-terracotta transition-colors font-sans text-sm cursor-pointer">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.5" fill="currentColor"/></svg>
+        @nuika_bread
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ============ HEADER ============ -->
+<header class="sticky top-0 z-40 border-b" style="background:rgba(247,242,232,0.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-color:#E5D9C5;">
+  <div class="max-w-5xl mx-auto px-4 py-2.5 flex items-center justify-between">
+    <!-- Logo -->
+    <div class="flex items-center">
+      <img
+        src="logo.png.png"
+        alt="לוגו נואיקה"
+        class="h-14 w-auto object-contain"
+        style="mix-blend-mode: multiply;"
+      />
+    </div>
+    <!-- Nav -->
+    <div class="flex items-center gap-4">
+      <button onclick="toggleLang()" class="text-xs text-muted hover:text-earth transition-colors font-sans tracking-wide px-2 py-1 rounded border border-muted/30 hover:border-earth cursor-pointer" id="lang-btn">EN</button>
+      <a href="https://www.instagram.com/nuika_bread" target="_blank" rel="noopener" aria-label="Instagram" class="text-muted hover:text-terracotta transition-colors cursor-pointer">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+          <circle cx="12" cy="12" r="4"/>
+          <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor"/>
+        </svg>
+      </a>
+      <a href="https://wa.me/972547382282" target="_blank" rel="noopener" aria-label="WhatsApp" class="text-muted hover:text-earth transition-colors cursor-pointer">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+        </svg>
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<section class="max-w-5xl mx-auto px-4 text-center" style="padding-top:clamp(2.5rem,6vw,4.5rem);padding-bottom:clamp(1.5rem,3vw,2.5rem);">
+  <p class="font-sans" style="color:#C4795A;font-size:0.82rem;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:1rem;" lang-content="he">לחם בוטיק • אפייה ביתית</p>
+  <p class="font-sans" style="color:#C4795A;font-size:0.82rem;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:1rem;" lang-content="en">Boutique Bread · Home Baking</p>
+  <h1 class="font-serif font-bold text-earth mb-4" style="font-size:clamp(2rem,5.5vw,3.5rem);line-height:1.15;letter-spacing:-0.01em;" lang-content="he">לחמים שנאפים<br>עם אהבה</h1>
+  <h1 class="font-serif font-bold text-earth mb-4" style="font-size:clamp(2rem,5.5vw,3.5rem);line-height:1.15;letter-spacing:-0.01em;" lang-content="en">Bread Baked<br>with Love</h1>
+  <p style="font-family:'Assistant',sans-serif;font-size:1rem;line-height:1.7;color:#6B5D4E;max-width:44ch;margin:0 auto 1.75rem;" lang-content="he">מחמצת ביתית, קמחים איכותיים, ואהבה אמיתית לאפייה. הזמינו עד יום שלישי בשעה 17:00</p>
+  <p style="font-family:'Assistant',sans-serif;font-size:1rem;line-height:1.7;color:#6B5D4E;max-width:44ch;margin:0 auto 1.75rem;" lang-content="en">Sourdough starter, quality flours, and a real passion for baking. Order by Tuesday 5:00 PM</p>
+
+  <!-- Info pills -->
+  <div class="flex flex-wrap justify-center gap-2" style="margin-top:0;">
+    <span class="inline-flex items-center gap-1.5 font-sans text-sm px-3.5 py-1.5 rounded-full" style="background:#EDE5D0;color:#5A4A3A;border:1px solid #D5C9B5;font-size:0.8rem;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span lang-content="he">הזמנות עד שלישי 17:00</span>
+      <span lang-content="en">Order by Tue 5 PM</span>
+    </span>
+    <span class="inline-flex items-center gap-1.5 font-sans text-sm px-3.5 py-1.5 rounded-full" style="background:#EDE5D0;color:#5A4A3A;border:1px solid #D5C9B5;font-size:0.8rem;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span lang-content="he">מינימום 100 ₪</span>
+      <span lang-content="en">Min. ₪100</span>
+    </span>
+    <span class="inline-flex items-center gap-1.5 font-sans text-sm px-3.5 py-1.5 rounded-full" style="background:#EDE5D0;color:#5A4A3A;border:1px solid #D5C9B5;font-size:0.8rem;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      <span lang-content="he">משלוח ברחובות 25 ₪</span>
+      <span lang-content="en">Delivery ₪25</span>
+    </span>
+  </div>
+</section>
+
+<!-- ============ DIVIDER ============ -->
+<div class="max-w-5xl mx-auto px-4 py-4">
+  <div class="divider-flower">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <g stroke="#C4795A" stroke-width="1.2" fill="none">
+        <ellipse cx="10" cy="10" rx="2" ry="5" transform="rotate(0 10 10)"/>
+        <ellipse cx="10" cy="10" rx="2" ry="5" transform="rotate(60 10 10)"/>
+        <ellipse cx="10" cy="10" rx="2" ry="5" transform="rotate(120 10 10)"/>
+        <circle cx="10" cy="10" r="2.2" fill="#C4795A"/>
+      </g>
+    </svg>
+  </div>
+</div>
+
+<!-- ============ PRODUCTS ============ -->
+<section id="menu" class="max-w-5xl mx-auto px-4 pb-44">
+  <div class="text-center mb-8">
+    <h2 class="font-serif text-earth font-bold mb-2" style="font-size:clamp(1.4rem,3.5vw,1.9rem);" lang-content="he">התפריט השבועי</h2>
+    <h2 class="font-serif text-earth font-bold mb-2" style="font-size:clamp(1.4rem,3.5vw,1.9rem);" lang-content="en">This Week's Menu</h2>
+    <p style="font-family:'Assistant',sans-serif;color:#6B5D4E;font-size:0.82rem;" lang-content="he">לחצו על מנה להוספה לסל</p>
+    <p style="font-family:'Assistant',sans-serif;color:#6B5D4E;font-size:0.82rem;" lang-content="en">Tap a product to add to cart</p>
+  </div>
+
+  <div id="products-grid" class="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+    <!-- Cards injected by JS -->
+  </div>
+</section>
+
+<!-- ============ CART BAR ============ -->
+<div id="cart-bar">
+  <div style="background:#2C1810;padding:12px 16px 16px;box-shadow:0 -4px 24px rgba(44,24,16,0.18);">
+    <div class="max-w-5xl mx-auto flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="relative" style="flex-shrink:0;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D4A96A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
+          </svg>
+          <span id="cart-count" class="absolute -top-1.5 -right-1.5 text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center" style="background:#D4A96A;color:#2C1810;font-family:'Assistant',sans-serif;font-size:11px;">0</span>
+        </div>
+        <div>
+          <div style="font-family:'Assistant',sans-serif;font-size:0.75rem;color:rgba(247,242,232,0.6);line-height:1;" lang-content="he">סל הקניות</div>
+          <div style="font-family:'Assistant',sans-serif;font-size:0.75rem;color:rgba(247,242,232,0.6);line-height:1;" lang-content="en">Cart</div>
+          <div class="font-serif font-bold" style="font-size:1.15rem;color:#F7F2E8;line-height:1.3;" id="cart-total">₪0</div>
+        </div>
+      </div>
+      <button onclick="openOrderModal()" class="font-serif font-bold cursor-pointer transition-all" style="background:#D4A96A;color:#2C1810;font-size:0.92rem;padding:11px 22px;border-radius:100px;border:none;letter-spacing:0.01em;" lang-content="he">לביצוע הזמנה ←</button>
+      <button onclick="openOrderModal()" class="font-serif font-bold cursor-pointer transition-all" style="background:#D4A96A;color:#2C1810;font-size:0.92rem;padding:11px 22px;border-radius:100px;border:none;letter-spacing:0.01em;" lang-content="en">Place Order →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ORDER MODAL ============ -->
+<div id="order-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" onclick="handleModalBackdrop(event)">
+  <div class="modal-box">
+    <div class="flex items-center justify-between mb-6">
+      <h2 id="modal-title" class="font-serif text-earth text-xl font-bold" lang-content="he">סיכום ופרטי הזמנה</h2>
+      <h2 id="modal-title" class="font-serif text-earth text-xl font-bold" lang-content="en">Order Summary</h2>
+      <button onclick="closeOrderModal()" class="text-muted hover:text-earth transition-colors cursor-pointer" aria-label="סגור">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- Order items -->
+    <div id="order-summary" class="mb-6 space-y-2"></div>
+
+    <!-- Divider -->
+    <hr class="border-parchment mb-6" />
+
+    <!-- Delivery method -->
+    <div class="mb-5">
+      <label class="block font-sans font-semibold text-ink mb-3 text-sm" lang-content="he">אופן קבלה</label>
+      <label class="block font-sans font-semibold text-ink mb-3 text-sm" lang-content="en">Delivery Method</label>
+      <div class="flex gap-3">
+        <label class="flex-1 cursor-pointer">
+          <input type="radio" name="delivery" value="delivery" class="sr-only" onchange="toggleDelivery(this)" />
+          <div class="delivery-option border-2 border-parchment rounded-xl p-3 text-center transition-colors hover:border-terracotta">
+            <div class="text-2xl mb-1">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6B3A2A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mx-auto"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+            </div>
+            <div class="text-sm font-sans text-ink font-semibold" lang-content="he">משלוח</div>
+            <div class="text-sm font-sans text-ink font-semibold" lang-content="en">Delivery</div>
+            <div class="text-xs text-muted" lang-content="he">+25 ₪</div>
+            <div class="text-xs text-muted" lang-content="en">+₪25</div>
+          </div>
+        </label>
+        <label class="flex-1 cursor-pointer">
+          <input type="radio" name="delivery" value="pickup" class="sr-only" onchange="toggleDelivery(this)" checked />
+          <div class="delivery-option border-2 border-earth rounded-xl p-3 text-center transition-colors hover:border-earth" id="pickup-option-box">
+            <div class="text-2xl mb-1">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6B3A2A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mx-auto"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </div>
+            <div class="text-sm font-sans text-ink font-semibold" lang-content="he">איסוף עצמי</div>
+            <div class="text-sm font-sans text-ink font-semibold" lang-content="en">Pickup</div>
+            <div class="text-xs text-muted" lang-content="he">ח' בן ציון • חינם</div>
+            <div class="text-xs text-muted" lang-content="en">Ben Zion St · Free</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Address (shown only for delivery) -->
+    <div id="address-field" class="mb-5 hidden">
+      <label class="block font-sans font-semibold text-ink mb-2 text-sm" for="address" lang-content="he">כתובת למשלוח</label>
+      <label class="block font-sans font-semibold text-ink mb-2 text-sm" for="address" lang-content="en">Delivery Address</label>
+      <input class="field" id="address" type="text" placeholder="רחוב, מספר בית, עיר" dir="rtl" />
+    </div>
+
+    <!-- Name & Phone -->
+    <div class="grid grid-cols-2 gap-3 mb-5">
+      <div>
+        <label class="block font-sans font-semibold text-ink mb-2 text-sm" for="cust-name" lang-content="he">שם מלא</label>
+        <label class="block font-sans font-semibold text-ink mb-2 text-sm" for="cust-name" lang-content="en">Full Name</label>
+        <input class="field" id="cust-name" type="text" placeholder="שם" />
+      </div>
+      <div>
+        <label class="block font-sans font-semibold text-ink mb-2 text-sm" for="cust-phone" lang-content="he">טלפון</label>
+        <label class="block font-sans font-semibold text-ink mb-2 text-sm" for="cust-phone" lang-content="en">Phone</label>
+        <input class="field" id="cust-phone" type="tel" placeholder="05X-XXXXXXX" dir="ltr" />
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="mb-6">
+      <label class="block font-sans font-semibold text-ink mb-2 text-sm" for="notes" lang-content="he">הערות (אופציונלי)</label>
+      <label class="block font-sans font-semibold text-ink mb-2 text-sm" for="notes" lang-content="en">Notes (optional)</label>
+      <textarea class="field resize-none" id="notes" rows="2" placeholder="אלרגיות, בקשות מיוחדות..."></textarea>
+    </div>
+
+    <!-- Total -->
+    <div class="flex justify-between items-center bg-parchment rounded-xl px-4 py-3 mb-6">
+      <span class="font-sans text-bark text-sm" lang-content="he">סה"כ לתשלום</span>
+      <span class="font-sans text-bark text-sm" lang-content="en">Total</span>
+      <span class="font-serif font-bold text-earth text-xl" id="modal-total">₪0</span>
+    </div>
+
+    <!-- Submit buttons -->
+    <div class="flex flex-col gap-3">
+      <button onclick="submitOrder('whatsapp')" class="w-full bg-earth hover:bg-earth/90 text-cream font-serif font-bold text-base py-3.5 rounded-full transition-colors cursor-pointer flex items-center justify-center gap-2">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        <span lang-content="he">שלח הזמנה בוואצאפ</span>
+        <span lang-content="en">Send via WhatsApp</span>
+      </button>
+      <button onclick="submitOrder('email')" class="w-full border-2 border-earth text-earth hover:bg-parchment font-serif font-bold text-base py-3 rounded-full transition-colors cursor-pointer flex items-center justify-center gap-2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        <span lang-content="he">שלח במייל</span>
+        <span lang-content="en">Send by Email</span>
+      </button>
+    </div>
+
+    <p class="text-center text-muted text-xs mt-4 font-sans" lang-content="he">לאחר שליחת ההזמנה נשלח לך קישור לתשלום ב-Bit</p>
+    <p class="text-center text-muted text-xs mt-4 font-sans" lang-content="en">After submitting, we'll send you a Bit payment link</p>
+  </div>
+</div>
+
+<!-- ============ THANK YOU PAGE ============ -->
+<div id="thankyou-overlay" role="status" aria-live="polite">
+  <!-- Decorative floaters (reused style) -->
+  <svg class="floater" style="width:44px;top:10%;right:10%;animation-delay:0s;" viewBox="0 0 44 44" fill="none"><g stroke="#C4795A" stroke-width="1.2" opacity="0.5"><ellipse cx="22" cy="22" rx="4" ry="11" transform="rotate(0 22 22)"/><ellipse cx="22" cy="22" rx="4" ry="11" transform="rotate(60 22 22)"/><ellipse cx="22" cy="22" rx="4" ry="11" transform="rotate(120 22 22)"/><circle cx="22" cy="22" r="4" fill="#C4795A" opacity="0.4"/></g></svg>
+  <svg class="floater" style="width:32px;bottom:20%;left:8%;animation-delay:2s;" viewBox="0 0 32 32" fill="none"><path d="M16 2 Q21 9 19 16 Q26 11 29 16 Q23 19 21 25 Q16 19 11 25 Q9 19 3 16 Q6 11 13 16 Q11 9 16 2Z" stroke="#8B5E3C" stroke-width="1" opacity="0.5"/></svg>
+
+  <div style="max-width:460px;width:100%;">
+
+    <!-- Animated check / bread icon -->
+    <div class="ty-icon mb-5">
+      <div style="width:88px;height:88px;background:#6B3A2A;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;box-shadow:0 8px 28px rgba(107,58,42,0.25);">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#F7F2E8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+    </div>
+
+    <h2 class="ty-title font-serif text-earth mb-2" style="font-size:clamp(1.8rem,5vw,2.4rem);font-weight:700;" lang-content="he">ההזמנה נשלחה!</h2>
+    <h2 class="ty-title font-serif text-earth mb-2" style="font-size:clamp(1.8rem,5vw,2.4rem);font-weight:700;" lang-content="en">Order Sent!</h2>
+
+    <p class="ty-body font-sans text-muted mb-6" style="font-size:0.95rem;line-height:1.65;" lang-content="he">תודה רבה! ההזמנה שלך התקבלה.<br>כעת ישלח אישור לוואצאפ שלך.</p>
+    <p class="ty-body font-sans text-muted mb-6" style="font-size:0.95rem;line-height:1.65;" lang-content="en">Thank you! Your order was received.<br>A confirmation has been sent to your WhatsApp.</p>
+
+    <!-- Order summary box -->
+    <div class="ty-summary bg-white/70 border border-parchment rounded-2xl p-5 mb-6 text-right" id="ty-order-box" style="backdrop-filter:blur(8px);"></div>
+
+    <!-- Bit payment button -->
+    <div class="ty-btn flex flex-col gap-3">
+      <a id="bit-link" href="#" target="_blank" rel="noopener"
+         class="block w-full text-center font-serif font-bold text-base py-3.5 rounded-full transition-colors cursor-pointer"
+         style="background:#6B3A2A;color:#F7F2E8;">
+        <span lang-content="he">תשלום ב-Bit →</span>
+        <span lang-content="en">Pay via Bit →</span>
+      </a>
+      <button onclick="backToMenu()"
+        class="w-full border-2 border-earth text-earth hover:bg-parchment font-serif font-bold text-base py-3 rounded-full transition-colors cursor-pointer" style="background:transparent;">
+        <span lang-content="he">חזרה לתפריט</span>
+        <span lang-content="en">Back to Menu</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ADMIN LOGIN ============ -->
+<div id="admin-login-overlay" role="dialog" aria-label="כניסת מנהלת">
+  <div style="background:#FDFAF4;border-radius:20px;padding:36px 28px;width:100%;max-width:360px;text-align:center;">
+    <div style="font-size:2rem;margin-bottom:8px;">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#6B3A2A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto;display:block;"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <h2 style="font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-size:1.4rem;font-weight:700;margin-bottom:4px;">כניסת מנהלת</h2>
+    <p style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.85rem;margin-bottom:20px;">הזיני את הסיסמה שלך</p>
+    <input
+      id="admin-password-input"
+      type="password"
+      placeholder="סיסמה"
+      class="field"
+      style="text-align:center;letter-spacing:0.2em;margin-bottom:12px;"
+      onkeydown="if(event.key==='Enter')checkAdminPassword()"
+      dir="ltr"
+    />
+    <div id="admin-pw-error" style="color:#B45032;font-family:'Assistant',sans-serif;font-size:0.82rem;margin-bottom:10px;min-height:18px;"></div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="checkAdminPassword()" class="admin-save-btn" style="flex:1;">כניסה</button>
+      <button onclick="closeAdminLogin()" style="flex:1;background:transparent;border:2px solid #6B3A2A;color:#6B3A2A;font-family:'Frank Ruhl Libre',serif;font-weight:700;font-size:1rem;padding:13px 16px;border-radius:100px;cursor:pointer;">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ADMIN PANEL ============ -->
+<div id="admin-panel" role="main" aria-label="לוח ניהול">
+  <div style="max-width:600px;margin:0 auto;padding:24px 16px 60px;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;padding-top:8px;">
+      <div>
+        <h1 style="font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-size:1.6rem;font-weight:700;margin:0;">לוח ניהול</h1>
+        <p style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.82rem;margin:2px 0 0;">נואיקה — לחם בוטיק</p>
+      </div>
+      <button onclick="closeAdminPanel()" style="background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;" aria-label="סגור">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B3A2A" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- Orders ON/OFF -->
+    <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:14px;padding:18px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+        <div>
+          <div style="font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-weight:700;font-size:1rem;margin-bottom:3px;">קבלת הזמנות</div>
+          <div id="orders-status-text" style="font-family:'Assistant',sans-serif;color:#7A9A50;font-size:0.82rem;">פתוחה — לקוחות יכולים להזמין</div>
+        </div>
+        <label class="admin-toggle" aria-label="הפעלת קבלת הזמנות" style="width:56px;height:30px;">
+          <input type="checkbox" id="orders-toggle" checked onchange="toggleOrdersStatus(this)" />
+          <span class="admin-toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Bit link -->
+    <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:14px;padding:18px;margin-bottom:20px;">
+      <label style="display:block;font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-weight:700;font-size:1rem;margin-bottom:8px;">
+        🔗 קישור Bit לתשלום
+      </label>
+      <input
+        id="admin-bit-link"
+        type="url"
+        class="field"
+        placeholder="https://bit.ly/..."
+        dir="ltr"
+        style="font-size:0.88rem;"
+      />
+      <p style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.78rem;margin-top:6px;">
+        אפליקציית Bit ← "קבלת כסף" ← "שלח קישור"
+      </p>
+    </div>
+
+    <!-- Products section -->
+    <h3 style="font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-size:1.1rem;font-weight:700;margin-bottom:12px;">מנות התפריט</h3>
+    <div id="admin-products-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;"></div>
+
+    <!-- Add product -->
+    <button onclick="openAddProduct()" class="add-product-btn" style="margin-bottom:24px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      הוסף מנה חדשה לתפריט
+    </button>
+
+    <!-- Save button -->
+    <button onclick="saveAdminSettings()" class="admin-save-btn" style="width:100%;font-size:1.05rem;padding:15px;">
+      שמור את כל השינויים ✓
+    </button>
+
+    <!-- Saved feedback -->
+    <div id="admin-saved-msg" style="text-align:center;font-family:'Assistant',sans-serif;color:#6B3A2A;font-size:0.88rem;margin-top:12px;opacity:0;transition:opacity 0.3s;">
+      ✓ השינויים נשמרו בהצלחה!
+    </div>
+
+    <!-- Order log -->
+    <div style="margin-top:32px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <h3 style="font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-size:1.1rem;font-weight:700;margin:0;">יומן הזמנות</h3>
+        <button onclick="clearOrderLog()" style="font-family:'Assistant',sans-serif;font-size:0.75rem;color:#B45032;background:transparent;border:1px solid #E5C5B0;border-radius:100px;padding:4px 12px;cursor:pointer;">נקה הכל</button>
+      </div>
+      <div id="order-log-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ EDIT PRODUCT MODAL ============ -->
+<div id="edit-product-modal" onclick="handleEditBackdrop(event)">
+  <div class="edit-modal-box">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <h3 id="edit-modal-title" style="font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-size:1.25rem;font-weight:700;margin:0;">עריכת מנה</h3>
+      <button onclick="closeEditModal()" style="background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B3A2A" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <input type="hidden" id="edit-product-id" />
+
+    <!-- Image upload -->
+    <div style="margin-bottom:14px;">
+      <label style="font-family:'Assistant',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:6px;">תמונה</label>
+      <div class="img-upload-area" onclick="document.getElementById('edit-img-input').click()">
+        <input type="file" id="edit-img-input" accept="image/*" onchange="previewImage(this)" onclick="event.stopPropagation()" />
+        <img id="edit-img-preview" class="img-preview" alt="תצוגה מקדימה" />
+        <div id="edit-img-placeholder">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C4795A" stroke-width="1.5" stroke-linecap="round" style="margin:0 auto 6px;display:block;"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <div style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.82rem;">לחצי להעלאת תמונה חדשה</div>
+          <div style="font-family:'Assistant',sans-serif;color:#C4B8A0;font-size:0.75rem;margin-top:2px;">JPG, PNG עד 5MB</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Name Hebrew -->
+    <div style="margin-bottom:12px;">
+      <label style="font-family:'Assistant',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:6px;">שם המנה (עברית)</label>
+      <input id="edit-name-he" type="text" class="field" placeholder="לחם מושלם לסופ״ש" />
+    </div>
+
+    <!-- Name English -->
+    <div style="margin-bottom:12px;">
+      <label style="font-family:'Assistant',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:6px;">שם המנה (אנגלית)</label>
+      <input id="edit-name-en" type="text" class="field" dir="ltr" placeholder="Perfect Weekend Loaf" />
+    </div>
+
+    <!-- Desc Hebrew -->
+    <div style="margin-bottom:12px;">
+      <label style="font-family:'Assistant',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:6px;">תיאור (עברית)</label>
+      <textarea id="edit-desc-he" class="field" rows="2" placeholder="קמח חיטה כפרי, מחמצת שיפון..."></textarea>
+    </div>
+
+    <!-- Desc English -->
+    <div style="margin-bottom:12px;">
+      <label style="font-family:'Assistant',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:6px;">תיאור (אנגלית)</label>
+      <textarea id="edit-desc-en" class="field" rows="2" dir="ltr" placeholder="Country wheat flour, rye sourdough..."></textarea>
+    </div>
+
+    <!-- Price -->
+    <div style="margin-bottom:20px;">
+      <label style="font-family:'Assistant',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:6px;">מחיר (₪)</label>
+      <input id="edit-price" type="number" class="field" style="width:120px;" placeholder="30" min="1" dir="ltr" />
+    </div>
+
+    <!-- Buttons -->
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button onclick="saveProductEdit()" class="admin-save-btn" style="width:100%;">שמור מנה ✓</button>
+      <button id="delete-product-btn" onclick="deleteProduct()" class="delete-product-btn" style="width:100%;padding:11px;">מחק מנה זו</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============ FOOTER ============ -->
+<footer style="background:#EDE5D0;border-top:1px solid #D5C9B5;margin-top:0;padding-bottom:8rem;">
+  <div class="max-w-5xl mx-auto px-4 text-center" style="padding-top:2.5rem;padding-bottom:2rem;">
+    <div class="font-serif text-earth font-bold mb-1" style="font-size:1.25rem;">נואיקה</div>
+    <p style="font-family:'Assistant',sans-serif;color:#6B5D4E;font-size:0.82rem;margin-bottom:1rem;" lang-content="he">לחם בוטיק ביתי · רחוב ש. בן ציון, רחובות</p>
+    <p style="font-family:'Assistant',sans-serif;color:#6B5D4E;font-size:0.82rem;margin-bottom:1rem;" lang-content="en">Artisan Home Bakery · Ben Zion St, Rehovot</p>
+    <div class="flex justify-center gap-5">
+      <a href="https://www.instagram.com/nuika_bread" target="_blank" rel="noopener" style="font-family:'Assistant',sans-serif;color:#8B7260;font-size:0.82rem;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#C4795A'" onmouseout="this.style.color='#8B7260'">@nuika_bread</a>
+      <span style="color:#C4B89A;">·</span>
+      <a href="https://wa.me/972547382282" target="_blank" rel="noopener" style="font-family:'Assistant',sans-serif;color:#8B7260;font-size:0.82rem;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#6B3A2A'" onmouseout="this.style.color='#8B7260'">054-7382282</a>
+    </div>
+  </div>
+</footer>
+
+<!-- ============ SCRIPT ============ -->
+<script>
+// ─── PWA SERVICE WORKER ─────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+
+// ─── LANDING ────────────────────────────────────────
+function enterSite() {
+  const landing = document.getElementById('landing');
+  landing.classList.add('exit');
+  landing.addEventListener('transitionend', () => {
+    landing.style.display = 'none';
+    document.body.style.overflow = '';
+  }, { once: true });
+}
+
+function getNextTuesdayDeadline() {
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun,1=Mon,2=Tue,...
+  // Days until next Tuesday (day=2)
+  let daysUntil = (2 - day + 7) % 7;
+  // If it's Tuesday and still before 17:00 — same day
+  if (day === 2 && now.getHours() < 17) daysUntil = 0;
+  // If it's Tuesday after 17:00 — next week
+  else if (day === 2 && now.getHours() >= 17) daysUntil = 7;
+  const deadline = new Date(now);
+  deadline.setDate(now.getDate() + daysUntil);
+  deadline.setHours(17, 0, 0, 0);
+  return deadline;
+}
+
+function updateCountdown() {
+  const now = new Date();
+  const deadline = getNextTuesdayDeadline();
+  const diff = deadline - now;
+  const el   = document.getElementById('countdown-text');
+  const dot  = document.getElementById('countdown-dot');
+  const box  = document.getElementById('landing-countdown');
+  const isHe = !document.body.classList.contains('lang-en');
+
+  if (diff <= 0) {
+    // Orders closed
+    box.classList.add('countdown-closed');
+    dot.classList.add('countdown-dot-closed');
+    el.textContent = isHe ? 'ההזמנות סגורות כרגע' : 'Orders currently closed';
+    return;
+  }
+
+  box.classList.remove('countdown-closed');
+  dot.classList.remove('countdown-dot-closed');
+
+  const totalH = Math.floor(diff / 3600000);
+  const days   = Math.floor(totalH / 24);
+  const hours  = totalH % 24;
+  const mins   = Math.floor((diff % 3600000) / 60000);
+  const secs   = Math.floor((diff % 60000) / 1000);
+
+  let text;
+  if (days > 0) {
+    text = isHe
+      ? `ההזמנות פתוחות · נסגרות בעוד ${days} ימים ו-${hours} שעות`
+      : `Orders open · Close in ${days}d ${hours}h`;
+  } else {
+    const hh = String(hours).padStart(2,'0');
+    const mm = String(mins).padStart(2,'0');
+    const ss = String(secs).padStart(2,'0');
+    text = isHe
+      ? `ההזמנות נסגרות בעוד ${hh}:${mm}:${ss}`
+      : `Orders close in ${hh}:${mm}:${ss}`;
+  }
+  el.textContent = text;
+}
+
+// Start countdown
+updateCountdown();
+setInterval(updateCountdown, 1000);
+
+// Prevent scrolling while landing is visible
+document.body.style.overflow = 'hidden';
+
+// ─── DATA ───────────────────────────────────────────
+// To update the menu, edit this array only.
+const PRODUCTS = [
+  {
+    id: 1,
+    nameHe: 'לחם מושלם לסופ״ש',
+    nameEn: 'Perfect Weekend Loaf',
+    descHe: 'קמח חיטה כפרי ומחמצת שיפון, מצופה שומשום מלא ושחור',
+    descEn: 'Country wheat & rye sourdough, coated in white & black sesame',
+    price: 30,
+    // Replace with actual image path when illustrations arrive:
+    illustration: 'images/1-lechem-mushalam.jpg',
+    svg: null,
+    soldOut: false
+  },
+  {
+    id: 2,
+    nameHe: 'לחם כוסמין מלא',
+    nameEn: 'Whole Spelt Loaf',
+    descHe: 'אגוזי מלך קלויים ומלא טעם',
+    descEn: 'Toasted walnuts, full of flavor',
+    price: 30,
+    illustration: 'images/2-lechem-kusmin.jpg',
+    svg: null,
+    soldOut: false
+  },
+  {
+    id: 3,
+    nameHe: 'באגט מחמצת פריך',
+    nameEn: 'Sourdough Baguette',
+    descHe: 'מצופה זרעים וגרעינים',
+    descEn: 'Covered in seeds & grains',
+    price: 20,
+    illustration: 'images/3-baguette.jpg',
+    svg: null,
+    soldOut: false
+  },
+  {
+    id: 4,
+    nameHe: 'עוגת ארל גריי לימונית',
+    nameEn: 'Lemon Earl Grey Cake',
+    descHe: 'גלייז לימון וטימין, עסיסית ומפתיעה',
+    descEn: 'Lemon glaze & thyme, moist and delightful',
+    price: 45,
+    illustration: 'images/4-ugat-earl-grey.jpg',
+    svg: null,
+    soldOut: false
+  },
+  {
+    id: 5,
+    nameHe: 'לחמניה שוודית',
+    nameEn: 'Swedish Bun',
+    descHe: 'חמאה חומה וקינמון, גלייז קרמל מלוח',
+    descEn: 'Brown butter & cinnamon, salted caramel glaze',
+    price: 25,
+    illustration: 'images/5-lachmaniya.jpg',
+    svg: null,
+    soldOut: false
+  },
+  {
+    id: 6,
+    nameHe: 'מאפה עננים',
+    nameEn: 'Clouds Pastry',
+    descHe: 'ריבת תות, קרם פטיסייר, אוכמניות ושקדים קלויים',
+    descEn: 'Strawberry jam, pastry cream, blueberries & toasted almonds',
+    price: 30,
+    illustration: 'images/6-maafe-ananin.jpg',
+    svg: null,
+    soldOut: false
+  },
+];
+
+// ─── STATE ─────────────────────────────────────────
+const cart = {}; // { productId: quantity }
+let deliveryMethod = 'pickup';
+const DELIVERY_COST = 25;
+const MIN_ORDER = 100;
+const OWNER_WHATSAPP = '972547382282';
+const OWNER_EMAIL    = 'shaharazmon24@gmail.com';
+
+// ─── RENDER PRODUCTS ───────────────────────────────
+function renderProducts() {
+  const grid = document.getElementById('products-grid');
+  grid.innerHTML = PRODUCTS.map(p => `
+    <div
+      class="product-card${p.soldOut ? ' sold-out' : ''}"
+      id="card-${p.id}"
+      onclick="${p.soldOut ? '' : `toggleProduct(${p.id})`}"
+      tabindex="${p.soldOut ? '-1' : '0'}"
+      role="button"
+      aria-label="${p.nameHe} — ${p.price} ₪${p.soldOut ? ' — אזל המלאי' : ''}"
+      aria-disabled="${p.soldOut}"
+      onkeydown="if(!${p.soldOut}&&(event.key==='Enter'||event.key===' '))toggleProduct(${p.id})"
+    >
+      <!-- Sold-out stamp -->
+      ${p.soldOut ? `<div class="sold-out-stamp" aria-hidden="true">אזל המלאי</div>` : ''}
+
+      <!-- Qty badge -->
+      <div class="qty-badge" id="badge-${p.id}">0</div>
+
+      <!-- Illustration -->
+      <div class="illus-wrap">
+        ${p.illustration
+          ? `<img src="${p.illustration}" alt="${p.nameHe}" loading="lazy" style="width:100%;height:100%;object-fit:cover;" />`
+          : p.svg}
+      </div>
+
+      <!-- Info -->
+      <div style="padding:12px 14px 14px;">
+        <div class="font-serif font-bold text-ink leading-snug mb-1" style="font-size:0.92rem;" lang-content="he">${p.nameHe}</div>
+        <div class="font-serif font-bold text-ink leading-snug mb-1" style="font-size:0.92rem;" lang-content="en">${p.nameEn}</div>
+        <p style="font-family:'Assistant',sans-serif;font-size:0.75rem;line-height:1.5;color:#6B5D4E;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" lang-content="he">${p.descHe}</p>
+        <p style="font-family:'Assistant',sans-serif;font-size:0.75rem;line-height:1.5;color:#6B5D4E;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" lang-content="en">${p.descEn}</p>
+        <div class="flex items-center justify-between">
+          <span class="font-serif font-bold text-earth" style="font-size:1rem;">₪${p.price}</span>
+          <span class="add-icon transition-all duration-200" id="add-icon-${p.id}" style="color:#C4795A;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          </span>
+        </div>
+      </div>
+
+      <!-- Qty controls (shown when in cart) -->
+      <div id="qty-controls-${p.id}" class="hidden items-center justify-between border-t px-3 py-2.5" style="border-color:#E5D9C5;background:#F5EFE3;">
+        <button class="qty-btn" onclick="changeQty(event,${p.id},-1)" aria-label="הפחת כמות">−</button>
+        <span class="font-sans font-semibold text-earth text-sm" id="qty-display-${p.id}">1</span>
+        <button class="qty-btn" onclick="changeQty(event,${p.id},+1)" aria-label="הוסף כמות">+</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── TOGGLE PRODUCT ────────────────────────────────
+function toggleProduct(id) {
+  if (cart[id]) {
+    // remove
+    delete cart[id];
+  } else {
+    cart[id] = 1;
+  }
+  updateCard(id);
+  updateCartBar();
+  animateCard(id);
+}
+
+function changeQty(e, id, delta) {
+  e.stopPropagation();
+  const newQty = (cart[id] || 0) + delta;
+  if (newQty <= 0) {
+    delete cart[id];
+  } else {
+    cart[id] = newQty;
+  }
+  updateCard(id);
+  updateCartBar();
+}
+
+function updateCard(id) {
+  const qty = cart[id] || 0;
+  const card    = document.getElementById(`card-${id}`);
+  const badge   = document.getElementById(`badge-${id}`);
+  const icon    = document.getElementById(`add-icon-${id}`);
+  const controls= document.getElementById(`qty-controls-${id}`);
+  const display = document.getElementById(`qty-display-${id}`);
+
+  if (qty > 0) {
+    card.classList.add('in-cart');
+    badge.textContent = qty;
+    badge.classList.add('visible');
+    icon.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`;
+    controls.classList.remove('hidden');
+    controls.classList.add('flex');
+    if (display) display.textContent = qty;
+  } else {
+    card.classList.remove('in-cart');
+    badge.classList.remove('visible');
+    icon.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`;
+    controls.classList.add('hidden');
+    controls.classList.remove('flex');
+  }
+}
+
+function animateCard(id) {
+  const card = document.getElementById(`card-${id}`);
+  card.classList.remove('pulse');
+  requestAnimationFrame(() => card.classList.add('pulse'));
+}
+
+// ─── CART BAR ──────────────────────────────────────
+function getCartTotal() {
+  return Object.entries(cart).reduce((sum, [id, qty]) => {
+    const p = PRODUCTS.find(p => p.id === +id);
+    return sum + (p ? p.price * qty : 0);
+  }, 0);
+}
+
+function getCartCount() {
+  return Object.values(cart).reduce((s, q) => s + q, 0);
+}
+
+function updateCartBar() {
+  const total = getCartTotal();
+  const count = getCartCount();
+  const bar = document.getElementById('cart-bar');
+  document.getElementById('cart-count').textContent = count;
+  document.getElementById('cart-total').textContent = `₪${total}`;
+  if (count > 0) bar.classList.add('visible');
+  else bar.classList.remove('visible');
+}
+
+// ─── ORDER MODAL ───────────────────────────────────
+function openOrderModal() {
+  if (getCartCount() === 0) return;
+  const modal = document.getElementById('order-modal');
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  renderOrderSummary();
+}
+
+function closeOrderModal() {
+  const modal = document.getElementById('order-modal');
+  modal.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function handleModalBackdrop(e) {
+  if (e.target === document.getElementById('order-modal')) closeOrderModal();
+}
+
+function renderOrderSummary() {
+  const summary = document.getElementById('order-summary');
+  const isEn = document.body.classList.contains('lang-en');
+  const items = Object.entries(cart).map(([id, qty]) => {
+    const p = PRODUCTS.find(p => p.id === +id);
+    if (!p) return '';
+    return `
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <span class="font-sans text-muted text-sm">${qty}×</span>
+          <span class="font-sans text-ink text-sm font-medium">${isEn ? p.nameEn : p.nameHe}</span>
+        </div>
+        <span class="font-sans text-earth text-sm font-semibold">₪${p.price * qty}</span>
+      </div>
+    `;
+  });
+  summary.innerHTML = items.join('');
+  updateModalTotal();
+}
+
+function updateModalTotal() {
+  const itemsTotal = getCartTotal();
+  const delivery = deliveryMethod === 'delivery' ? DELIVERY_COST : 0;
+  const grandTotal = itemsTotal + delivery;
+  document.getElementById('modal-total').textContent = `₪${grandTotal}`;
+}
+
+function toggleDelivery(radio) {
+  deliveryMethod = radio.value;
+  const addressField = document.getElementById('address-field');
+  const options = document.querySelectorAll('.delivery-option');
+  options.forEach(o => {
+    o.style.borderColor = '';
+    o.classList.remove('border-earth');
+    o.classList.add('border-parchment');
+  });
+  radio.closest('label').querySelector('.delivery-option').classList.remove('border-parchment');
+  radio.closest('label').querySelector('.delivery-option').classList.add('border-earth');
+
+  if (deliveryMethod === 'delivery') {
+    addressField.classList.remove('hidden');
+  } else {
+    addressField.classList.add('hidden');
+  }
+  updateModalTotal();
+}
+
+// ─── SUBMIT ORDER ──────────────────────────────────
+function submitOrder(method) {
+  const name  = document.getElementById('cust-name').value.trim();
+  const phone = document.getElementById('cust-phone').value.trim();
+  const address = document.getElementById('address').value.trim();
+  const notes = document.getElementById('notes').value.trim();
+  const isEn  = document.body.classList.contains('lang-en');
+
+  if (!name || !phone) {
+    alert(isEn ? 'Please fill in name and phone.' : 'נא למלא שם וטלפון.');
+    return;
+  }
+  if (deliveryMethod === 'delivery' && !address) {
+    alert(isEn ? 'Please enter a delivery address.' : 'נא להזין כתובת למשלוח.');
+    return;
+  }
+  const itemsTotal = getCartTotal();
+  if (itemsTotal < MIN_ORDER) {
+    alert(isEn
+      ? `Minimum order is ₪${MIN_ORDER}. Current total: ₪${itemsTotal}.`
+      : `מינימום הזמנה ${MIN_ORDER} ₪. סה"כ כרגע: ${itemsTotal} ₪.`);
+    return;
+  }
+
+  // Build message
+  const lines = Object.entries(cart).map(([id, qty]) => {
+    const p = PRODUCTS.find(p => p.id === +id);
+    return `• ${p.nameHe} x${qty} = ₪${p.price * qty}`;
+  });
+  const delivery = deliveryMethod === 'delivery' ? DELIVERY_COST : 0;
+  const grandTotal = itemsTotal + delivery;
+
+  const deliveryLine = deliveryMethod === 'delivery'
+    ? `📦 משלוח: ₪${DELIVERY_COST}\nכתובת: ${address}`
+    : `🏠 איסוף עצמי מרחוב ש. בן ציון`;
+
+  const msg = [
+    `שלום! הזמנה חדשה מ-${name} 🥖`,
+    ``,
+    ...lines,
+    ``,
+    deliveryLine,
+    ``,
+    `סה"כ לתשלום: ₪${grandTotal}`,
+    `טלפון: ${phone}`,
+    notes ? `הערות: ${notes}` : '',
+  ].filter(l => l !== undefined).join('\n');
+
+  const encoded = encodeURIComponent(msg);
+
+  if (method === 'whatsapp') {
+    // Send to owner
+    window.open(`https://wa.me/${OWNER_WHATSAPP}?text=${encoded}`, '_blank');
+    // Send confirmation to customer (after short delay so both open)
+    setTimeout(() => {
+      const customerPhone = phone.replace(/\D/g, '');
+      const customerIntl = customerPhone.startsWith('0')
+        ? '972' + customerPhone.slice(1)
+        : customerPhone;
+      const confirmMsg = encodeURIComponent(
+        `שלום ${name}! 🌾\nקיבלנו את ההזמנה שלך מנואיקה ✔️\n\n${lines.join('\n')}\n\nסה"כ: ₪${grandTotal}\nנשלח לך קישור לתשלום ב-Bit בקרוב 🍞`
+      );
+      window.open(`https://wa.me/${customerIntl}?text=${confirmMsg}`, '_blank');
+    }, 600);
+  } else {
+    const subject = encodeURIComponent(`הזמנה מנואיקה — ${name}`);
+    const body = encodeURIComponent(msg);
+    window.open(`mailto:${OWNER_EMAIL}?subject=${subject}&body=${body}`, '_blank');
+  }
+
+  // Save to order log
+  saveOrderToLog({
+    name, phone,
+    items: lines.join(' | '),
+    total: grandTotal,
+    delivery: deliveryMethod,
+    address: deliveryMethod === 'delivery' ? address : '',
+    notes
+  });
+
+  // Close order modal
+  closeOrderModal();
+
+  // Show thank-you page
+  showThankYou({ name, lines, grandTotal, phone });
+}
+
+function showThankYou({ name, lines, grandTotal, phone }) {
+  const overlay = document.getElementById('thankyou-overlay');
+  const box     = document.getElementById('ty-order-box');
+  const bitLink = document.getElementById('bit-link');
+  const isHe    = !document.body.classList.contains('lang-en');
+
+  // Build summary HTML
+  box.innerHTML = `
+    <div class="font-sans text-bark text-sm font-semibold mb-3" style="color:#6B3A2A;">
+      ${isHe ? `הזמנה של ${name}` : `Order for ${name}`}
+    </div>
+    ${lines.map(l => `<div class="font-sans text-ink text-sm py-1 border-b border-parchment">${l}</div>`).join('')}
+    <div class="flex justify-between items-center pt-3 mt-1">
+      <span class="font-sans text-muted text-sm">${isHe ? 'סה"כ לתשלום' : 'Total'}</span>
+      <span class="font-serif font-bold text-earth text-lg">₪${grandTotal}</span>
+    </div>
+  `;
+
+  // Bit link — from localStorage or default
+  bitLink.href = localStorage.getItem('nuika_bit_link') || 'https://bit.ly/nuika-bit';
+
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function backToMenu() {
+  const overlay = document.getElementById('thankyou-overlay');
+  overlay.classList.remove('open');
+  document.body.style.overflow = '';
+  // Clear cart
+  Object.keys(cart).forEach(id => {
+    delete cart[id];
+    updateCard(+id);
+  });
+  updateCartBar();
+}
+
+// ─── ADMIN PANEL ───────────────────────────────────
+const ADMIN_PASSWORD = 'nuika2026'; // ← שני את הסיסמה כאן
+
+// פתיחת לוח הניהול: הקלידי את הסיסמה ב-URL — index.html?admin
+(function checkAdminAccess() {
+  if (window.location.search.includes('admin')) {
+    document.getElementById('admin-login-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+})();
+
+function checkAdminPassword() {
+  const input = document.getElementById('admin-password-input').value;
+  const errEl = document.getElementById('admin-pw-error');
+  if (input === ADMIN_PASSWORD) {
+    closeAdminLogin();
+    openAdminPanel();
+  } else {
+    errEl.textContent = 'סיסמה שגויה, נסי שוב';
+    document.getElementById('admin-password-input').value = '';
+    document.getElementById('admin-password-input').focus();
+  }
+}
+
+function closeAdminLogin() {
+  document.getElementById('admin-login-overlay').classList.remove('open');
+  document.getElementById('admin-pw-error').textContent = '';
+  document.getElementById('admin-password-input').value = '';
+  if (!document.getElementById('admin-panel').classList.contains('open')) {
+    document.body.style.overflow = '';
+  }
+}
+
+function openAdminPanel() {
+  const savedBit = localStorage.getItem('nuika_bit_link') || '';
+  document.getElementById('admin-bit-link').value = savedBit;
+
+  // Orders toggle state
+  const isOpen = localStorage.getItem('nuika_orders_open') !== '0';
+  const tog = document.getElementById('orders-toggle');
+  if (tog) {
+    tog.checked = isOpen;
+    const statusText = document.getElementById('orders-status-text');
+    statusText.textContent = isOpen ? 'פתוחה — לקוחות יכולים להזמין' : 'סגורה — לקוחות לא יוכלו להזמין';
+    statusText.style.color = isOpen ? '#7A9A50' : '#B45032';
+  }
+
+  renderAdminProducts();
+  renderOrderLog();
+  document.getElementById('admin-panel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function renderAdminProducts() {
+  const list = document.getElementById('admin-products-list');
+  list.innerHTML = PRODUCTS.map(p => `
+    <div class="admin-card">
+      <img src="${p.illustration || ''}" alt="${p.nameHe}"
+        onerror="this.style.display='none'"
+        style="width:56px;height:56px;object-fit:cover;border-radius:8px;flex-shrink:0;" />
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:'Frank Ruhl Libre',serif;font-weight:700;color:#2C1810;font-size:0.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.nameHe}</div>
+        <div style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.78rem;">₪${p.price}</div>
+      </div>
+      <!-- Edit button -->
+      <button onclick="openEditProduct(${p.id})"
+        style="background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:8px;padding:6px 10px;cursor:pointer;flex-shrink:0;"
+        aria-label="ערוך ${p.nameHe}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B3A2A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
+      <!-- Toggle -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;">
+        <label class="admin-toggle" aria-label="זמינות ${p.nameHe}">
+          <input type="checkbox" id="admin-toggle-${p.id}" ${p.soldOut ? '' : 'checked'}
+            onchange="liveToggleSoldOut(${p.id}, this)" />
+          <span class="admin-toggle-slider"></span>
+        </label>
+        <span id="admin-status-${p.id}" style="font-family:'Assistant',sans-serif;font-size:0.7rem;color:${p.soldOut ? '#B45032' : '#7A9A50'};">
+          ${p.soldOut ? 'אזל' : 'זמין'}
+        </span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function liveToggleSoldOut(id, checkbox) {
+  const p = PRODUCTS.find(p => p.id === id);
+  if (!p) return;
+  p.soldOut = !checkbox.checked;
+  const statusEl = document.getElementById(`admin-status-${id}`);
+  statusEl.textContent = p.soldOut ? 'אזל' : 'זמין';
+  statusEl.style.color = p.soldOut ? '#B45032' : '#7A9A50';
+}
+
+function saveAdminSettings() {
+  // Save Bit link
+  const bitVal = document.getElementById('admin-bit-link').value.trim();
+  if (bitVal) localStorage.setItem('nuika_bit_link', bitVal);
+
+  // Save soldOut states
+  const soldOutMap = {};
+  PRODUCTS.forEach(p => { soldOutMap[p.id] = p.soldOut; });
+  localStorage.setItem('nuika_soldout', JSON.stringify(soldOutMap));
+
+  // Re-render products with new states
+  renderProducts();
+  updateCartBar();
+
+  // Show saved confirmation
+  const msg = document.getElementById('admin-saved-msg');
+  msg.style.opacity = '1';
+  setTimeout(() => { msg.style.opacity = '0'; }, 2500);
+}
+
+function closeAdminPanel() {
+  document.getElementById('admin-panel').classList.remove('open');
+  document.body.style.overflow = '';
+  // Clean URL
+  history.replaceState(null, '', window.location.pathname);
+}
+
+// Init orders-open state on page load
+updateOrdersOpenBanner();
+
+// Load saved settings on page load
+(function loadSavedSettings() {
+  // Bit link
+  const savedBit = localStorage.getItem('nuika_bit_link');
+  if (savedBit) {
+    const bitLinkEl = document.getElementById('bit-link');
+    if (bitLinkEl) bitLinkEl.href = savedBit;
+  }
+
+  // Full products (if saved via admin)
+  const savedProducts = localStorage.getItem('nuika_products');
+  if (savedProducts) {
+    try {
+      const saved = JSON.parse(savedProducts);
+      // Replace PRODUCTS array in place
+      PRODUCTS.length = 0;
+      saved.forEach(p => PRODUCTS.push({ ...p, svg: null }));
+    } catch(e) {}
+  } else {
+    // Fallback: load only soldOut states
+    const savedSoldOut = localStorage.getItem('nuika_soldout');
+    if (savedSoldOut) {
+      const map = JSON.parse(savedSoldOut);
+      PRODUCTS.forEach(p => {
+        if (map[p.id] !== undefined) p.soldOut = map[p.id];
+      });
+    }
+  }
+})();
+
+// ─── ORDERS ON/OFF ─────────────────────────────────
+function toggleOrdersStatus(checkbox) {
+  const isOpen = checkbox.checked;
+  localStorage.setItem('nuika_orders_open', isOpen ? '1' : '0');
+  const statusText = document.getElementById('orders-status-text');
+  statusText.textContent = isOpen
+    ? 'פתוחה — לקוחות יכולים להזמין'
+    : 'סגורה — לקוחות לא יוכלו להזמין';
+  statusText.style.color = isOpen ? '#7A9A50' : '#B45032';
+  updateOrdersOpenBanner();
+}
+
+function updateOrdersOpenBanner() {
+  const isOpen = localStorage.getItem('nuika_orders_open') !== '0';
+  let banner = document.getElementById('orders-closed-banner');
+  if (!isOpen) {
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'orders-closed-banner';
+      banner.style.cssText = `
+        position:fixed;top:0;left:0;right:0;z-index:45;
+        background:#6B3A2A;color:#F7F2E8;
+        text-align:center;padding:10px 16px;
+        font-family:'Assistant',sans-serif;font-size:0.9rem;
+        `;
+      banner.textContent = 'ההזמנות סגורות כרגע — נחזור בקרוב 🌾';
+      document.body.prepend(banner);
+    }
+    // Disable cart button
+    document.querySelectorAll('.product-card:not(.sold-out)').forEach(c => {
+      c.style.pointerEvents = 'none';
+      c.style.opacity = '0.6';
+    });
+  } else {
+    if (banner) banner.remove();
+    document.querySelectorAll('.product-card:not(.sold-out)').forEach(c => {
+      c.style.pointerEvents = '';
+      c.style.opacity = '';
+    });
+  }
+}
+
+// ─── ORDER LOG ──────────────────────────────────────
+function saveOrderToLog(orderData) {
+  const log = JSON.parse(localStorage.getItem('nuika_order_log') || '[]');
+  log.unshift({ ...orderData, date: new Date().toLocaleString('he-IL') });
+  if (log.length > 50) log.pop(); // Keep last 50
+  localStorage.setItem('nuika_order_log', JSON.stringify(log));
+}
+
+function renderOrderLog() {
+  const log = JSON.parse(localStorage.getItem('nuika_order_log') || '[]');
+  const el = document.getElementById('order-log-list');
+  if (!el) return;
+  if (log.length === 0) {
+    el.innerHTML = `<div style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.82rem;text-align:center;padding:16px 0;">אין הזמנות עדיין</div>`;
+    return;
+  }
+  el.innerHTML = log.map((o, i) => `
+    <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:12px;padding:14px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+        <div style="font-family:'Frank Ruhl Libre',serif;font-weight:700;color:#2C1810;font-size:0.92rem;">${o.name}</div>
+        <div style="font-family:'Assistant',sans-serif;font-size:0.72rem;color:#9B8B75;">${o.date}</div>
+      </div>
+      <div style="font-family:'Assistant',sans-serif;font-size:0.78rem;color:#6B5D4E;margin-bottom:4px;">${o.items}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-family:'Assistant',sans-serif;font-size:0.78rem;color:#8B7260;">${o.delivery === 'delivery' ? '📦 משלוח — ' + (o.address || '') : '🏠 איסוף עצמי'}</div>
+        <div style="font-family:'Frank Ruhl Libre',serif;font-weight:700;color:#6B3A2A;font-size:0.95rem;">₪${o.total}</div>
+      </div>
+      ${o.notes ? `<div style="font-family:'Assistant',sans-serif;font-size:0.75rem;color:#9B8B75;margin-top:4px;">הערה: ${o.notes}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function clearOrderLog() {
+  if (!confirm('למחוק את כל יומן ההזמנות?')) return;
+  localStorage.removeItem('nuika_order_log');
+  renderOrderLog();
+}
+
+// ─── EDIT / ADD / DELETE PRODUCT ───────────────────
+let editingNewProduct = false;
+let pendingImageDataUrl = null;
+
+function openEditProduct(id) {
+  const p = PRODUCTS.find(p => p.id === id);
+  if (!p) return;
+  editingNewProduct = false;
+  pendingImageDataUrl = null;
+
+  document.getElementById('edit-modal-title').textContent = 'עריכת מנה';
+  document.getElementById('edit-product-id').value = id;
+  document.getElementById('edit-name-he').value   = p.nameHe;
+  document.getElementById('edit-name-en').value   = p.nameEn;
+  document.getElementById('edit-desc-he').value   = p.descHe;
+  document.getElementById('edit-desc-en').value   = p.descEn;
+  document.getElementById('edit-price').value     = p.price;
+  document.getElementById('delete-product-btn').style.display = 'block';
+
+  // Show current image
+  const preview = document.getElementById('edit-img-preview');
+  const placeholder = document.getElementById('edit-img-placeholder');
+  if (p.illustration) {
+    preview.src = p.illustration;
+    preview.style.display = 'block';
+    placeholder.style.display = 'none';
+  } else {
+    preview.style.display = 'none';
+    placeholder.style.display = 'block';
+  }
+  document.getElementById('edit-img-input').value = '';
+
+  document.getElementById('edit-product-modal').classList.add('open');
+}
+
+function openAddProduct() {
+  editingNewProduct = true;
+  pendingImageDataUrl = null;
+
+  document.getElementById('edit-modal-title').textContent  = 'הוספת מנה חדשה';
+  document.getElementById('edit-product-id').value = '';
+  document.getElementById('edit-name-he').value    = '';
+  document.getElementById('edit-name-en').value    = '';
+  document.getElementById('edit-desc-he').value    = '';
+  document.getElementById('edit-desc-en').value    = '';
+  document.getElementById('edit-price').value      = '';
+  document.getElementById('delete-product-btn').style.display = 'none';
+
+  const preview = document.getElementById('edit-img-preview');
+  const placeholder = document.getElementById('edit-img-placeholder');
+  preview.style.display = 'none';
+  placeholder.style.display = 'block';
+  document.getElementById('edit-img-input').value = '';
+
+  document.getElementById('edit-product-modal').classList.add('open');
+}
+
+function previewImage(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    pendingImageDataUrl = e.target.result;
+    const preview = document.getElementById('edit-img-preview');
+    const placeholder = document.getElementById('edit-img-placeholder');
+    preview.src = pendingImageDataUrl;
+    preview.style.display = 'block';
+    placeholder.style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveProductEdit() {
+  const nameHe = document.getElementById('edit-name-he').value.trim();
+  const nameEn = document.getElementById('edit-name-en').value.trim();
+  const descHe = document.getElementById('edit-desc-he').value.trim();
+  const descEn = document.getElementById('edit-desc-en').value.trim();
+  const price  = parseInt(document.getElementById('edit-price').value);
+
+  if (!nameHe || !price) {
+    alert('חובה למלא שם בעברית ומחיר');
+    return;
+  }
+
+  if (editingNewProduct) {
+    // Add new product
+    const newId = Date.now();
+    PRODUCTS.push({
+      id: newId,
+      nameHe, nameEn: nameEn || nameHe,
+      descHe: descHe || '',
+      descEn: descEn || '',
+      price,
+      illustration: pendingImageDataUrl || null,
+      svg: null,
+      soldOut: false
+    });
+  } else {
+    // Update existing
+    const id = +document.getElementById('edit-product-id').value;
+    const p = PRODUCTS.find(p => p.id === id);
+    if (!p) return;
+    p.nameHe = nameHe;
+    p.nameEn = nameEn || nameHe;
+    p.descHe = descHe;
+    p.descEn = descEn;
+    p.price  = price;
+    if (pendingImageDataUrl) p.illustration = pendingImageDataUrl;
+  }
+
+  saveAllProducts();
+  closeEditModal();
+  renderAdminProducts();
+  renderProducts();
+}
+
+function deleteProduct() {
+  const id = +document.getElementById('edit-product-id').value;
+  if (!confirm('למחוק את המנה הזו?')) return;
+  const idx = PRODUCTS.findIndex(p => p.id === id);
+  if (idx !== -1) PRODUCTS.splice(idx, 1);
+  // Remove from cart
+  delete cart[id];
+  saveAllProducts();
+  closeEditModal();
+  renderAdminProducts();
+  renderProducts();
+  updateCartBar();
+}
+
+function closeEditModal() {
+  document.getElementById('edit-product-modal').classList.remove('open');
+  pendingImageDataUrl = null;
+}
+
+function handleEditBackdrop(e) {
+  if (e.target === document.getElementById('edit-product-modal')) closeEditModal();
+}
+
+function saveAllProducts() {
+  // Save full products array (without SVGs which are large) to localStorage
+  const toSave = PRODUCTS.map(p => ({
+    id: p.id, nameHe: p.nameHe, nameEn: p.nameEn,
+    descHe: p.descHe, descEn: p.descEn,
+    price: p.price, illustration: p.illustration,
+    soldOut: p.soldOut
+  }));
+  localStorage.setItem('nuika_products', JSON.stringify(toSave));
+}
+
+// ─── LANGUAGE TOGGLE ───────────────────────────────
+function toggleLang() {
+  const isEn = document.body.classList.toggle('lang-en');
+  document.documentElement.setAttribute('lang', isEn ? 'en' : 'he');
+  document.documentElement.setAttribute('dir', isEn ? 'ltr' : 'rtl');
+  document.getElementById('lang-btn').textContent = isEn ? 'עב' : 'EN';
+  renderOrderSummary();
+  updateCountdown();
+}
+
+// ─── INIT ──────────────────────────────────────────
+renderProducts();
+</script>
+</body>
+</html>

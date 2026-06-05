@@ -1,0 +1,26 @@
+{
+  "name": "נואיקה — לחם בוטיק",
+  "short_name": "נואיקה",
+  "description": "לחם בוטיק ביתי | מחמצת, קמחים איכותיים, אפייה שבועית ברחובות",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#F7F2E8",
+  "theme_color": "#6B3A2A",
+  "orientation": "portrait",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "logo.png.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo.png.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

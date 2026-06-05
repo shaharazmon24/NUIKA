@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($env:PATH = [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"User\"\\); python --version 2>&1)",
+      "Bash(ls \"C:\\\\Projects\\\\NUIKA\\\\\" && ls \"C:\\\\Projects\\\\NUIKA\\\\images\\\\\" 2>/dev/null || echo \"no images folder\")"
+    ]
+  }
+}
