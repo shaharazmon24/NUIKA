@@ -717,6 +717,56 @@
       height: 1px;
       background: linear-gradient(to right, transparent, #C4B89A 40%, #C4B89A 60%, transparent);
     }
+
+    /* ── DARK MODE ────────────────────────────────── */
+    body.dark { background-color: #1A1410; color: #E8DDD0; }
+    body.dark header { background: rgba(22,16,12,0.94) !important; border-color: #3A2E24 !important; }
+    body.dark #landing, body.dark #thankyou-overlay { background: #1C1610; }
+    body.dark .product-card { background: #241E18; border-color: #3A2E24; }
+    body.dark .product-card.in-cart { background: #2C2016; border-color: #8B5E3C; }
+    body.dark .product-card:hover { border-color: #C4795A; }
+    body.dark .illus-wrap { background: #2A2218; }
+    body.dark #qty-controls-1, body.dark [id^="qty-controls-"] { background: #2A2218 !important; border-color: #3A2E24 !important; }
+    body.dark .modal-box, body.dark .edit-modal-box { background: #1E1812; }
+    body.dark #order-modal { background: rgba(10,6,4,0.7); }
+    body.dark .field { background: #2A2218; border-color: #4A3A2A; color: #E8DDD0; }
+    body.dark .field::placeholder { color: #7A6A58; }
+    body.dark footer { background: #1C1610; border-color: #3A2E24; }
+    body.dark #admin-panel { background: #1A1410; }
+    body.dark .admin-card, body.dark .order-card, body.dark .order-stat-card { background: #241E18; border-color: #3A2E24; }
+    body.dark .order-actions { border-color: #3A2E24; }
+    body.dark .baking-row { border-color: #3A2E24; }
+    body.dark #admin-login-overlay > div { background: #1E1812; }
+    body.dark .btn-status { color: #D4A96A; border-color: #4A3A2A; background: transparent; }
+    body.dark .btn-status:hover { background: #2A2218; border-color: #C4795A; }
+    body.dark .btn-status.active { background: #6B3A2A; color: #F7F2E8; border-color: #6B3A2A; }
+    body.dark .add-product-btn { border-color: #C4795A; color: #C4795A; }
+    body.dark .add-product-btn:hover { background: #C4795A; color: #1A1410; }
+    body.dark .admin-toggle-slider { background: #3A2E24; }
+    body.dark #orders-closed-banner { background: #4A2A1A; }
+    body.dark .countdown-box { background: rgba(212,169,106,0.1); border-color: rgba(212,169,106,0.25); color: #D4A96A; }
+    body.dark [style*="background:#F0E9D8"], body.dark [style*="background: #F0E9D8"] { background: #2A2218 !important; }
+    body.dark [style*="background:#FDFAF4"], body.dark [style*="background: #FDFAF4"] { background: #241E18 !important; }
+    body.dark [style*="background:#EDE5D0"], body.dark [style*="background: #EDE5D0"] { background: #2A2218 !important; }
+    body.dark [style*="color:#2C1810"] { color: #E8DDD0 !important; }
+    body.dark [style*="color:#6B5D4E"] { color: #A89880 !important; }
+    body.dark [style*="color:#9B8B75"] { color: #7A6A58 !important; }
+    body.dark .dark-toggle-btn { background: #2A2218; border-color: #4A3A2A; color: #D4A96A; }
+    body.dark .dark-toggle-btn:hover { border-color: #D4A96A; }
+
+    /* Dark mode toggle button */
+    .dark-toggle-btn {
+      background: transparent;
+      border: 1px solid rgba(107,58,42,0.3);
+      border-radius: 100px;
+      width: 34px; height: 34px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      color: #6B3A2A;
+      flex-shrink: 0;
+    }
+    .dark-toggle-btn:hover { border-color: #6B3A2A; background: rgba(107,58,42,0.08); }
   </style>
 </head>
 <body class="font-sans text-ink">
@@ -813,6 +863,10 @@
     </div>
     <!-- Nav -->
     <div class="flex items-center gap-4">
+      <button onclick="toggleDarkMode()" class="dark-toggle-btn" id="dark-toggle-btn" aria-label="מצב לילה">
+        <svg id="dark-icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        <svg id="dark-icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
       <button onclick="toggleLang()" class="text-xs text-muted hover:text-earth transition-colors font-sans tracking-wide px-2 py-1 rounded border border-muted/30 hover:border-earth cursor-pointer" id="lang-btn">EN</button>
       <a href="https://www.instagram.com/nuika_bread" target="_blank" rel="noopener" aria-label="Instagram" class="text-muted hover:text-terracotta transition-colors cursor-pointer">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -1126,6 +1180,27 @@
       </p>
     </div>
 
+    <!-- Deadline settings -->
+    <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:14px;padding:18px;margin-bottom:20px;">
+      <label style="display:block;font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-weight:700;font-size:1rem;margin-bottom:8px;">
+        ⏰ מועד סגירת הזמנות
+      </label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">
+        <div>
+          <label style="font-family:'Assistant',sans-serif;font-size:0.8rem;color:#9B8B75;display:block;margin-bottom:4px;">תאריך</label>
+          <input id="admin-deadline-date" type="date" class="field" style="font-size:0.88rem;" dir="ltr" />
+        </div>
+        <div>
+          <label style="font-family:'Assistant',sans-serif;font-size:0.8rem;color:#9B8B75;display:block;margin-bottom:4px;">שעה</label>
+          <input id="admin-deadline-time" type="time" class="field" style="font-size:0.88rem;" dir="ltr" value="17:00" />
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="clearDeadline()" style="flex:1;background:transparent;border:1.5px solid #D5C9B5;color:#9B8B75;font-family:'Assistant',sans-serif;font-size:0.8rem;padding:7px;border-radius:8px;cursor:pointer;">חזור לברירת מחדל (שלישי 17:00)</button>
+      </div>
+      <p id="admin-deadline-preview" style="font-family:'Assistant',sans-serif;color:#7A9A50;font-size:0.78rem;margin-top:8px;"></p>
+    </div>
+
     <!-- Products section -->
     <h3 style="font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-size:1.1rem;font-weight:700;margin-bottom:12px;">מנות התפריט</h3>
     <div id="admin-products-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;"></div>
@@ -1154,10 +1229,16 @@
           <h2 style="font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-size:1.3rem;font-weight:700;margin:0 0 2px;">ניהול הזמנות</h2>
           <p style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.78rem;margin:0;">הזמנות נשמרות אוטומטית ועוברות לארכיון לאחר 7 ימים</p>
         </div>
-        <button onclick="printBakingList()" style="display:flex;align-items:center;gap:6px;font-family:'Assistant',sans-serif;font-size:0.78rem;font-weight:600;background:#F0E9D8;border:1.5px solid #D5C9B5;color:#6B3A2A;padding:7px 14px;border-radius:100px;cursor:pointer;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-          הדפסת רשימת אפייה
-        </button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+          <button onclick="exportOrdersCSV()" style="display:flex;align-items:center;gap:6px;font-family:'Assistant',sans-serif;font-size:0.78rem;font-weight:600;background:#EEF8EE;border:1.5px solid #B0D9B0;color:#2A7A2A;padding:7px 14px;border-radius:100px;cursor:pointer;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            ייצוא CSV
+          </button>
+          <button onclick="printBakingList()" style="display:flex;align-items:center;gap:6px;font-family:'Assistant',sans-serif;font-size:0.78rem;font-weight:600;background:#F0E9D8;border:1.5px solid #D5C9B5;color:#6B3A2A;padding:7px 14px;border-radius:100px;cursor:pointer;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            הדפסת רשימת אפייה
+          </button>
+        </div>
       </div>
 
       <!-- Stats -->
@@ -1199,6 +1280,19 @@
       </div>
 
     </div>
+
+    <!-- ═══ CUSTOMER MANAGEMENT ═══ -->
+    <div style="margin-top:36px;padding-top:28px;border-top:2px solid #E5D9C5;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div>
+          <h2 style="font-family:'Frank Ruhl Libre',serif;color:#6B3A2A;font-size:1.3rem;font-weight:700;margin:0 0 2px;">לקוחות</h2>
+          <p style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.78rem;margin:0;">מבוסס על כל ההזמנות הקיימות</p>
+        </div>
+        <button onclick="renderCustomers()" style="font-family:'Assistant',sans-serif;font-size:0.78rem;font-weight:600;background:#F0E9D8;border:1.5px solid #D5C9B5;color:#6B3A2A;padding:7px 14px;border-radius:100px;cursor:pointer;">רענן</button>
+      </div>
+      <div id="customers-list"></div>
+    </div>
+
   </div>
 </div>
 
@@ -1822,6 +1916,7 @@ function openAdminPanel() {
   renderOrderManagement();
   document.getElementById('admin-panel').classList.add('open');
   document.body.style.overflow = 'hidden';
+  setTimeout(() => { loadDeadlineIntoAdmin(); renderCustomers(); }, 0);
 }
 
 function renderAdminProducts() {
@@ -2375,6 +2470,200 @@ function toggleLang() {
 
 // ─── INIT ──────────────────────────────────────────
 renderProducts();
+
+// ─── DARK MODE ─────────────────────────────────────
+function toggleDarkMode() {
+  const isDark = document.body.classList.toggle('dark');
+  localStorage.setItem('nuika_dark', isDark ? '1' : '0');
+  const moon = document.getElementById('dark-icon-moon');
+  const sun  = document.getElementById('dark-icon-sun');
+  if (isDark) { moon.style.display = 'none'; sun.style.display = ''; }
+  else         { moon.style.display = '';    sun.style.display = 'none'; }
+}
+
+(function initDarkMode() {
+  if (localStorage.getItem('nuika_dark') === '1') {
+    document.body.classList.add('dark');
+    const moon = document.getElementById('dark-icon-moon');
+    const sun  = document.getElementById('dark-icon-sun');
+    if (moon) { moon.style.display = 'none'; sun.style.display = ''; }
+  }
+})();
+
+// ─── DEADLINE MANAGEMENT ───────────────────────────
+function getCustomDeadline() {
+  const saved = localStorage.getItem('nuika_deadline');
+  if (!saved) return null;
+  const d = new Date(saved);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function getNextTuesdayDeadline() {
+  const custom = getCustomDeadline();
+  if (custom) return custom;
+
+  const now = new Date();
+  const day = now.getDay();
+  let daysUntil = (2 - day + 7) % 7;
+  if (day === 2 && now.getHours() < 17) daysUntil = 0;
+  else if (day === 2 && now.getHours() >= 17) daysUntil = 7;
+  const deadline = new Date(now);
+  deadline.setDate(now.getDate() + daysUntil);
+  deadline.setHours(17, 0, 0, 0);
+  return deadline;
+}
+
+function clearDeadline() {
+  localStorage.removeItem('nuika_deadline');
+  const dateEl = document.getElementById('admin-deadline-date');
+  const timeEl = document.getElementById('admin-deadline-time');
+  if (dateEl) dateEl.value = '';
+  if (timeEl) timeEl.value = '17:00';
+  updateDeadlinePreview();
+  updateCountdown();
+}
+
+function updateDeadlinePreview() {
+  const dateEl = document.getElementById('admin-deadline-date');
+  const timeEl = document.getElementById('admin-deadline-time');
+  const preview = document.getElementById('admin-deadline-preview');
+  if (!dateEl || !preview) return;
+  if (dateEl.value) {
+    const d = new Date(dateEl.value + 'T' + (timeEl.value || '17:00'));
+    const formatted = d.toLocaleDateString('he-IL', { weekday:'long', day:'numeric', month:'long' });
+    preview.textContent = `✓ ייסגר: ${formatted} בשעה ${timeEl.value || '17:00'}`;
+    preview.style.color = '#2A7A2A';
+  } else {
+    const def = getNextTuesdayDeadline();
+    const formatted = def.toLocaleDateString('he-IL', { weekday:'long', day:'numeric', month:'long' });
+    preview.textContent = `ברירת מחדל: ${formatted} בשעה 17:00`;
+    preview.style.color = '#9B8B75';
+  }
+}
+
+function loadDeadlineIntoAdmin() {
+  const saved = localStorage.getItem('nuika_deadline');
+  const dateEl = document.getElementById('admin-deadline-date');
+  const timeEl = document.getElementById('admin-deadline-time');
+  if (!dateEl) return;
+  if (saved) {
+    const d = new Date(saved);
+    if (!isNaN(d.getTime())) {
+      dateEl.value = d.toISOString().slice(0,10);
+      timeEl.value = d.toTimeString().slice(0,5);
+    }
+  }
+  updateDeadlinePreview();
+  dateEl.addEventListener('change', saveDeadlineFromAdmin);
+  timeEl.addEventListener('change', saveDeadlineFromAdmin);
+}
+
+function saveDeadlineFromAdmin() {
+  const dateEl = document.getElementById('admin-deadline-date');
+  const timeEl = document.getElementById('admin-deadline-time');
+  if (!dateEl || !dateEl.value) return;
+  const iso = dateEl.value + 'T' + (timeEl.value || '17:00') + ':00';
+  localStorage.setItem('nuika_deadline', iso);
+  updateDeadlinePreview();
+  updateCountdown();
+}
+
+
+// ─── CSV EXPORT ────────────────────────────────────
+function exportOrdersCSV() {
+  const orders = JSON.parse(localStorage.getItem('nuika_order_log') || '[]');
+  if (orders.length === 0) { alert('אין הזמנות לייצוא'); return; }
+
+  const BOM = '﻿';
+  const headers = ['תאריך','שם','טלפון','פריטים','סה"כ','אופן קבלה','כתובת','הערות','סטטוס'];
+  const statusMap = { new:'חדשה', confirmed:'אושרה', ready:'מוכנה', done:'נמסרה' };
+
+  const rows = orders.map(o => [
+    o.date || '',
+    o.name || '',
+    o.phone || '',
+    (o.itemsArr ? o.itemsArr.map(i => `${i.name} x${i.qty}`).join(' | ') : o.items || ''),
+    o.total || 0,
+    o.delivery === 'delivery' ? 'משלוח' : 'איסוף עצמי',
+    o.address || '',
+    o.notes || '',
+    statusMap[o.status] || o.status || ''
+  ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
+
+  const csv = BOM + [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const today = new Date().toLocaleDateString('he-IL').replace(/\//g,'-');
+  a.download = `nuika-orders-${today}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── CUSTOMER MANAGEMENT ───────────────────────────
+function renderCustomers() {
+  const el = document.getElementById('customers-list');
+  if (!el) return;
+
+  const allOrders = JSON.parse(localStorage.getItem('nuika_order_log') || '[]');
+  if (allOrders.length === 0) {
+    el.innerHTML = `<div style="font-family:'Assistant',sans-serif;color:#9B8B75;font-size:0.85rem;text-align:center;padding:24px 0;">אין נתוני לקוחות עדיין</div>`;
+    return;
+  }
+
+  // Aggregate by phone
+  const map = {};
+  allOrders.forEach(o => {
+    const phone = (o.phone || '').replace(/\D/g,'');
+    if (!phone) return;
+    if (!map[phone]) {
+      map[phone] = { name: o.name, phone: o.phone || phone, count: 0, total: 0, items: {}, lastDate: 0 };
+    }
+    map[phone].count++;
+    map[phone].total += o.total || 0;
+    if (o.timestamp > map[phone].lastDate) {
+      map[phone].lastDate = o.timestamp;
+      map[phone].name = o.name || map[phone].name;
+    }
+    if (o.itemsArr) {
+      o.itemsArr.forEach(item => {
+        map[phone].items[item.name] = (map[phone].items[item.name] || 0) + item.qty;
+      });
+    }
+  });
+
+  const customers = Object.values(map).sort((a,b) => b.count - a.count);
+
+  el.innerHTML = customers.map(c => {
+    const topItem = Object.entries(c.items).sort((a,b)=>b[1]-a[1])[0];
+    const intl = c.phone.replace(/\D/g,'').replace(/^0/,'972');
+    return `
+    <div class="order-card" style="margin-bottom:10px;">
+      <div class="order-card-header">
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:'Frank Ruhl Libre',serif;font-weight:700;color:#2C1810;font-size:0.95rem;">${c.name || 'לקוח'}</div>
+          <div style="font-family:'Assistant',sans-serif;font-size:0.78rem;color:#9B8B75;" dir="ltr">${c.phone}</div>
+        </div>
+        <div style="text-align:center;padding:4px 10px;background:#EDF6FF;border-radius:8px;flex-shrink:0;">
+          <div style="font-family:'Frank Ruhl Libre',serif;font-size:1.1rem;font-weight:700;color:#1A6DB5;">${c.count}</div>
+          <div style="font-family:'Assistant',sans-serif;font-size:0.68rem;color:#5A8AB5;">הזמנות</div>
+        </div>
+        <div style="text-align:center;padding:4px 10px;background:#EEF8EE;border-radius:8px;flex-shrink:0;">
+          <div style="font-family:'Frank Ruhl Libre',serif;font-size:1.1rem;font-weight:700;color:#2A7A2A;">₪${c.total}</div>
+          <div style="font-family:'Assistant',sans-serif;font-size:0.68rem;color:#5A8A5A;">סה"כ</div>
+        </div>
+      </div>
+      ${topItem ? `<div class="order-items-row">הכי מזמין: ${topItem[0]} (${topItem[1]} יח')</div>` : ''}
+      <div class="order-actions">
+        <button class="btn-wa" onclick="window.open('https://wa.me/${intl}','_blank')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          שלח הודעה
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
 </script>
 </body>
 </html>
