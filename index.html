@@ -718,41 +718,56 @@
       background: linear-gradient(to right, transparent, #C4B89A 40%, #C4B89A 60%, transparent);
     }
 
-    /* ── DARK MODE ────────────────────────────────── */
-    body.dark { background-color: #1A1410; color: #E8DDD0; }
-    body.dark header { background: rgba(22,16,12,0.94) !important; border-color: #3A2E24 !important; }
-    body.dark #landing, body.dark #thankyou-overlay { background: #1C1610; }
-    body.dark .product-card { background: #241E18; border-color: #3A2E24; }
-    body.dark .product-card.in-cart { background: #2C2016; border-color: #8B5E3C; }
-    body.dark .product-card:hover { border-color: #C4795A; }
-    body.dark .illus-wrap { background: #2A2218; }
-    body.dark #qty-controls-1, body.dark [id^="qty-controls-"] { background: #2A2218 !important; border-color: #3A2E24 !important; }
-    body.dark .modal-box, body.dark .edit-modal-box { background: #1E1812; }
-    body.dark #order-modal { background: rgba(10,6,4,0.7); }
-    body.dark .field { background: #2A2218; border-color: #4A3A2A; color: #E8DDD0; }
-    body.dark .field::placeholder { color: #7A6A58; }
-    body.dark footer { background: #1C1610; border-color: #3A2E24; }
-    body.dark #admin-panel { background: #1A1410; }
-    body.dark .admin-card, body.dark .order-card, body.dark .order-stat-card { background: #241E18; border-color: #3A2E24; }
-    body.dark .order-actions { border-color: #3A2E24; }
-    body.dark .baking-row { border-color: #3A2E24; }
-    body.dark #admin-login-overlay > div { background: #1E1812; }
-    body.dark .btn-status { color: #D4A96A; border-color: #4A3A2A; background: transparent; }
-    body.dark .btn-status:hover { background: #2A2218; border-color: #C4795A; }
-    body.dark .btn-status.active { background: #6B3A2A; color: #F7F2E8; border-color: #6B3A2A; }
-    body.dark .add-product-btn { border-color: #C4795A; color: #C4795A; }
-    body.dark .add-product-btn:hover { background: #C4795A; color: #1A1410; }
-    body.dark .admin-toggle-slider { background: #3A2E24; }
-    body.dark #orders-closed-banner { background: #4A2A1A; }
-    body.dark .countdown-box { background: rgba(212,169,106,0.1); border-color: rgba(212,169,106,0.25); color: #D4A96A; }
-    body.dark [style*="background:#F0E9D8"], body.dark [style*="background: #F0E9D8"] { background: #2A2218 !important; }
-    body.dark [style*="background:#FDFAF4"], body.dark [style*="background: #FDFAF4"] { background: #241E18 !important; }
-    body.dark [style*="background:#EDE5D0"], body.dark [style*="background: #EDE5D0"] { background: #2A2218 !important; }
-    body.dark [style*="color:#2C1810"] { color: #E8DDD0 !important; }
-    body.dark [style*="color:#6B5D4E"] { color: #A89880 !important; }
-    body.dark [style*="color:#9B8B75"] { color: #7A6A58 !important; }
-    body.dark .dark-toggle-btn { background: #2A2218; border-color: #4A3A2A; color: #D4A96A; }
-    body.dark .dark-toggle-btn:hover { border-color: #D4A96A; }
+    /* ── PROGRESS BAR (minimum order) ───────────── */
+    #cart-progress-wrap {
+      height: 3px;
+      background: rgba(255,255,255,0.12);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    #cart-progress-bar {
+      height: 100%;
+      border-radius: 2px;
+      background: linear-gradient(90deg, #D4A96A, #C4795A);
+      transition: width 0.4s cubic-bezier(0.34,1.1,0.64,1);
+      width: 0%;
+    }
+    #cart-progress-label {
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.68rem;
+      color: rgba(247,242,232,0.55);
+      margin-top: 2px;
+      line-height: 1;
+      min-height: 12px;
+    }
+
+    /* ── SCROLL TO TOP ────────────────────────── */
+    #scroll-top-btn {
+      position: fixed;
+      bottom: 100px;
+      left: 16px;
+      z-index: 49;
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: rgba(107,58,42,0.85);
+      backdrop-filter: blur(8px);
+      border: 1.5px solid rgba(196,120,90,0.4);
+      color: #F7F2E8;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(12px) scale(0.85);
+      transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.34,1.3,0.64,1);
+      pointer-events: none;
+      box-shadow: 0 4px 16px rgba(44,24,16,0.25);
+    }
+    #scroll-top-btn.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+    #scroll-top-btn:hover { background: rgba(107,58,42,1); }
 
     /* ── ADMIN TABS ──────────────────────────────── */
     .admin-top-bar {
@@ -855,19 +870,6 @@
       margin-top: -2px;
     }
 
-    /* Dark mode toggle button */
-    .dark-toggle-btn {
-      background: transparent;
-      border: 1px solid rgba(107,58,42,0.3);
-      border-radius: 100px;
-      width: 34px; height: 34px;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer;
-      transition: background 0.2s, border-color 0.2s;
-      color: #6B3A2A;
-      flex-shrink: 0;
-    }
-    .dark-toggle-btn:hover { border-color: #6B3A2A; background: rgba(107,58,42,0.08); }
   </style>
 </head>
 <body class="font-sans text-ink">
@@ -964,11 +966,7 @@
     </div>
     <!-- Nav -->
     <div class="flex items-center gap-4">
-      <button onclick="toggleDarkMode()" class="dark-toggle-btn" id="dark-toggle-btn" aria-label="מצב לילה">
-        <svg id="dark-icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
-        <svg id="dark-icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-      </button>
-      <button onclick="toggleLang()" class="text-xs text-muted hover:text-earth transition-colors font-sans tracking-wide px-2 py-1 rounded border border-muted/30 hover:border-earth cursor-pointer" id="lang-btn">EN</button>
+<button onclick="toggleLang()" class="text-xs text-muted hover:text-earth transition-colors font-sans tracking-wide px-2 py-1 rounded border border-muted/30 hover:border-earth cursor-pointer" id="lang-btn">EN</button>
       <a href="https://www.instagram.com/nuika_bread" target="_blank" rel="noopener" aria-label="Instagram" class="text-muted hover:text-terracotta transition-colors cursor-pointer">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
@@ -1044,26 +1042,40 @@
 
 <!-- ============ CART BAR ============ -->
 <div id="cart-bar">
-  <div style="background:#2C1810;padding:12px 16px 16px;box-shadow:0 -4px 24px rgba(44,24,16,0.18);">
-    <div class="max-w-5xl mx-auto flex items-center justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <div class="relative" style="flex-shrink:0;">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D4A96A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
-          </svg>
-          <span id="cart-count" class="absolute -top-1.5 -right-1.5 text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center" style="background:#D4A96A;color:#2C1810;font-family:'Assistant',sans-serif;font-size:11px;">0</span>
-        </div>
-        <div>
-          <div style="font-family:'Assistant',sans-serif;font-size:0.75rem;color:rgba(247,242,232,0.6);line-height:1;" lang-content="he">סל הקניות</div>
-          <div style="font-family:'Assistant',sans-serif;font-size:0.75rem;color:rgba(247,242,232,0.6);line-height:1;" lang-content="en">Cart</div>
-          <div class="font-serif font-bold" style="font-size:1.15rem;color:#F7F2E8;line-height:1.3;" id="cart-total">₪0</div>
-        </div>
+  <div style="background:#2C1810;padding:10px 16px 14px;box-shadow:0 -4px 24px rgba(44,24,16,0.18);">
+    <div class="max-w-5xl mx-auto">
+      <!-- Progress bar row -->
+      <div id="cart-progress-wrap" style="display:none;">
+        <div id="cart-progress-bar"></div>
       </div>
-      <button onclick="openOrderModal()" class="font-serif font-bold cursor-pointer transition-all" style="background:#D4A96A;color:#2C1810;font-size:0.92rem;padding:11px 22px;border-radius:100px;border:none;letter-spacing:0.01em;" lang-content="he">לביצוע הזמנה ←</button>
-      <button onclick="openOrderModal()" class="font-serif font-bold cursor-pointer transition-all" style="background:#D4A96A;color:#2C1810;font-size:0.92rem;padding:11px 22px;border-radius:100px;border:none;letter-spacing:0.01em;" lang-content="en">Place Order →</button>
+      <div id="cart-progress-label" lang-content="he"></div>
+
+      <!-- Main row -->
+      <div class="flex items-center justify-between gap-4" style="margin-top:4px;">
+        <div class="flex items-center gap-3">
+          <div class="relative" style="flex-shrink:0;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D4A96A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
+            </svg>
+            <span id="cart-count" class="absolute -top-1.5 -right-1.5 text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center" style="background:#D4A96A;color:#2C1810;font-family:'Assistant',sans-serif;font-size:11px;">0</span>
+          </div>
+          <div>
+            <div style="font-family:'Assistant',sans-serif;font-size:0.75rem;color:rgba(247,242,232,0.6);line-height:1;" lang-content="he">סל הקניות</div>
+            <div style="font-family:'Assistant',sans-serif;font-size:0.75rem;color:rgba(247,242,232,0.6);line-height:1;" lang-content="en">Cart</div>
+            <div class="font-serif font-bold" style="font-size:1.15rem;color:#F7F2E8;line-height:1.3;" id="cart-total">₪0</div>
+          </div>
+        </div>
+        <button onclick="openOrderModal()" class="font-serif font-bold cursor-pointer transition-all" style="background:#D4A96A;color:#2C1810;font-size:0.92rem;padding:11px 22px;border-radius:100px;border:none;letter-spacing:0.01em;" lang-content="he">לביצוע הזמנה ←</button>
+        <button onclick="openOrderModal()" class="font-serif font-bold cursor-pointer transition-all" style="background:#D4A96A;color:#2C1810;font-size:0.92rem;padding:11px 22px;border-radius:100px;border:none;letter-spacing:0.01em;" lang-content="en">Place Order →</button>
+      </div>
     </div>
   </div>
 </div>
+
+<!-- ============ SCROLL TO TOP ============ -->
+<button id="scroll-top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="חזור למעלה">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+</button>
 
 <!-- ============ ORDER MODAL ============ -->
 <div id="order-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" onclick="handleModalBackdrop(event)">
@@ -1785,10 +1797,10 @@ function renderProducts() {
 // ─── TOGGLE PRODUCT ────────────────────────────────
 function toggleProduct(id) {
   if (cart[id]) {
-    // remove
     delete cart[id];
   } else {
     cart[id] = 1;
+    haptic(28);
   }
   updateCard(id);
   updateCartBar();
@@ -1802,6 +1814,7 @@ function changeQty(e, id, delta) {
     delete cart[id];
   } else {
     cart[id] = newQty;
+    haptic(18);
   }
   updateCard(id);
   updateCartBar();
@@ -1858,6 +1871,7 @@ function updateCartBar() {
   document.getElementById('cart-total').textContent = `₪${total}`;
   if (count > 0) bar.classList.add('visible');
   else bar.classList.remove('visible');
+  updateProgressBar();
 }
 
 // ─── ORDER MODAL ───────────────────────────────────
@@ -1867,6 +1881,7 @@ function openOrderModal() {
   modal.classList.add('open');
   document.body.style.overflow = 'hidden';
   renderOrderSummary();
+  loadCustomerDetails();
 }
 
 function closeOrderModal() {
@@ -1938,6 +1953,7 @@ function submitOrder(method) {
     alert(isEn ? 'Please fill in name and phone.' : 'נא למלא שם וטלפון.');
     return;
   }
+  saveCustomerDetails(name, phone);
   if (deliveryMethod === 'delivery' && !address) {
     alert(isEn ? 'Please enter a delivery address.' : 'נא להזין כתובת למשלוח.');
     return;
@@ -2693,27 +2709,61 @@ function updateOrdersTabBadge() {
   }
 }
 
+// ─── #10 HAPTIC FEEDBACK ───────────────────────────
+function haptic(ms) {
+  if (navigator.vibrate) navigator.vibrate(ms || 28);
+}
+
+// ─── #13 SAVE / LOAD CUSTOMER DETAILS ──────────────
+function saveCustomerDetails(name, phone) {
+  localStorage.setItem('nuika_cust_name', name);
+  localStorage.setItem('nuika_cust_phone', phone);
+}
+
+function loadCustomerDetails() {
+  const name  = localStorage.getItem('nuika_cust_name')  || '';
+  const phone = localStorage.getItem('nuika_cust_phone') || '';
+  const nameEl  = document.getElementById('cust-name');
+  const phoneEl = document.getElementById('cust-phone');
+  if (nameEl  && name)  nameEl.value  = name;
+  if (phoneEl && phone) phoneEl.value = phone;
+}
+
+// ─── #6 PROGRESS BAR ───────────────────────────────
+function updateProgressBar() {
+  const total = getCartTotal();
+  const wrap  = document.getElementById('cart-progress-wrap');
+  const bar   = document.getElementById('cart-progress-bar');
+  const label = document.getElementById('cart-progress-label');
+  if (!wrap) return;
+
+  if (total >= MIN_ORDER) {
+    wrap.style.display = 'none';
+    label.textContent  = '';
+    return;
+  }
+
+  const pct = Math.min((total / MIN_ORDER) * 100, 100);
+  const remaining = MIN_ORDER - total;
+  wrap.style.display = 'block';
+  bar.style.width = pct + '%';
+  const isEn = document.body.classList.contains('lang-en');
+  label.textContent = isEn
+    ? `Add ₪${remaining} to reach minimum`
+    : `עוד ₪${remaining} למינימום הזמנה`;
+}
+
+// ─── #8 SCROLL TO TOP ──────────────────────────────
+window.addEventListener('scroll', () => {
+  const btn = document.getElementById('scroll-top-btn');
+  if (!btn) return;
+  if (window.scrollY > 320) btn.classList.add('visible');
+  else btn.classList.remove('visible');
+}, { passive: true });
+
 // ─── INIT ──────────────────────────────────────────
 renderProducts();
 
-// ─── DARK MODE ─────────────────────────────────────
-function toggleDarkMode() {
-  const isDark = document.body.classList.toggle('dark');
-  localStorage.setItem('nuika_dark', isDark ? '1' : '0');
-  const moon = document.getElementById('dark-icon-moon');
-  const sun  = document.getElementById('dark-icon-sun');
-  if (isDark) { moon.style.display = 'none'; sun.style.display = ''; }
-  else         { moon.style.display = '';    sun.style.display = 'none'; }
-}
-
-(function initDarkMode() {
-  if (localStorage.getItem('nuika_dark') === '1') {
-    document.body.classList.add('dark');
-    const moon = document.getElementById('dark-icon-moon');
-    const sun  = document.getElementById('dark-icon-sun');
-    if (moon) { moon.style.display = 'none'; sun.style.display = ''; }
-  }
-})();
 
 // ─── DEADLINE MANAGEMENT ───────────────────────────
 function getCustomDeadline() {
