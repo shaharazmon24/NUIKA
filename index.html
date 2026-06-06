@@ -4396,7 +4396,7 @@ function renderPlan() {
       </div>
       <input class="plan-qty-input" type="number" min="0" value="${qty || ''}" placeholder="0"
         oninput="setPlanQty('${r.id}', this.value)" />
-      <div style="text-align:left;min-width:54px;font-family:'Assistant',sans-serif;font-size:0.78rem;">
+      <div id="plan-row-cost-${r.id}" style="text-align:left;min-width:54px;font-family:'Assistant',sans-serif;font-size:0.78rem;">
         ${qty > 0 ? `<div style="color:#3A7A50;font-weight:700;">₪${lineRevenue}</div><div style="color:#B45032;font-size:0.68rem;">-₪${lineCost.toFixed(0)}</div>` : ''}
       </div>
     </div>`;
@@ -4423,7 +4423,20 @@ function setPlanQty(recipeId, val) {
   if (qty <= 0) delete WEEKLY_PLAN[recipeId];
   else WEEKLY_PLAN[recipeId] = qty;
   saveWeeklyPlan();
-  // Update totals only (avoid full re-render on every keystroke)
+
+  // Update the row's live cost display
+  const r = RECIPES.find(r => r.id === recipeId);
+  const rowCostEl = document.getElementById('plan-row-cost-' + recipeId);
+  if (r && rowCostEl) {
+    const cost = calcRecipeCost(r);
+    const lineRevenue = qty * r.sellingPrice;
+    const lineCost    = qty * cost.costPerUnit;
+    rowCostEl.innerHTML = qty > 0
+      ? `<div style="color:#3A7A50;font-weight:700;">₪${lineRevenue}</div><div style="color:#B45032;font-size:0.68rem;">-₪${lineCost.toFixed(0)}</div>`
+      : '';
+  }
+
+  // Update totals bar
   renderPlanTotals();
 }
 
