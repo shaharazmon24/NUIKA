@@ -874,6 +874,103 @@
       margin-top: -2px;
     }
 
+    /* ── Product tag badges ── */
+    .product-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 100px;
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      z-index: 3;
+      letter-spacing: 0.01em;
+      line-height: 1.5;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.13);
+    }
+    .product-tag.popular {
+      background: #FFF3E0;
+      color: #B45032;
+      border: 1px solid #F5C99A;
+    }
+    .product-tag.new {
+      background: #E8F4E8;
+      color: #3A7A50;
+      border: 1px solid #A8D8A8;
+    }
+
+    /* ── Stock remaining badge ── */
+    .stock-remaining {
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #B45032;
+      background: #FFF3E0;
+      border: 1px solid #F5C99A;
+      border-radius: 100px;
+      padding: 1px 7px;
+      display: inline-block;
+      margin-top: 4px;
+    }
+    .stock-remaining.low {
+      color: #C4000A;
+      background: #FFF0F0;
+      border-color: #F5B8B8;
+      animation: stockPulse 2s ease-in-out infinite;
+    }
+    @keyframes stockPulse {
+      0%,100% { opacity: 1; }
+      50% { opacity: 0.65; }
+    }
+
+    /* ── Repeat order banner ── */
+    #repeat-order-banner {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: linear-gradient(135deg, #F5EFE3 0%, #EDE5D0 100%);
+      border: 1.5px solid #D5C9B5;
+      border-radius: 14px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      cursor: pointer;
+      transition: box-shadow 0.2s, transform 0.15s;
+    }
+    #repeat-order-banner:hover {
+      box-shadow: 0 4px 16px rgba(107,58,42,0.12);
+      transform: translateY(-1px);
+    }
+    #repeat-order-banner:active {
+      transform: scale(0.99);
+    }
+
+    /* ── PWA Install button ── */
+    #install-pwa-btn {
+      display: none;
+      align-items: center;
+      gap: 5px;
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #6B3A2A;
+      background: #F5EFE3;
+      border: 1.5px solid #D5C9B5;
+      border-radius: 100px;
+      padding: 5px 12px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      white-space: nowrap;
+    }
+    #install-pwa-btn:hover {
+      background: #EDE5D0;
+      border-color: #C4B89A;
+    }
+
   </style>
 </head>
 <body class="font-sans text-ink">
@@ -969,7 +1066,12 @@
       />
     </div>
     <!-- Nav -->
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-3">
+      <button id="install-pwa-btn" onclick="installPWA()" aria-label="התקן כאפליקציה">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v13M8 11l4 4 4-4M20 17v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2"/></svg>
+        <span lang-content="he">התקן</span>
+        <span lang-content="en">Install</span>
+      </button>
 <button onclick="toggleLang()" class="text-xs text-muted hover:text-earth transition-colors font-sans tracking-wide px-2 py-1 rounded border border-muted/30 hover:border-earth cursor-pointer" id="lang-btn">EN</button>
       <a href="https://www.instagram.com/nuika_bread" target="_blank" rel="noopener" aria-label="Instagram" class="text-muted hover:text-terracotta transition-colors cursor-pointer">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -1037,6 +1139,20 @@
     <h2 class="font-serif text-earth font-bold mb-2" style="font-size:clamp(1.4rem,3.5vw,1.9rem);" lang-content="en">This Week's Menu</h2>
     <p style="font-family:'Assistant',sans-serif;color:#6B5D4E;font-size:0.82rem;" lang-content="he">לחצו על מנה להוספה לסל</p>
     <p style="font-family:'Assistant',sans-serif;color:#6B5D4E;font-size:0.82rem;" lang-content="en">Tap a product to add to cart</p>
+  </div>
+
+  <!-- Repeat last order banner (shown if previous order exists) -->
+  <div id="repeat-order-banner" onclick="repeatLastOrder()" role="button" aria-label="הזמן שוב כמו שבוע שעבר">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:1.3rem;">🔁</span>
+      <div>
+        <div style="font-family:'Frank Ruhl Libre',serif;font-size:0.9rem;font-weight:700;color:#2C1810;" lang-content="he">הזמני שוב כמו שבוע שעבר</div>
+        <div style="font-family:'Frank Ruhl Libre',serif;font-size:0.9rem;font-weight:700;color:#2C1810;" lang-content="en">Repeat your last order</div>
+        <div style="font-family:'Assistant',sans-serif;font-size:0.75rem;color:#6B5D4E;margin-top:1px;" lang-content="he">לחצי להוספת ההזמנה הקודמת לסל</div>
+        <div style="font-family:'Assistant',sans-serif;font-size:0.75rem;color:#6B5D4E;margin-top:1px;" lang-content="en">Tap to add your previous order to cart</div>
+      </div>
+    </div>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B7260" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="9 18 15 12 9 6"/></svg>
   </div>
 
   <div id="products-grid" class="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
@@ -1561,6 +1677,31 @@
       <input id="edit-price" type="number" class="field" style="width:120px;" placeholder="30" min="1" dir="ltr" />
     </div>
 
+    <!-- Max Stock -->
+    <div style="margin-bottom:12px;">
+      <label style="font-family:'Assistant',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:6px;">מלאי מקסימלי לשבוע</label>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input id="edit-stock" type="number" class="field" style="width:110px;" placeholder="ללא הגבלה" min="1" dir="ltr" />
+        <span style="font-family:'Assistant',sans-serif;font-size:0.8rem;color:#9B8B75;">יחידות (ריק = ללא הגבלה)</span>
+      </div>
+    </div>
+
+    <!-- Tag -->
+    <div style="margin-bottom:20px;">
+      <label style="font-family:'Assistant',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:8px;">תגית על הכרטיס</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-family:'Assistant',sans-serif;font-size:0.82rem;font-weight:600;padding:5px 11px;border-radius:100px;border:1.5px solid #D5C9B5;background:#F5EFE3;color:#5A4A3A;">
+          <input type="radio" name="edit-tag" value="" style="accent-color:#6B3A2A;" /> ללא תגית
+        </label>
+        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-family:'Assistant',sans-serif;font-size:0.82rem;font-weight:600;padding:5px 11px;border-radius:100px;border:1.5px solid #F5C99A;background:#FFF3E0;color:#B45032;">
+          <input type="radio" name="edit-tag" value="popular" style="accent-color:#B45032;" /> 🔥 הכי פופולרי
+        </label>
+        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-family:'Assistant',sans-serif;font-size:0.82rem;font-weight:600;padding:5px 11px;border-radius:100px;border:1.5px solid #A8D8A8;background:#E8F4E8;color:#3A7A50;">
+          <input type="radio" name="edit-tag" value="new" style="accent-color:#3A7A50;" /> ✨ חדש השבוע
+        </label>
+      </div>
+    </div>
+
     <!-- Buttons -->
     <div style="display:flex;flex-direction:column;gap:10px;">
       <button onclick="saveProductEdit()" class="admin-save-btn" style="width:100%;">שמור מנה ✓</button>
@@ -1599,7 +1740,34 @@ function enterSite() {
   landing.addEventListener('transitionend', () => {
     landing.style.display = 'none';
     document.body.style.overflow = '';
+    checkRepeatOrder();
   }, { once: true });
+}
+
+// ─── PWA INSTALL ──────────────────────────────────
+let _deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  _deferredInstallPrompt = e;
+  const btn = document.getElementById('install-pwa-btn');
+  if (btn) btn.style.display = 'flex';
+});
+
+window.addEventListener('appinstalled', () => {
+  _deferredInstallPrompt = null;
+  const btn = document.getElementById('install-pwa-btn');
+  if (btn) btn.style.display = 'none';
+});
+
+function installPWA() {
+  if (!_deferredInstallPrompt) return;
+  _deferredInstallPrompt.prompt();
+  _deferredInstallPrompt.userChoice.then(() => {
+    _deferredInstallPrompt = null;
+    const btn = document.getElementById('install-pwa-btn');
+    if (btn) btn.style.display = 'none';
+  });
 }
 
 function getNextTuesdayDeadline() {
@@ -1679,7 +1847,9 @@ const PRODUCTS = [
     // Replace with actual image path when illustrations arrive:
     illustration: 'images/1-lechem-mushalam.jpg',
     svg: null,
-    soldOut: false
+    soldOut: false,
+    maxStock: null,
+    tag: null
   },
   {
     id: 2,
@@ -1690,7 +1860,9 @@ const PRODUCTS = [
     price: 30,
     illustration: 'images/2-lechem-kusmin.jpg',
     svg: null,
-    soldOut: false
+    soldOut: false,
+    maxStock: null,
+    tag: null
   },
   {
     id: 3,
@@ -1701,7 +1873,9 @@ const PRODUCTS = [
     price: 20,
     illustration: 'images/3-baguette.jpg',
     svg: null,
-    soldOut: false
+    soldOut: false,
+    maxStock: null,
+    tag: null
   },
   {
     id: 4,
@@ -1712,7 +1886,9 @@ const PRODUCTS = [
     price: 45,
     illustration: 'images/4-ugat-earl-grey.jpg',
     svg: null,
-    soldOut: false
+    soldOut: false,
+    maxStock: null,
+    tag: null
   },
   {
     id: 5,
@@ -1723,7 +1899,9 @@ const PRODUCTS = [
     price: 25,
     illustration: 'images/5-lachmaniya.jpg',
     svg: null,
-    soldOut: false
+    soldOut: false,
+    maxStock: null,
+    tag: null
   },
   {
     id: 6,
@@ -1734,7 +1912,9 @@ const PRODUCTS = [
     price: 30,
     illustration: 'images/6-maafe-ananin.jpg',
     svg: null,
-    soldOut: false
+    soldOut: false,
+    maxStock: null,
+    tag: null
   },
 ];
 
@@ -1746,22 +1926,91 @@ const MIN_ORDER = 100;
 const OWNER_WHATSAPP = '972547382282';
 const OWNER_EMAIL    = 'shaharazmon24@gmail.com';
 
+// ─── STOCK REMAINING ──────────────────────────────
+// Returns null if no limit set, otherwise units left after active orders.
+function getStockRemaining(productId) {
+  const p = PRODUCTS.find(p => p.id === productId);
+  if (!p || !p.maxStock) return null;
+  const orders = JSON.parse(localStorage.getItem('nuika_order_log') || '[]');
+  let sold = 0;
+  orders.filter(o => !o.archived && o.status !== 'done').forEach(o => {
+    (o.itemsArr || []).forEach(item => {
+      if ((item.id && item.id === productId) || item.name === p.nameHe) sold += item.qty;
+    });
+  });
+  return Math.max(0, p.maxStock - sold);
+}
+
+// ─── REPEAT LAST ORDER ────────────────────────────
+function checkRepeatOrder() {
+  const last = localStorage.getItem('nuika_last_order');
+  if (!last) return;
+  try {
+    const items = JSON.parse(last);
+    if (!items || !items.length) return;
+    const banner = document.getElementById('repeat-order-banner');
+    if (banner) banner.style.display = 'flex';
+  } catch(e) {}
+}
+
+function repeatLastOrder() {
+  const last = JSON.parse(localStorage.getItem('nuika_last_order') || '[]');
+  if (!last.length) return;
+  // Clear current cart
+  Object.keys(cart).forEach(id => { delete cart[+id]; updateCard(+id); });
+  // Fill with last order (respect stock limits)
+  last.forEach(({ id, qty }) => {
+    const p = PRODUCTS.find(p => p.id === id);
+    if (!p || p.soldOut) return;
+    const rem = getStockRemaining(id);
+    const safeQty = rem !== null ? Math.min(qty, rem) : qty;
+    if (safeQty > 0) cart[id] = safeQty;
+    updateCard(id);
+  });
+  updateCartBar();
+  haptic(40);
+  // Hide banner
+  const banner = document.getElementById('repeat-order-banner');
+  if (banner) banner.style.display = 'none';
+  // Scroll to products
+  setTimeout(() => {
+    document.getElementById('menu').scrollIntoView({ behavior: 'smooth' });
+  }, 150);
+}
+
 // ─── RENDER PRODUCTS ───────────────────────────────
 function renderProducts() {
   const grid = document.getElementById('products-grid');
-  grid.innerHTML = PRODUCTS.map(p => `
+  grid.innerHTML = PRODUCTS.map(p => {
+    const remaining = getStockRemaining(p.id);
+    const isAutoSoldOut = remaining !== null && remaining <= 0;
+    const effectiveSoldOut = p.soldOut || isAutoSoldOut;
+    const tagHtml = p.tag === 'popular'
+      ? `<div class="product-tag popular">🔥 הכי פופולרי</div>`
+      : p.tag === 'new'
+      ? `<div class="product-tag new">✨ חדש השבוע</div>`
+      : '';
+    const stockHtml = (!effectiveSoldOut && remaining !== null)
+      ? `<div class="stock-remaining${remaining <= 3 ? ' low' : ''}" id="stock-label-${p.id}">נותרו ${remaining} יחידות</div>`
+      : `<div id="stock-label-${p.id}"></div>`;
+
+    return `
     <div
-      class="product-card${p.soldOut ? ' sold-out' : ''}"
+      class="product-card${effectiveSoldOut ? ' sold-out' : ''}"
       id="card-${p.id}"
-      onclick="${p.soldOut ? '' : `toggleProduct(${p.id})`}"
-      tabindex="${p.soldOut ? '-1' : '0'}"
+      onclick="${effectiveSoldOut ? '' : `toggleProduct(${p.id})`}"
+      tabindex="${effectiveSoldOut ? '-1' : '0'}"
       role="button"
-      aria-label="${p.nameHe} — ${p.price} ₪${p.soldOut ? ' — אזל המלאי' : ''}"
-      aria-disabled="${p.soldOut}"
-      onkeydown="if(!${p.soldOut}&&(event.key==='Enter'||event.key===' '))toggleProduct(${p.id})"
+      aria-label="${p.nameHe} — ${p.price} ₪${effectiveSoldOut ? ' — אזל המלאי' : ''}"
+      aria-disabled="${effectiveSoldOut}"
+      onkeydown="if(!${effectiveSoldOut}&&(event.key==='Enter'||event.key===' '))toggleProduct(${p.id})"
+      style="position:relative;"
     >
+      <!-- Tag badge -->
+      ${tagHtml}
+
       <!-- Sold-out stamp -->
-      ${p.soldOut ? `<div class="sold-out-stamp" aria-hidden="true">אזל המלאי</div>` : ''}
+      ${effectiveSoldOut ? `<div class="sold-out-stamp" aria-hidden="true">אזל המלאי</div>` : ''}
 
       <!-- Qty badge -->
       <div class="qty-badge" id="badge-${p.id}">0</div>
@@ -1777,9 +2026,10 @@ function renderProducts() {
       <div style="padding:12px 14px 14px;">
         <div class="font-serif font-bold text-ink leading-snug mb-1" style="font-size:0.92rem;" lang-content="he">${p.nameHe}</div>
         <div class="font-serif font-bold text-ink leading-snug mb-1" style="font-size:0.92rem;" lang-content="en">${p.nameEn}</div>
-        <p style="font-family:'Assistant',sans-serif;font-size:0.75rem;line-height:1.5;color:#6B5D4E;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" lang-content="he">${p.descHe}</p>
-        <p style="font-family:'Assistant',sans-serif;font-size:0.75rem;line-height:1.5;color:#6B5D4E;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" lang-content="en">${p.descEn}</p>
-        <div class="flex items-center justify-between">
+        <p style="font-family:'Assistant',sans-serif;font-size:0.75rem;line-height:1.5;color:#6B5D4E;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" lang-content="he">${p.descHe}</p>
+        <p style="font-family:'Assistant',sans-serif;font-size:0.75rem;line-height:1.5;color:#6B5D4E;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" lang-content="en">${p.descEn}</p>
+        ${stockHtml}
+        <div class="flex items-center justify-between" style="margin-top:8px;">
           <span class="font-serif font-bold text-earth" style="font-size:1rem;">₪${p.price}</span>
           <span class="add-icon transition-all duration-200" id="add-icon-${p.id}" style="color:#C4795A;">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
@@ -1794,7 +2044,8 @@ function renderProducts() {
         <button class="qty-btn" onclick="changeQty(event,${p.id},+1)" aria-label="הוסף כמות">+</button>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 // ─── TOGGLE PRODUCT ────────────────────────────────
@@ -1802,6 +2053,8 @@ function toggleProduct(id) {
   if (cart[id]) {
     delete cart[id];
   } else {
+    const rem = getStockRemaining(id);
+    if (rem !== null && rem <= 0) return; // stock exhausted
     cart[id] = 1;
     haptic(28);
   }
@@ -1816,6 +2069,14 @@ function changeQty(e, id, delta) {
   if (newQty <= 0) {
     delete cart[id];
   } else {
+    // Check stock cap when increasing
+    if (delta > 0) {
+      const rem = getStockRemaining(id);
+      if (rem !== null && newQty > rem) {
+        haptic(60);
+        return; // can't exceed remaining stock
+      }
+    }
     cart[id] = newQty;
     haptic(18);
   }
@@ -2018,8 +2279,13 @@ function submitOrder(method) {
   // Build structured items array for baking summary
   const itemsArr = Object.entries(cart).map(([id, qty]) => {
     const p = PRODUCTS.find(p => p.id === +id);
-    return p ? { name: p.nameHe, qty, price: p.price } : null;
+    return p ? { id: p.id, name: p.nameHe, qty, price: p.price } : null;
   }).filter(Boolean);
+
+  // Save last order for "הזמני שוב" feature
+  localStorage.setItem('nuika_last_order', JSON.stringify(
+    Object.entries(cart).map(([id, qty]) => ({ id: +id, qty }))
+  ));
 
   // Save to order log
   saveOrderToLog({
@@ -2538,6 +2804,10 @@ function openEditProduct(id) {
   document.getElementById('edit-desc-he').value   = p.descHe;
   document.getElementById('edit-desc-en').value   = p.descEn;
   document.getElementById('edit-price').value     = p.price;
+  document.getElementById('edit-stock').value     = p.maxStock || '';
+  // Tag radio
+  const tagRadios = document.querySelectorAll('input[name="edit-tag"]');
+  tagRadios.forEach(r => { r.checked = (r.value === (p.tag || '')); });
   document.getElementById('delete-product-btn').style.display = 'block';
 
   // Show current image
@@ -2567,6 +2837,9 @@ function openAddProduct() {
   document.getElementById('edit-desc-he').value    = '';
   document.getElementById('edit-desc-en').value    = '';
   document.getElementById('edit-price').value      = '';
+  document.getElementById('edit-stock').value      = '';
+  // Clear tag radios
+  document.querySelectorAll('input[name="edit-tag"]').forEach(r => { r.checked = (r.value === ''); });
   document.getElementById('delete-product-btn').style.display = 'none';
 
   const preview = document.getElementById('edit-img-preview');
@@ -2594,11 +2867,15 @@ function previewImage(input) {
 }
 
 function saveProductEdit() {
-  const nameHe = document.getElementById('edit-name-he').value.trim();
-  const nameEn = document.getElementById('edit-name-en').value.trim();
-  const descHe = document.getElementById('edit-desc-he').value.trim();
-  const descEn = document.getElementById('edit-desc-en').value.trim();
-  const price  = parseInt(document.getElementById('edit-price').value);
+  const nameHe  = document.getElementById('edit-name-he').value.trim();
+  const nameEn  = document.getElementById('edit-name-en').value.trim();
+  const descHe  = document.getElementById('edit-desc-he').value.trim();
+  const descEn  = document.getElementById('edit-desc-en').value.trim();
+  const price   = parseInt(document.getElementById('edit-price').value);
+  const stockVal= parseInt(document.getElementById('edit-stock').value);
+  const maxStock= isNaN(stockVal) || stockVal < 1 ? null : stockVal;
+  const tagRadio= document.querySelector('input[name="edit-tag"]:checked');
+  const tag     = tagRadio && tagRadio.value ? tagRadio.value : null;
 
   if (!nameHe || !price) {
     alert('חובה למלא שם בעברית ומחיר');
@@ -2616,18 +2893,22 @@ function saveProductEdit() {
       price,
       illustration: pendingImageDataUrl || null,
       svg: null,
-      soldOut: false
+      soldOut: false,
+      maxStock,
+      tag
     });
   } else {
     // Update existing
     const id = +document.getElementById('edit-product-id').value;
     const p = PRODUCTS.find(p => p.id === id);
     if (!p) return;
-    p.nameHe = nameHe;
-    p.nameEn = nameEn || nameHe;
-    p.descHe = descHe;
-    p.descEn = descEn;
-    p.price  = price;
+    p.nameHe   = nameHe;
+    p.nameEn   = nameEn || nameHe;
+    p.descHe   = descHe;
+    p.descEn   = descEn;
+    p.price    = price;
+    p.maxStock = maxStock;
+    p.tag      = tag;
     if (pendingImageDataUrl) p.illustration = pendingImageDataUrl;
   }
 
@@ -2666,7 +2947,9 @@ function saveAllProducts() {
     id: p.id, nameHe: p.nameHe, nameEn: p.nameEn,
     descHe: p.descHe, descEn: p.descEn,
     price: p.price, illustration: p.illustration,
-    soldOut: p.soldOut
+    soldOut: p.soldOut,
+    maxStock: p.maxStock || null,
+    tag: p.tag || null
   }));
   localStorage.setItem('nuika_products', JSON.stringify(toSave));
 }
