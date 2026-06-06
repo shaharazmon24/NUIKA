@@ -949,6 +949,547 @@
       transform: scale(0.99);
     }
 
+    /* ══════════════════════════════════════════════
+       KITCHEN STUDIO — admin tab styles
+    ══════════════════════════════════════════════ */
+
+    /* Sub-nav inside kitchen tab */
+    .k-subnav {
+      display: flex;
+      gap: 4px;
+      background: #EDE5D0;
+      border: 1.5px solid #D5C9B5;
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 20px;
+    }
+    .k-subnav-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #8B7260;
+      background: transparent;
+      border: none;
+      border-radius: 9px;
+      padding: 7px 4px;
+      cursor: pointer;
+      transition: background 0.18s, color 0.18s;
+      white-space: nowrap;
+    }
+    .k-subnav-btn.active {
+      background: #6B3A2A;
+      color: #F7F2E8;
+    }
+    .k-subnav-btn:hover:not(.active) {
+      background: rgba(107,58,42,0.1);
+      color: #6B3A2A;
+    }
+    .k-section { display: none; }
+    .k-section.active { display: block; }
+
+    /* Section header row */
+    .k-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      gap: 8px;
+    }
+    .k-section-title {
+      font-family: 'Frank Ruhl Libre', serif;
+      font-weight: 700;
+      color: #2C1810;
+      font-size: 1.05rem;
+      margin: 0;
+    }
+
+    /* Small add button */
+    .k-add-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #F7F2E8;
+      background: #6B3A2A;
+      border: none;
+      border-radius: 8px;
+      padding: 7px 12px;
+      cursor: pointer;
+      transition: background 0.18s;
+      white-space: nowrap;
+    }
+    .k-add-btn:hover { background: #5A3022; }
+    .k-ghost-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #6B3A2A;
+      background: transparent;
+      border: 1.5px solid #D5C9B5;
+      border-radius: 8px;
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .k-ghost-btn:hover { background: #F0E9D8; border-color: #C4B89A; }
+
+    /* Pantry table */
+    .k-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.82rem;
+    }
+    .k-table th {
+      text-align: right;
+      padding: 8px 10px;
+      font-weight: 700;
+      color: #6B5D4E;
+      font-size: 0.75rem;
+      border-bottom: 2px solid #E5D9C5;
+      white-space: nowrap;
+    }
+    .k-table td {
+      padding: 9px 10px;
+      color: #2C1810;
+      border-bottom: 1px solid #F0E9D8;
+      vertical-align: middle;
+    }
+    .k-table tr:last-child td { border-bottom: none; }
+    .k-table tr:hover td { background: #FDFAF4; }
+    .k-cat-badge {
+      display: inline-block;
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.67rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 100px;
+      background: #EDE5D0;
+      color: #6B5D4E;
+      white-space: nowrap;
+    }
+    .k-table-wrap {
+      background: #fff;
+      border: 1.5px solid #E5D9C5;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .k-search {
+      width: 100%;
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.85rem;
+      color: #2C1810;
+      background: #FDFAF4;
+      border: 1.5px solid #D5C9B5;
+      border-radius: 9px;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+      direction: rtl;
+    }
+    .k-search:focus { outline: none; border-color: #6B3A2A; }
+
+    /* Recipe cards */
+    .recipe-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .recipe-card-k {
+      background: #fff;
+      border: 1.5px solid #E5D9C5;
+      border-radius: 12px;
+      padding: 12px;
+      cursor: pointer;
+      transition: border-color 0.18s, box-shadow 0.18s;
+      position: relative;
+    }
+    .recipe-card-k:hover {
+      border-color: #C4B89A;
+      box-shadow: 0 2px 12px rgba(107,58,42,0.1);
+    }
+    .recipe-card-k .r-name {
+      font-family: 'Frank Ruhl Libre', serif;
+      font-weight: 700;
+      color: #2C1810;
+      font-size: 0.88rem;
+      margin-bottom: 3px;
+      line-height: 1.3;
+    }
+    .recipe-card-k .r-meta {
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.72rem;
+      color: #8B7260;
+      margin-bottom: 8px;
+    }
+    .recipe-card-k .r-cost {
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #2C1810;
+    }
+    .fc-badge {
+      display: inline-block;
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 100px;
+      margin-top: 4px;
+    }
+    .fc-green { background: #E8F4E8; color: #3A7A50; }
+    .fc-yellow { background: #FFF8E0; color: #8B6800; }
+    .fc-red { background: #FFF0F0; color: #C4000A; }
+    .recipe-card-k .r-actions {
+      display: flex;
+      gap: 5px;
+      margin-top: 10px;
+    }
+    .r-action-btn {
+      flex: 1;
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 5px 4px;
+      border-radius: 7px;
+      border: 1.5px solid #D5C9B5;
+      background: #F5EFE3;
+      color: #6B3A2A;
+      cursor: pointer;
+      transition: background 0.15s;
+      text-align: center;
+    }
+    .r-action-btn:hover { background: #EDE5D0; }
+    .r-action-btn.primary { background: #6B3A2A; color: #F7F2E8; border-color: #6B3A2A; }
+    .r-action-btn.primary:hover { background: #5A3022; }
+
+    /* Category label colors */
+    .cat-lechem { background: #E8F4E8; color: #3A7A50; }
+    .cat-uga { background: #FFF3E0; color: #B45032; }
+    .cat-mafe { background: #F3E8FF; color: #6A3A90; }
+    .cat-chala { background: #FFF8E0; color: #8B6800; }
+    .cat-basis { background: #E8F0FF; color: #2A4A90; }
+    .cat-other { background: #F0F0F0; color: #5A5A5A; }
+
+    /* Plan table */
+    .plan-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-bottom: 1px solid #F0E9D8;
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.82rem;
+    }
+    .plan-row:last-child { border-bottom: none; }
+    .plan-row .plan-name {
+      flex: 1;
+      font-weight: 600;
+      color: #2C1810;
+      font-size: 0.82rem;
+      line-height: 1.2;
+    }
+    .plan-row .plan-meta { font-size: 0.7rem; color: #9B8B75; }
+    .plan-qty-input {
+      width: 54px;
+      text-align: center;
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #6B3A2A;
+      background: #F5EFE3;
+      border: 1.5px solid #D5C9B5;
+      border-radius: 8px;
+      padding: 5px 6px;
+      direction: ltr;
+    }
+    .plan-qty-input:focus { outline: none; border-color: #6B3A2A; }
+    .plan-totals-row {
+      background: #F5EFE3;
+      border-top: 2px solid #D5C9B5;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: 'Assistant', sans-serif;
+      border-radius: 0 0 12px 12px;
+    }
+    .profit-bar-wrap {
+      background: #F0E9D8;
+      border-radius: 100px;
+      height: 8px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    .profit-bar-fill {
+      height: 100%;
+      border-radius: 100px;
+      background: #7A9A50;
+      transition: width 0.4s ease;
+    }
+
+    /* Shopping list */
+    .shop-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-bottom: 1px solid #F0E9D8;
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.82rem;
+    }
+    .shop-item:last-child { border-bottom: none; }
+    .shop-item input[type=checkbox] { accent-color: #6B3A2A; width: 16px; height: 16px; flex-shrink: 0; }
+    .shop-item .si-name { flex: 1; color: #2C1810; font-weight: 600; }
+    .shop-item .si-amount { color: #6B3A2A; font-weight: 700; font-size: 0.88rem; }
+    .shop-item .si-cost { color: #9B8B75; font-size: 0.72rem; }
+    .shop-cat-header {
+      padding: 6px 12px 4px;
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #8B7260;
+      background: #F5EFE3;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Recipe editor modal */
+    #recipe-editor-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 2100;
+      display: none;
+      align-items: flex-end;
+    }
+    #recipe-editor-modal.open {
+      display: flex;
+    }
+    #recipe-editor-modal .re-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(44,24,16,0.45);
+    }
+    #recipe-editor-modal .re-panel {
+      position: relative;
+      background: #FDFAF4;
+      width: 100%;
+      max-height: 92vh;
+      border-radius: 20px 20px 0 0;
+      overflow-y: auto;
+      padding: 0 0 40px;
+    }
+    @media (min-width: 640px) {
+      #recipe-editor-modal {
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+      #recipe-editor-modal .re-panel {
+        border-radius: 16px;
+        max-width: 640px;
+        max-height: 88vh;
+      }
+    }
+    .re-header {
+      position: sticky;
+      top: 0;
+      background: #F0E9D8;
+      border-bottom: 1.5px solid #E5D9C5;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 2;
+    }
+    .re-body { padding: 16px; }
+    .re-section-label {
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #9B8B75;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin: 18px 0 8px;
+    }
+    .re-field-label {
+      font-family: 'Assistant', sans-serif;
+      font-weight: 600;
+      color: #2C1810;
+      font-size: 0.82rem;
+      display: block;
+      margin-bottom: 5px;
+    }
+    /* Ingredient table in editor */
+    .ing-table { width: 100%; border-collapse: collapse; }
+    .ing-table th {
+      text-align: right;
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #9B8B75;
+      padding: 4px 6px 8px;
+      border-bottom: 1.5px solid #E5D9C5;
+    }
+    .ing-table td {
+      padding: 5px 4px;
+      vertical-align: middle;
+      border-bottom: 1px solid #F0E9D8;
+    }
+    .ing-table input[type=text], .ing-table input[type=number] {
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.82rem;
+      color: #2C1810;
+      background: #F5EFE3;
+      border: 1.5px solid #E5D9C5;
+      border-radius: 6px;
+      padding: 5px 7px;
+      width: 100%;
+    }
+    .ing-table input:focus { outline: none; border-color: #6B3A2A; background: #fff; }
+    .ing-cost-cell {
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.78rem;
+      color: #8B7260;
+      text-align: left;
+      white-space: nowrap;
+      padding: 5px 4px;
+    }
+    .ing-del-btn {
+      background: none;
+      border: none;
+      color: #C4B89A;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 5px;
+      transition: color 0.15s, background 0.15s;
+      display: flex;
+      align-items: center;
+    }
+    .ing-del-btn:hover { color: #C4000A; background: #FFF0F0; }
+
+    /* Cost summary in editor */
+    .re-cost-summary {
+      background: #F5EFE3;
+      border: 1.5px solid #E5D9C5;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      text-align: center;
+    }
+    .re-cost-summary .cs-val {
+      font-family: 'Frank Ruhl Libre', serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #6B3A2A;
+    }
+    .re-cost-summary .cs-lbl {
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.68rem;
+      color: #9B8B75;
+      margin-top: 1px;
+    }
+
+    /* Scale calculator */
+    .scale-calc {
+      background: #EDE5D0;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-top: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .scale-calc label {
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.82rem;
+      color: #2C1810;
+      white-space: nowrap;
+    }
+    .scale-calc input {
+      width: 64px;
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #6B3A2A;
+      background: #fff;
+      border: 1.5px solid #D5C9B5;
+      border-radius: 8px;
+      padding: 5px 8px;
+      text-align: center;
+      direction: ltr;
+    }
+    .scale-calc input:focus { outline: none; border-color: #6B3A2A; }
+    .scale-result {
+      flex: 1;
+      font-family: 'Assistant', sans-serif;
+      font-size: 0.78rem;
+      color: #6B5D4E;
+    }
+
+    /* Empty state */
+    .k-empty {
+      text-align: center;
+      padding: 32px 16px;
+      font-family: 'Assistant', sans-serif;
+      color: #9B8B75;
+      font-size: 0.88rem;
+    }
+    .k-empty .k-empty-icon { font-size: 2.2rem; margin-bottom: 8px; }
+
+    /* Inline edit icon buttons in table */
+    .k-icon-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #C4B89A;
+      padding: 4px;
+      border-radius: 5px;
+      transition: color 0.15s, background 0.15s;
+      display: inline-flex;
+      align-items: center;
+    }
+    .k-icon-btn:hover { color: #6B3A2A; background: #F0E9D8; }
+    .k-icon-btn.del:hover { color: #C4000A; background: #FFF0F0; }
+
+    /* Pantry edit modal */
+    #pantry-edit-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 2100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    #pantry-edit-modal.open { display: flex; }
+    #pantry-edit-modal .pe-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(44,24,16,0.45);
+    }
+    #pantry-edit-modal .pe-box {
+      position: relative;
+      background: #FDFAF4;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 400px;
+      padding: 20px;
+    }
+
     /* ── PWA Install button ── */
     #install-pwa-btn {
       display: none;
@@ -1404,6 +1945,10 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
         הגדרות
       </button>
+      <button class="admin-tab-btn" id="atab-kitchen" onclick="switchAdminTab('kitchen')" role="tab" style="position:relative;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2h18l-2 7H5L3 2z"/><path d="M5 9l1 11h12l1-11"/><path d="M9 13h6"/></svg>
+        מטבח
+      </button>
     </div>
   </div>
 
@@ -1618,6 +2163,303 @@
     </div>
   </div>
 
+  <!-- ══════════════════════════════════════════════════ -->
+  <!-- TAB: מטבח — Kitchen Studio                        -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <div id="admin-tab-kitchen" class="admin-tab-content">
+
+    <!-- Sub navigation -->
+    <div class="k-subnav">
+      <button class="k-subnav-btn active" id="ksub-pantry" onclick="switchKitchenTab('pantry')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3h18v4H3z"/><path d="M3 7v14h18V7"/><path d="M9 12h6M9 16h6"/></svg>
+        מחסן
+      </button>
+      <button class="k-subnav-btn" id="ksub-recipes" onclick="switchKitchenTab('recipes')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="13" y2="11"/></svg>
+        מתכונים
+      </button>
+      <button class="k-subnav-btn" id="ksub-plan" onclick="switchKitchenTab('plan')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        תכנון
+      </button>
+    </div>
+
+    <!-- ─── PANTRY (מחסן מחירים) ─── -->
+    <div class="k-section active" id="ksec-pantry">
+      <div class="k-section-header">
+        <p class="k-section-title">מחסן מחירים</p>
+        <button class="k-add-btn" onclick="openPantryEditor()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          הוסף מרכיב
+        </button>
+      </div>
+      <input class="k-search" type="text" id="pantry-search" placeholder="חפשי מרכיב..." oninput="renderPantry()" />
+      <div class="k-table-wrap">
+        <table class="k-table">
+          <thead>
+            <tr>
+              <th>מרכיב</th>
+              <th>מחיר/ק"ג</th>
+              <th>קטגוריה</th>
+              <th>ספק</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="pantry-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── RECIPES (ספריית מתכונים) ─── -->
+    <div class="k-section" id="ksec-recipes">
+      <div class="k-section-header">
+        <p class="k-section-title">ספריית מתכונים</p>
+        <button class="k-add-btn" onclick="openRecipeEditor(null)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          מתכון חדש
+        </button>
+      </div>
+      <div class="recipe-grid" id="recipe-grid"></div>
+    </div>
+
+    <!-- ─── WEEKLY PLAN (תכנון שבועי + רשימת קניות) ─── -->
+    <div class="k-section" id="ksec-plan">
+      <div class="k-section-header">
+        <p class="k-section-title">תכנון מכירה</p>
+        <button class="k-ghost-btn" onclick="importFromOrders()" title="ייבא כמויות מהזמנות קיימות">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          ייבא מהזמנות
+        </button>
+      </div>
+      <div class="k-table-wrap" style="margin-bottom:14px;">
+        <div id="plan-rows"></div>
+        <div class="plan-totals-row" id="plan-totals" style="display:none;">
+          <div style="font-family:'Assistant',sans-serif;font-size:0.78rem;">
+            <div style="color:#9B8B75;">הכנסה צפויה</div>
+            <div id="plan-revenue" style="font-size:1.05rem;font-weight:700;color:#2C1810;">₪0</div>
+          </div>
+          <div style="font-family:'Assistant',sans-serif;font-size:0.78rem;text-align:center;">
+            <div style="color:#9B8B75;">עלות ח"ג</div>
+            <div id="plan-cost" style="font-size:1.05rem;font-weight:700;color:#B45032;">₪0</div>
+          </div>
+          <div style="font-family:'Assistant',sans-serif;font-size:0.78rem;text-align:left;">
+            <div style="color:#9B8B75;">רווח גולמי</div>
+            <div id="plan-profit" style="font-size:1.05rem;font-weight:700;color:#3A7A50;">₪0</div>
+            <div class="profit-bar-wrap" style="width:80px;margin-top:4px;">
+              <div class="profit-bar-fill" id="plan-profit-bar" style="width:0%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="k-add-btn" onclick="generateShoppingList()" style="width:100%;justify-content:center;margin-bottom:16px;padding:12px;font-size:0.88rem;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        צרי רשימת קניות
+      </button>
+
+      <!-- Shopping list output -->
+      <div id="shopping-list-output" style="display:none;">
+        <div class="k-section-header" style="margin-bottom:8px;">
+          <p class="k-section-title" style="font-size:0.95rem;">🛒 רשימת קניות</p>
+          <button class="k-ghost-btn" onclick="printShoppingList()" style="font-size:0.75rem;padding:5px 10px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            הדפס
+          </button>
+        </div>
+        <div class="k-table-wrap">
+          <div id="shopping-list-body"></div>
+        </div>
+        <div id="shopping-total" style="text-align:left;padding:10px 12px;font-family:'Assistant',sans-serif;font-size:0.82rem;color:#6B5D4E;"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     RECIPE EDITOR MODAL
+════════════════════════════════════════════════════════ -->
+<div id="recipe-editor-modal">
+  <div class="re-backdrop" onclick="closeRecipeEditor()"></div>
+  <div class="re-panel">
+    <div class="re-header">
+      <h3 id="re-title" style="font-family:'Frank Ruhl Libre',serif;font-size:1.1rem;font-weight:700;color:#2C1810;margin:0;">מתכון חדש</h3>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button id="re-delete-btn" onclick="deleteRecipe()" style="display:none;font-family:'Assistant',sans-serif;font-size:0.78rem;font-weight:600;color:#C4000A;background:transparent;border:1.5px solid #F5B8B8;border-radius:8px;padding:5px 10px;cursor:pointer;">מחק</button>
+        <button onclick="closeRecipeEditor()" style="background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B3A2A" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="re-body">
+      <input type="hidden" id="re-id" />
+
+      <!-- Name + category row -->
+      <div style="display:grid;grid-template-columns:1fr auto;gap:10px;margin-bottom:12px;">
+        <div>
+          <label class="re-field-label">שם המתכון</label>
+          <input type="text" id="re-name" class="field" placeholder="לחם כפרי מחמצת" oninput="recalcEditorCosts()" />
+        </div>
+        <div>
+          <label class="re-field-label">קטגוריה</label>
+          <select id="re-category" class="field" style="font-family:'Assistant',sans-serif;">
+            <option value="לחם">לחם</option>
+            <option value="עוגה">עוגה</option>
+            <option value="מאפה">מאפה</option>
+            <option value="חלה">חלה</option>
+            <option value="עוגייה">עוגייה</option>
+            <option value="בסיס">בצק בסיס</option>
+            <option value="אחר">אחר</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Yield + selling price row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+        <div>
+          <label class="re-field-label">כמות יחידות</label>
+          <input type="number" id="re-yield-count" class="field" placeholder="1" min="1" dir="ltr" oninput="recalcEditorCosts()" />
+        </div>
+        <div>
+          <label class="re-field-label">משקל ליחידה (ג')</label>
+          <input type="number" id="re-yield-weight" class="field" placeholder="700" min="1" dir="ltr" />
+        </div>
+        <div>
+          <label class="re-field-label">מחיר מכירה ₪</label>
+          <input type="number" id="re-price" class="field" placeholder="35" min="0" dir="ltr" oninput="recalcEditorCosts()" />
+        </div>
+      </div>
+
+      <!-- Section: ingredients -->
+      <div class="re-section-label">מרכיבים</div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+        <table class="ing-table">
+          <thead>
+            <tr>
+              <th style="width:38%;">מרכיב</th>
+              <th style="width:20%;text-align:center;">משקל (ג')</th>
+              <th style="width:14%;text-align:center;">% אופה</th>
+              <th style="width:18%;text-align:left;">עלות</th>
+              <th style="width:10%;"></th>
+            </tr>
+          </thead>
+          <tbody id="re-ing-tbody"></tbody>
+        </table>
+      </div>
+      <button onclick="addIngredientRow()" class="k-ghost-btn" style="margin-top:8px;width:100%;justify-content:center;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        הוסף מרכיב
+      </button>
+
+      <!-- Cost summary -->
+      <div class="re-cost-summary" id="re-cost-summary">
+        <div>
+          <div class="cs-val" id="cs-cost-unit">—</div>
+          <div class="cs-lbl">עלות ליחידה</div>
+        </div>
+        <div>
+          <div class="cs-val" id="cs-fc">—</div>
+          <div class="cs-lbl">Food Cost</div>
+        </div>
+        <div>
+          <div class="cs-val" id="cs-profit">—</div>
+          <div class="cs-lbl">רווח ליחידה</div>
+        </div>
+      </div>
+
+      <!-- Scale calculator -->
+      <div class="scale-calc">
+        <label>מחשב מינון:</label>
+        <input type="number" id="scale-target" placeholder="1" min="1" dir="ltr" oninput="updateScaleCalc()" />
+        <span style="font-family:'Assistant',sans-serif;font-size:0.78rem;color:#8B7260;">יחידות</span>
+        <div class="scale-result" id="scale-result"></div>
+      </div>
+
+      <!-- Section: baking times -->
+      <div class="re-section-label">זמני הכנה ואפייה</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div>
+          <label class="re-field-label">זמן הכנה (דק')</label>
+          <input type="number" id="re-prep-time" class="field" placeholder="30" min="0" dir="ltr" />
+        </div>
+        <div>
+          <label class="re-field-label">זמן אפייה (דק')</label>
+          <input type="number" id="re-bake-time" class="field" placeholder="45" min="0" dir="ltr" />
+        </div>
+        <div>
+          <label class="re-field-label">טמפ' (°C)</label>
+          <input type="number" id="re-bake-temp" class="field" placeholder="250" min="0" dir="ltr" />
+        </div>
+      </div>
+      <div>
+        <label class="re-field-label">הערות</label>
+        <textarea id="re-notes" class="field" rows="2" placeholder="הערות, טיפים, גרסאות..."></textarea>
+      </div>
+
+      <!-- Save button -->
+      <button onclick="saveRecipe()" class="admin-save-btn" style="width:100%;margin-top:20px;font-size:0.95rem;padding:13px;">
+        שמור מתכון ✓
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     PANTRY EDIT MODAL
+════════════════════════════════════════════════════════ -->
+<div id="pantry-edit-modal">
+  <div class="pe-backdrop" onclick="closePantryEditor()"></div>
+  <div class="pe-box">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <h3 id="pe-title" style="font-family:'Frank Ruhl Libre',serif;font-size:1.1rem;font-weight:700;color:#2C1810;margin:0;">הוספת מרכיב</h3>
+      <button onclick="closePantryEditor()" style="background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B3A2A" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <input type="hidden" id="pe-id" />
+    <div style="margin-bottom:12px;">
+      <label class="re-field-label">שם המרכיב</label>
+      <input type="text" id="pe-name" class="field" placeholder="קמח חיטה מלא" />
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div>
+        <label class="re-field-label">מחיר לק"ג (₪)</label>
+        <input type="number" id="pe-price" class="field" placeholder="7.6" step="0.1" dir="ltr" />
+      </div>
+      <div>
+        <label class="re-field-label">קטגוריה</label>
+        <select id="pe-cat" class="field" style="font-family:'Assistant',sans-serif;">
+          <option>קמח</option>
+          <option>שמן וחמאה</option>
+          <option>חלב וביצים</option>
+          <option>ממתיקים</option>
+          <option>אגוזים וזרעים</option>
+          <option>שמרים</option>
+          <option>שוקולד</option>
+          <option>תבלינים</option>
+          <option>דגנים</option>
+          <option>פירות יבשים</option>
+          <option>גבינות</option>
+          <option>ירקות</option>
+          <option>ריבות</option>
+          <option>אחר</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div>
+        <label class="re-field-label">ספק</label>
+        <input type="text" id="pe-supplier" class="field" placeholder="קמח הארץ, מאיר..." />
+      </div>
+      <div>
+        <label class="re-field-label">אחוזי פחת (%)</label>
+        <input type="number" id="pe-waste" class="field" placeholder="5" min="0" max="100" dir="ltr" />
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button id="pe-delete-btn" onclick="deletePantryItem()" style="display:none;font-family:'Assistant',sans-serif;font-size:0.82rem;font-weight:600;color:#C4000A;background:transparent;border:1.5px solid #F5B8B8;border-radius:8px;padding:9px 12px;cursor:pointer;flex:0 0 auto;">מחק</button>
+      <button onclick="savePantryItem()" class="admin-save-btn" style="flex:1;padding:10px;">שמור ✓</button>
+    </div>
+  </div>
 </div>
 
 <!-- ============ EDIT PRODUCT MODAL ============ -->
@@ -2391,6 +3233,7 @@ function openAdminPanel() {
 
   renderAdminProducts();
   renderOrderStats();
+  initKitchen();
   document.getElementById('admin-panel').classList.add('open');
   document.body.style.overflow = 'hidden';
   switchAdminTab('dash');
@@ -2978,9 +3821,13 @@ function switchAdminTab(tab) {
   // Scroll to top of panel
   document.getElementById('admin-panel').scrollTop = 0;
   // Render relevant content
-  if (tab === 'orders') renderOrderManagement();
+  if (tab === 'orders')    renderOrderManagement();
   if (tab === 'customers') renderCustomers();
-  if (tab === 'dash') renderOrderStats();
+  if (tab === 'dash')      renderOrderStats();
+  if (tab === 'kitchen') {
+    initKitchen();
+    switchKitchenTab(_currentKitchenTab || 'pantry');
+  }
 }
 
 function updateOrdersTabBadge() {
@@ -3224,6 +4071,821 @@ function renderCustomers() {
       </div>
     </div>`;
   }).join('');
+}
+
+// ════════════════════════════════════════════════════════════
+// KITCHEN STUDIO — מטבח
+// ════════════════════════════════════════════════════════════
+
+// ─── DEFAULT DATA ────────────────────────────────────────
+const DEFAULT_PANTRY = [
+  // קמחים
+  {id:'pi1',name:'קמח רב תכליתי T550',pricePerKg:6,cat:'קמח',supplier:'קמח הארץ',waste:0,vat:0.17},
+  {id:'pi2',name:'קמח פיצה / לחם',pricePerKg:7.9,cat:'קמח',supplier:'סוגת',waste:0,vat:0.17},
+  {id:'pi3',name:'קמח חיטה מלא',pricePerKg:7.6,cat:'קמח',supplier:'קמח הארץ',waste:0,vat:0.17},
+  {id:'pi4',name:'קמח שיפון מלא',pricePerKg:7.6,cat:'קמח',supplier:'קמח הארץ',waste:0,vat:0.17},
+  {id:'pi5',name:'קמח שקדים',pricePerKg:46,cat:'קמח',supplier:'מאיר',waste:0,vat:0.17},
+  {id:'pi6',name:'קמח כוסמין',pricePerKg:10,cat:'קמח',supplier:'',waste:0,vat:0.17},
+  // שמנים וחמאה
+  {id:'pi7',name:'חמאה',pricePerKg:39,cat:'שמן וחמאה',supplier:'',waste:0.05,vat:0.17},
+  {id:'pi8',name:'חמאה לבנה תנובה',pricePerKg:39.8,cat:'שמן וחמאה',supplier:'תנובה',waste:0.05,vat:0.17},
+  {id:'pi9',name:'חמאה אירית',pricePerKg:35,cat:'שמן וחמאה',supplier:'',waste:0.05,vat:0.17},
+  {id:'pi10',name:'שמן זית',pricePerKg:50,cat:'שמן וחמאה',supplier:'מאיר',waste:0.05,vat:0.17},
+  {id:'pi11',name:'שמן קנולה',pricePerKg:12,cat:'שמן וחמאה',supplier:'',waste:0,vat:0.17},
+  {id:'pi12',name:'חמאת קקאו',pricePerKg:140,cat:'שמן וחמאה',supplier:'מאיר',waste:0,vat:0.17},
+  // חלב וביצים
+  {id:'pi13',name:'ביצים',pricePerKg:22,cat:'חלב וביצים',supplier:'',waste:0.05,vat:0.17},
+  {id:'pi14',name:'חלב מלא 3%',pricePerKg:7,cat:'חלב וביצים',supplier:'',waste:0.05,vat:0.17},
+  {id:'pi15',name:'חלב שיבולת שועל',pricePerKg:12,cat:'חלב וביצים',supplier:'',waste:0.05,vat:0.17},
+  {id:'pi16',name:'אבקת חלב',pricePerKg:100,cat:'חלב וביצים',supplier:'גרובשטיין',waste:0.05,vat:0.17},
+  // ממתיקים
+  {id:'pi17',name:'סוכר לבן',pricePerKg:5.8,cat:'ממתיקים',supplier:'',waste:0.05,vat:0.17},
+  {id:'pi18',name:'אבקת סוכר',pricePerKg:12.9,cat:'ממתיקים',supplier:'',waste:0.05,vat:0.17},
+  {id:'pi19',name:'דבש',pricePerKg:30,cat:'ממתיקים',supplier:'',waste:0.05,vat:0.17},
+  {id:'pi20',name:'תמר יהלום',pricePerKg:38,cat:'ממתיקים',supplier:'מאיר',waste:0.05,vat:0.17},
+  // אגוזים וזרעים
+  {id:'pi21',name:'פקאן אמריקאי',pricePerKg:68,cat:'אגוזים וזרעים',supplier:'מאיר',waste:0.05,vat:0.17},
+  {id:'pi22',name:'אגוז מלך',pricePerKg:32,cat:'אגוזים וזרעים',supplier:'מאיר',waste:0.05,vat:0.17},
+  {id:'pi23',name:'שקדים טבעיים',pricePerKg:48,cat:'אגוזים וזרעים',supplier:'מאיר',waste:0.05,vat:0.17},
+  {id:'pi24',name:'שקד מולבן',pricePerKg:58,cat:'אגוזים וזרעים',supplier:'מאיר',waste:0.05,vat:0.17},
+  {id:'pi25',name:'אגוזי לוז',pricePerKg:60,cat:'אגוזים וזרעים',supplier:'',waste:0.05,vat:0.17},
+  {id:'pi26',name:'פיסטוקים',pricePerKg:100,cat:'אגוזים וזרעים',supplier:'',waste:0.05,vat:0.17},
+  // שמרים
+  {id:'pi27',name:'שמרים יבשים',pricePerKg:30,cat:'שמרים',supplier:'',waste:0.05,vat:0.17},
+  {id:'pi28',name:'שמרים טריים',pricePerKg:43.2,cat:'שמרים',supplier:'',waste:0.05,vat:0.17},
+  // שוקולד ומילויים
+  {id:'pi29',name:'שוקולד לבן גרובשטיין',pricePerKg:68,cat:'שוקולד',supplier:'גרובשטיין',waste:0,vat:0.17},
+  {id:'pi30',name:'נוטלה',pricePerKg:33.2,cat:'שוקולד',supplier:'',waste:0.05,vat:0.17},
+  // תבלינים
+  {id:'pi31',name:'מלח',pricePerKg:1.5,cat:'תבלינים',supplier:'',waste:0,vat:0.17},
+  {id:'pi32',name:'קינמון',pricePerKg:39,cat:'תבלינים',supplier:'',waste:0.05,vat:0.17},
+  {id:'pi33',name:'פרג טחון',pricePerKg:26,cat:'תבלינים',supplier:'',waste:0.05,vat:0.17},
+  {id:'pi34',name:'שומשום לבן',pricePerKg:22,cat:'תבלינים',supplier:'',waste:0,vat:0.17},
+  {id:'pi35',name:'שומשום מלא',pricePerKg:24,cat:'תבלינים',supplier:'',waste:0,vat:0.17},
+  // דגנים
+  {id:'pi36',name:'כוסמת ירוקה אורגנית',pricePerKg:12,cat:'דגנים',supplier:'מאיר',waste:0,vat:0.17},
+  {id:'pi37',name:'שיבולת שועל שלמה',pricePerKg:8,cat:'דגנים',supplier:'',waste:0,vat:0.17},
+  // פירות יבשים
+  {id:'pi38',name:'צימוקים סולטנה',pricePerKg:24,cat:'פירות יבשים',supplier:'מאיר',waste:0.05,vat:0.17},
+  {id:'pi39',name:'תאנים מיובשות',pricePerKg:35,cat:'פירות יבשים',supplier:'',waste:0.05,vat:0.17},
+  // גבינות וירקות
+  {id:'pi40',name:'פטה עיזים',pricePerKg:110,cat:'גבינות',supplier:'אברמנטו',waste:0.05,vat:0.17},
+  {id:'pi41',name:'זיתי קלמטה',pricePerKg:58,cat:'ירקות',supplier:'אברמנטו',waste:0.05,vat:0.17},
+  // ריבות
+  {id:'pi42',name:'ריבת תות',pricePerKg:25,cat:'ריבות',supplier:'',waste:0.05,vat:0.17},
+  {id:'pi43',name:'מחית וניל',pricePerKg:453,cat:'תבלינים',supplier:'',waste:0.05,vat:0.17},
+];
+
+const DEFAULT_RECIPES = [
+  {
+    id:'rec1',name:'לחם מושלם לסופ״ש',category:'לחם',
+    yieldCount:1,yieldWeightG:700,sellingPrice:30,
+    prepTimeMin:30,bakingTimeMin:45,bakingTempC:250,
+    notes:'קמח כפרי + מחמצת שיפון, שומשום מלא ושחור',
+    ingredients:[
+      {id:'r1i1',pantryId:'pi3',name:'קמח כפרי T812',weightG:280,bakerPct:70},
+      {id:'r1i2',pantryId:'pi4',name:'קמח שיפון מלא',weightG:60,bakerPct:10},
+      {id:'r1i3',pantryId:'',name:'מי צימוקים',weightG:288,bakerPct:72},
+      {id:'r1i4',pantryId:'',name:'מחמצת',weightG:80,bakerPct:20},
+      {id:'r1i5',pantryId:'pi31',name:'מלח',weightG:12,bakerPct:3},
+      {id:'r1i6',pantryId:'pi35',name:'שומשום מלא',weightG:60,bakerPct:15},
+    ]
+  },
+  {
+    id:'rec2',name:'לחם כוסמין מלא',category:'לחם',
+    yieldCount:1,yieldWeightG:700,sellingPrice:30,
+    prepTimeMin:25,bakingTimeMin:40,bakingTempC:245,
+    notes:'אגוזי מלך קלויים ומלא טעם',
+    ingredients:[
+      {id:'r2i1',pantryId:'pi6',name:'קמח כוסמין',weightG:250,bakerPct:71},
+      {id:'r2i2',pantryId:'pi3',name:'קמח חיטה מלא',weightG:75,bakerPct:21},
+      {id:'r2i3',pantryId:'pi4',name:'קמח שיפון',weightG:25,bakerPct:8},
+      {id:'r2i4',pantryId:'',name:'מים',weightG:240,bakerPct:67},
+      {id:'r2i5',pantryId:'',name:'מחמצת',weightG:70,bakerPct:20},
+      {id:'r2i6',pantryId:'pi31',name:'מלח',weightG:10,bakerPct:2.8},
+      {id:'r2i7',pantryId:'pi22',name:'אגוז מלך קלוי',weightG:75,bakerPct:21},
+    ]
+  },
+  {
+    id:'rec3',name:'באגט מחמצת פריך',category:'לחם',
+    yieldCount:1,yieldWeightG:250,sellingPrice:20,
+    prepTimeMin:20,bakingTimeMin:25,bakingTempC:250,
+    notes:'מצופה זרעים וגרעינים',
+    ingredients:[
+      {id:'r3i1',pantryId:'pi2',name:'קמח פיצה/לחם',weightG:200,bakerPct:80},
+      {id:'r3i2',pantryId:'pi3',name:'קמח חיטה מלא',weightG:50,bakerPct:20},
+      {id:'r3i3',pantryId:'',name:'מים',weightG:175,bakerPct:70},
+      {id:'r3i4',pantryId:'',name:'מחמצת',weightG:50,bakerPct:20},
+      {id:'r3i5',pantryId:'pi31',name:'מלח',weightG:7,bakerPct:2.8},
+      {id:'r3i6',pantryId:'pi34',name:'שומשום לבן',weightG:20,bakerPct:8},
+      {id:'r3i7',pantryId:'pi35',name:'שומשום מלא',weightG:20,bakerPct:8},
+    ]
+  },
+  {
+    id:'rec4',name:'עוגת ארל גריי לימונית',category:'עוגה',
+    yieldCount:1,yieldWeightG:600,sellingPrice:45,
+    prepTimeMin:40,bakingTimeMin:45,bakingTempC:175,
+    notes:'גלייז לימון וטימין, עסיסית ומפתיעה',
+    ingredients:[
+      {id:'r4i1',pantryId:'pi1',name:'קמח T550',weightG:200,bakerPct:0},
+      {id:'r4i2',pantryId:'pi7',name:'חמאה',weightG:150,bakerPct:0},
+      {id:'r4i3',pantryId:'pi17',name:'סוכר',weightG:180,bakerPct:0},
+      {id:'r4i4',pantryId:'pi13',name:'ביצים',weightG:150,bakerPct:0},
+      {id:'r4i5',pantryId:'pi14',name:'חלב',weightG:80,bakerPct:0},
+      {id:'r4i6',pantryId:'pi31',name:'מלח',weightG:3,bakerPct:0},
+      {id:'r4i7',pantryId:'',name:'תה ארל גריי',weightG:10,bakerPct:0},
+    ]
+  },
+  {
+    id:'rec5',name:'לחמניה שוודית',category:'מאפה',
+    yieldCount:6,yieldWeightG:100,sellingPrice:25,
+    prepTimeMin:35,bakingTimeMin:20,bakingTempC:190,
+    notes:'חמאה חומה וקינמון, גלייז קרמל מלוח',
+    ingredients:[
+      {id:'r5i1',pantryId:'pi2',name:'קמח פיצה/לחם',weightG:300,bakerPct:100},
+      {id:'r5i2',pantryId:'pi13',name:'ביצים',weightG:55,bakerPct:18},
+      {id:'r5i3',pantryId:'pi7',name:'חמאה',weightG:90,bakerPct:30},
+      {id:'r5i4',pantryId:'pi17',name:'סוכר',weightG:45,bakerPct:15},
+      {id:'r5i5',pantryId:'pi14',name:'חלב',weightG:120,bakerPct:40},
+      {id:'r5i6',pantryId:'pi28',name:'שמרים טריים',weightG:10,bakerPct:3},
+      {id:'r5i7',pantryId:'pi31',name:'מלח',weightG:5,bakerPct:1.7},
+      {id:'r5i8',pantryId:'pi32',name:'קינמון',weightG:8,bakerPct:0},
+    ]
+  },
+  {
+    id:'rec6',name:'מאפה עננים',category:'מאפה',
+    yieldCount:4,yieldWeightG:120,sellingPrice:30,
+    prepTimeMin:45,bakingTimeMin:25,bakingTempC:185,
+    notes:'ריבת תות, קרם פטיסייר, אוכמניות ושקדים קלויים',
+    ingredients:[
+      {id:'r6i1',pantryId:'pi2',name:'קמח פיצה/לחם',weightG:200,bakerPct:100},
+      {id:'r6i2',pantryId:'pi13',name:'ביצים',weightG:40,bakerPct:20},
+      {id:'r6i3',pantryId:'pi7',name:'חמאה',weightG:60,bakerPct:30},
+      {id:'r6i4',pantryId:'pi17',name:'סוכר',weightG:30,bakerPct:15},
+      {id:'r6i5',pantryId:'pi14',name:'חלב',weightG:80,bakerPct:40},
+      {id:'r6i6',pantryId:'pi28',name:'שמרים טריים',weightG:6,bakerPct:3},
+      {id:'r6i7',pantryId:'pi31',name:'מלח',weightG:3,bakerPct:1.5},
+      {id:'r6i8',pantryId:'pi42',name:'ריבת תות',weightG:60,bakerPct:0},
+      {id:'r6i9',pantryId:'pi23',name:'שקדים',weightG:30,bakerPct:0},
+    ]
+  },
+];
+
+// ─── LIVE STATE ──────────────────────────────────────────
+let PANTRY = [];
+let RECIPES = [];
+let WEEKLY_PLAN = {}; // { recipeId: quantity }
+let _currentKitchenTab = 'pantry';
+let _editingRecipeId = null;
+let _editingPantryId = null;
+
+// ─── LOAD / SAVE ─────────────────────────────────────────
+function loadKitchenData() {
+  try {
+    PANTRY  = JSON.parse(localStorage.getItem('nuika_pantry'))  || DEFAULT_PANTRY.map(p=>({...p}));
+    RECIPES = JSON.parse(localStorage.getItem('nuika_recipes')) || DEFAULT_RECIPES.map(r=>({...r}));
+    WEEKLY_PLAN = JSON.parse(localStorage.getItem('nuika_weekly_plan')) || {};
+  } catch(e) {
+    PANTRY = DEFAULT_PANTRY.map(p=>({...p}));
+    RECIPES = DEFAULT_RECIPES.map(r=>({...r}));
+    WEEKLY_PLAN = {};
+  }
+}
+function savePantry()      { localStorage.setItem('nuika_pantry', JSON.stringify(PANTRY)); }
+function saveRecipes()     { localStorage.setItem('nuika_recipes', JSON.stringify(RECIPES)); }
+function saveWeeklyPlan()  { localStorage.setItem('nuika_weekly_plan', JSON.stringify(WEEKLY_PLAN)); }
+
+// ─── TAB SWITCHING ───────────────────────────────────────
+function switchKitchenTab(tab) {
+  _currentKitchenTab = tab;
+  document.querySelectorAll('.k-subnav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.k-section').forEach(s => s.classList.remove('active'));
+  const btn = document.getElementById('ksub-' + tab);
+  const sec = document.getElementById('ksec-' + tab);
+  if (btn) btn.classList.add('active');
+  if (sec) sec.classList.add('active');
+  if (tab === 'pantry')  renderPantry();
+  if (tab === 'recipes') renderRecipeGrid();
+  if (tab === 'plan')    renderPlan();
+}
+
+// ─── FOOD COST CALCULATION ───────────────────────────────
+// Returns cost in ₪ for a single ingredient row (weightG basis)
+function calcIngCost(weightG, pantryId) {
+  const p = PANTRY.find(p => p.id === pantryId);
+  if (!p || !p.pricePerKg) return null;
+  const wKg = weightG / 1000;
+  return wKg * p.pricePerKg * (1 + (p.waste || 0)) * (1 + (p.vat || 0.17));
+}
+
+// Returns { totalCost, knownCost, unknownCount, costPerUnit, fc, profitPerUnit }
+function calcRecipeCost(recipe) {
+  let knownCost = 0, unknownCount = 0;
+  (recipe.ingredients || []).forEach(ing => {
+    const c = calcIngCost(ing.weightG, ing.pantryId);
+    if (c !== null) knownCost += c;
+    else unknownCount++;
+  });
+  const count  = recipe.yieldCount  || 1;
+  const price  = recipe.sellingPrice || 0;
+  const costPerUnit = knownCost / count;
+  const fc = price > 0 ? costPerUnit / price : null;
+  const profitPerUnit = price - costPerUnit;
+  return { totalCost: knownCost, knownCost, unknownCount, costPerUnit, fc, profitPerUnit };
+}
+
+// ─── FC BADGE ────────────────────────────────────────────
+function fcBadgeHtml(fc) {
+  if (fc === null) return `<span class="fc-badge fc-yellow">FC: ?</span>`;
+  const pct = (fc * 100).toFixed(1);
+  const cls = fc <= 0.32 ? 'fc-green' : fc <= 0.45 ? 'fc-yellow' : 'fc-red';
+  return `<span class="fc-badge ${cls}">FC: ${pct}%</span>`;
+}
+
+// ─── CATEGORY CLASS ──────────────────────────────────────
+function catClass(category) {
+  const map = { 'לחם':'cat-lechem', 'עוגה':'cat-uga', 'מאפה':'cat-mafe', 'חלה':'cat-chala', 'בסיס':'cat-basis', 'עוגייה':'cat-mafe' };
+  return map[category] || 'cat-other';
+}
+function catEmoji(category) {
+  const map = { 'לחם':'🍞', 'עוגה':'🎂', 'מאפה':'🥐', 'חלה':'🕍', 'עוגייה':'🍪', 'בסיס':'🫙', 'אחר':'🍴' };
+  return map[category] || '🍴';
+}
+
+// ─── RENDER PANTRY TABLE ─────────────────────────────────
+function renderPantry() {
+  const q = (document.getElementById('pantry-search')?.value || '').trim().toLowerCase();
+  const filtered = PANTRY.filter(p => !q || p.name.includes(q) || (p.supplier||'').includes(q) || p.cat.includes(q));
+  const tbody = document.getElementById('pantry-tbody');
+  if (!tbody) return;
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="k-empty"><div class="k-empty-icon">🔍</div>לא נמצאו מרכיבים</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.map(p => `
+    <tr>
+      <td style="font-weight:600;color:#2C1810;">${p.name}</td>
+      <td dir="ltr" style="color:#6B3A2A;font-weight:700;">₪${p.pricePerKg.toFixed(1)}</td>
+      <td><span class="k-cat-badge">${p.cat}</span></td>
+      <td style="color:#9B8B75;font-size:0.75rem;">${p.supplier||'—'}</td>
+      <td style="white-space:nowrap;">
+        <button class="k-icon-btn" onclick="openPantryEditor('${p.id}')" title="ערוך">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ─── RENDER RECIPE GRID ──────────────────────────────────
+function renderRecipeGrid() {
+  const grid = document.getElementById('recipe-grid');
+  if (!grid) return;
+  if (!RECIPES.length) {
+    grid.innerHTML = `<div class="k-empty" style="grid-column:1/-1;"><div class="k-empty-icon">📖</div>אין מתכונים עדיין<br><button class="k-add-btn" onclick="openRecipeEditor(null)" style="margin-top:12px;">הוסף מתכון ראשון</button></div>`;
+    return;
+  }
+  grid.innerHTML = RECIPES.map(r => {
+    const cost = calcRecipeCost(r);
+    const warn = cost.unknownCount > 0
+      ? `<div style="font-family:'Assistant',sans-serif;font-size:0.68rem;color:#9B8B75;margin-top:2px;">${cost.unknownCount} מרכיב ללא מחיר</div>` : '';
+    return `
+    <div class="recipe-card-k" onclick="openRecipeEditor('${r.id}')">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:4px;margin-bottom:5px;">
+        <div class="r-name">${catEmoji(r.category)} ${r.name}</div>
+        <span class="k-cat-badge ${catClass(r.category)}" style="flex-shrink:0;margin-top:1px;">${r.category}</span>
+      </div>
+      <div class="r-meta">${r.yieldCount} יח' · ${r.yieldWeightG}ג' · ₪${r.sellingPrice}/יח'</div>
+      <div class="r-cost">₪${cost.costPerUnit.toFixed(2)} עלות ליחידה</div>
+      ${warn}
+      ${fcBadgeHtml(cost.fc)}
+      <div class="r-actions" onclick="event.stopPropagation()">
+        <button class="r-action-btn" onclick="addToPlan('${r.id}')">+ לתכנון</button>
+        <button class="r-action-btn primary" onclick="openRecipeEditor('${r.id}')">ערוך</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── RENDER PLAN ─────────────────────────────────────────
+function renderPlan() {
+  const container = document.getElementById('plan-rows');
+  const totalsEl  = document.getElementById('plan-totals');
+  if (!container) return;
+
+  if (!RECIPES.length) {
+    container.innerHTML = `<div class="k-empty"><div class="k-empty-icon">📅</div>הוסיפי מתכונים תחילה</div>`;
+    if (totalsEl) totalsEl.style.display = 'none';
+    return;
+  }
+
+  let totalRevenue = 0, totalCost = 0;
+  container.innerHTML = RECIPES.map(r => {
+    const qty = WEEKLY_PLAN[r.id] || 0;
+    const cost = calcRecipeCost(r);
+    const lineRevenue = qty * r.sellingPrice;
+    const lineCost    = qty * cost.costPerUnit;
+    totalRevenue += lineRevenue;
+    totalCost    += lineCost;
+    return `
+    <div class="plan-row">
+      <div>
+        <div class="plan-name">${catEmoji(r.category)} ${r.name}</div>
+        <div class="plan-meta">₪${r.sellingPrice} ליח' · FC ${cost.fc !== null ? (cost.fc*100).toFixed(0)+'%' : '?'}</div>
+      </div>
+      <input class="plan-qty-input" type="number" min="0" value="${qty || ''}" placeholder="0"
+        oninput="setPlanQty('${r.id}', this.value)" />
+      <div style="text-align:left;min-width:54px;font-family:'Assistant',sans-serif;font-size:0.78rem;">
+        ${qty > 0 ? `<div style="color:#3A7A50;font-weight:700;">₪${lineRevenue}</div><div style="color:#B45032;font-size:0.68rem;">-₪${lineCost.toFixed(0)}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Totals
+  const margin = totalRevenue > 0 ? ((totalRevenue - totalCost) / totalRevenue) : 0;
+  if (totalsEl) {
+    totalsEl.style.display = 'flex';
+    const revenueEl = document.getElementById('plan-revenue');
+    const costEl    = document.getElementById('plan-cost');
+    const profitEl  = document.getElementById('plan-profit');
+    const barEl     = document.getElementById('plan-profit-bar');
+    if (revenueEl) revenueEl.textContent = `₪${totalRevenue.toFixed(0)}`;
+    if (costEl)    costEl.textContent    = `₪${totalCost.toFixed(0)}`;
+    if (profitEl)  profitEl.textContent  = `₪${(totalRevenue-totalCost).toFixed(0)} (${(margin*100).toFixed(0)}%)`;
+    if (barEl)     barEl.style.width     = `${Math.max(0, Math.min(100, margin*100)).toFixed(0)}%`;
+    if (barEl)     barEl.style.background = margin >= 0.55 ? '#7A9A50' : margin >= 0.35 ? '#C9A02A' : '#B45032';
+  }
+}
+
+function setPlanQty(recipeId, val) {
+  const qty = parseInt(val) || 0;
+  if (qty <= 0) delete WEEKLY_PLAN[recipeId];
+  else WEEKLY_PLAN[recipeId] = qty;
+  saveWeeklyPlan();
+  // Update totals only (avoid full re-render on every keystroke)
+  renderPlanTotals();
+}
+
+function renderPlanTotals() {
+  let totalRevenue = 0, totalCost = 0;
+  RECIPES.forEach(r => {
+    const qty = WEEKLY_PLAN[r.id] || 0;
+    if (!qty) return;
+    const cost = calcRecipeCost(r);
+    totalRevenue += qty * r.sellingPrice;
+    totalCost    += qty * cost.costPerUnit;
+  });
+  const margin = totalRevenue > 0 ? ((totalRevenue - totalCost) / totalRevenue) : 0;
+  const profitEl = document.getElementById('plan-profit');
+  const costEl   = document.getElementById('plan-cost');
+  const revEl    = document.getElementById('plan-revenue');
+  const barEl    = document.getElementById('plan-profit-bar');
+  if (revEl)    revEl.textContent   = `₪${totalRevenue.toFixed(0)}`;
+  if (costEl)   costEl.textContent  = `₪${totalCost.toFixed(0)}`;
+  if (profitEl) profitEl.textContent = `₪${(totalRevenue-totalCost).toFixed(0)} (${(margin*100).toFixed(0)}%)`;
+  if (barEl) {
+    barEl.style.width      = `${Math.max(0, Math.min(100, margin*100)).toFixed(0)}%`;
+    barEl.style.background = margin >= 0.55 ? '#7A9A50' : margin >= 0.35 ? '#C9A02A' : '#B45032';
+  }
+}
+
+function addToPlan(recipeId) {
+  if (!WEEKLY_PLAN[recipeId]) WEEKLY_PLAN[recipeId] = 1;
+  else WEEKLY_PLAN[recipeId]++;
+  saveWeeklyPlan();
+  switchKitchenTab('plan');
+}
+
+function importFromOrders() {
+  // Read from actual order log
+  const orders = getOrders().filter(o => !o.archived && o.status !== 'done');
+  if (!orders.length) { alert('אין הזמנות פעילות להייבוא.'); return; }
+  const tally = {};
+  orders.forEach(o => {
+    (o.itemsArr || []).forEach(item => {
+      const r = RECIPES.find(r => r.name === item.name || (item.id && r.id === item.id));
+      if (r) tally[r.id] = (tally[r.id] || 0) + item.qty;
+    });
+  });
+  if (!Object.keys(tally).length) { alert('לא מצאתי מתכונים מתאימים להזמנות הקיימות.'); return; }
+  Object.assign(WEEKLY_PLAN, tally);
+  saveWeeklyPlan();
+  renderPlan();
+}
+
+// ─── SHOPPING LIST GENERATOR ─────────────────────────────
+function generateShoppingList() {
+  const planned = Object.entries(WEEKLY_PLAN).filter(([,q]) => q > 0);
+  if (!planned.length) { alert('הוסיפי מוצרים לתכנון תחילה.'); return; }
+
+  const aggregate = {}; // { pantryId|name : { name, pantryId, totalG, cat, unitCost } }
+
+  planned.forEach(([recipeId, qty]) => {
+    const r = RECIPES.find(r => r.id === recipeId);
+    if (!r) return;
+    const scale = qty / (r.yieldCount || 1);
+    (r.ingredients || []).forEach(ing => {
+      const key = ing.pantryId || ('_' + ing.name);
+      if (!aggregate[key]) {
+        const pItem = PANTRY.find(p => p.id === ing.pantryId);
+        aggregate[key] = {
+          name: pItem ? pItem.name : ing.name,
+          cat:  pItem ? pItem.cat  : 'אחר',
+          pantryId: ing.pantryId,
+          totalG: 0,
+          costPerKg: pItem ? pItem.pricePerKg * (1+(pItem.waste||0)) * (1+(pItem.vat||0.17)) : 0
+        };
+      }
+      aggregate[key].totalG += ing.weightG * scale;
+    });
+  });
+
+  // Group by category
+  const byCategory = {};
+  Object.values(aggregate).forEach(item => {
+    if (!byCategory[item.cat]) byCategory[item.cat] = [];
+    byCategory[item.cat].push(item);
+  });
+
+  let totalShopCost = 0;
+  let html = '';
+  const catOrder = ['קמח','שמן וחמאה','חלב וביצים','ממתיקים','שמרים','אגוזים וזרעים','שוקולד','תבלינים','דגנים','פירות יבשים','גבינות','ירקות','ריבות','אחר'];
+  const allCats = [...new Set([...catOrder, ...Object.keys(byCategory)])];
+
+  allCats.forEach(cat => {
+    if (!byCategory[cat]) return;
+    html += `<div class="shop-cat-header">${cat}</div>`;
+    byCategory[cat].sort((a,b) => b.totalG - a.totalG).forEach(item => {
+      const g = item.totalG;
+      const display = g >= 1000 ? `${(g/1000).toFixed(2)} ק"ג` : `${Math.round(g)} ג'`;
+      const lineCost = (g / 1000) * item.costPerKg;
+      if (lineCost > 0) totalShopCost += lineCost;
+      const costStr = lineCost > 0 ? `≈ ₪${lineCost.toFixed(1)}` : '';
+      html += `
+        <div class="shop-item">
+          <input type="checkbox" />
+          <span class="si-name">${item.name}</span>
+          <span class="si-amount">${display}</span>
+          <span class="si-cost">${costStr}</span>
+        </div>`;
+    });
+  });
+
+  const outputEl = document.getElementById('shopping-list-output');
+  const bodyEl   = document.getElementById('shopping-list-body');
+  const totalEl  = document.getElementById('shopping-total');
+  if (outputEl) outputEl.style.display = 'block';
+  if (bodyEl)   bodyEl.innerHTML = html;
+  if (totalEl)  totalEl.innerHTML = `<strong>עלות קניות משוערת: ₪${totalShopCost.toFixed(0)}</strong>`;
+
+  outputEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function printShoppingList() {
+  const content = document.getElementById('shopping-list-body')?.innerHTML || '';
+  const w = window.open('', '_blank');
+  w.document.write(`<html dir="rtl"><head><title>רשימת קניות — נואיקה</title>
+    <style>body{font-family:Arial,sans-serif;direction:rtl;padding:20px;max-width:400px;margin:0 auto;}
+    h2{color:#6B3A2A;} .shop-cat-header{font-weight:bold;margin-top:14px;color:#8B7260;font-size:0.8rem;text-transform:uppercase;}
+    .shop-item{display:flex;gap:10px;padding:5px 0;border-bottom:1px solid #eee;align-items:center;}
+    .si-name{flex:1;} .si-amount{font-weight:bold;color:#6B3A2A;} .si-cost{color:#999;font-size:0.75rem;}
+    input[type=checkbox]{width:14px;height:14px;}</style></head>
+    <body><h2>🛒 רשימת קניות — נואיקה</h2>${content}</body></html>`);
+  w.document.close();
+  w.print();
+}
+
+// ─── RECIPE EDITOR ───────────────────────────────────────
+function openRecipeEditor(recipeId) {
+  loadKitchenData(); // Refresh data
+  _editingRecipeId = recipeId;
+  const modal = document.getElementById('recipe-editor-modal');
+  const titleEl = document.getElementById('re-title');
+  const deleteBtn = document.getElementById('re-delete-btn');
+  const tbody = document.getElementById('re-ing-tbody');
+
+  if (recipeId) {
+    const r = RECIPES.find(r => r.id === recipeId);
+    if (!r) return;
+    titleEl.textContent = r.name || 'עריכת מתכון';
+    document.getElementById('re-id').value           = r.id;
+    document.getElementById('re-name').value         = r.name;
+    document.getElementById('re-category').value     = r.category;
+    document.getElementById('re-yield-count').value  = r.yieldCount;
+    document.getElementById('re-yield-weight').value = r.yieldWeightG;
+    document.getElementById('re-price').value        = r.sellingPrice;
+    document.getElementById('re-prep-time').value    = r.prepTimeMin || '';
+    document.getElementById('re-bake-time').value    = r.bakingTimeMin || '';
+    document.getElementById('re-bake-temp').value    = r.bakingTempC || '';
+    document.getElementById('re-notes').value        = r.notes || '';
+    deleteBtn.style.display = 'block';
+    // Render ingredients
+    tbody.innerHTML = '';
+    (r.ingredients || []).forEach(ing => addIngredientRow(ing));
+  } else {
+    titleEl.textContent = 'מתכון חדש';
+    document.getElementById('re-id').value           = '';
+    document.getElementById('re-name').value         = '';
+    document.getElementById('re-category').value     = 'לחם';
+    document.getElementById('re-yield-count').value  = 1;
+    document.getElementById('re-yield-weight').value = '';
+    document.getElementById('re-price').value        = '';
+    document.getElementById('re-prep-time').value    = '';
+    document.getElementById('re-bake-time').value    = '';
+    document.getElementById('re-bake-temp').value    = '';
+    document.getElementById('re-notes').value        = '';
+    deleteBtn.style.display = 'none';
+    tbody.innerHTML = '';
+    // Add 4 blank rows
+    for (let i = 0; i < 4; i++) addIngredientRow();
+  }
+
+  // Reset scale
+  document.getElementById('scale-target').value = '';
+  document.getElementById('scale-result').textContent = '';
+
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  recalcEditorCosts();
+}
+
+function closeRecipeEditor() {
+  document.getElementById('recipe-editor-modal').classList.remove('open');
+  document.body.style.overflow = '';
+  _editingRecipeId = null;
+}
+
+let _ingRowCounter = 0;
+function addIngredientRow(ing) {
+  const tbody = document.getElementById('re-ing-tbody');
+  if (!tbody) return;
+  const rowId = 're-row-' + (++_ingRowCounter);
+
+  // Build pantry options for datalist
+  const dlId = 'dl-' + rowId;
+
+  const tr = document.createElement('tr');
+  tr.id = rowId;
+  tr.innerHTML = `
+    <td style="min-width:120px;">
+      <input list="${dlId}" type="text" placeholder="שם מרכיב" class="ing-name"
+        value="${ing ? ing.name : ''}"
+        style="font-family:'Assistant',sans-serif;font-size:0.8rem;color:#2C1810;background:#F5EFE3;border:1.5px solid #E5D9C5;border-radius:6px;padding:5px 7px;width:100%;"
+        oninput="onIngNameInput(this, '${rowId}')" />
+      <input type="hidden" class="ing-pantry-id" value="${ing ? (ing.pantryId||'') : ''}" />
+      <datalist id="${dlId}">${PANTRY.map(p=>`<option value="${p.name}" data-id="${p.id}">`).join('')}</datalist>
+    </td>
+    <td style="min-width:70px;">
+      <input type="number" min="0" step="any" placeholder="0" class="ing-weight"
+        value="${ing ? ing.weightG : ''}" dir="ltr"
+        style="font-family:'Assistant',sans-serif;font-size:0.8rem;color:#2C1810;background:#F5EFE3;border:1.5px solid #E5D9C5;border-radius:6px;padding:5px 7px;width:100%;text-align:center;"
+        oninput="recalcEditorCosts()" />
+    </td>
+    <td style="min-width:56px;text-align:center;">
+      <span class="ing-baker-pct" style="font-family:'Assistant',sans-serif;font-size:0.75rem;color:#9B8B75;">
+        ${ing && ing.bakerPct ? ing.bakerPct+'%' : '—'}
+      </span>
+    </td>
+    <td class="ing-cost-cell" id="${rowId}-cost">—</td>
+    <td>
+      <button class="ing-del-btn" onclick="removeIngredientRow('${rowId}')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </td>
+  `;
+  tbody.appendChild(tr);
+  recalcEditorCosts();
+}
+
+function onIngNameInput(input, rowId) {
+  const name = input.value.trim();
+  const pantryItem = PANTRY.find(p => p.name === name);
+  const row = document.getElementById(rowId);
+  if (row && pantryItem) {
+    row.querySelector('.ing-pantry-id').value = pantryItem.id;
+  } else if (row) {
+    row.querySelector('.ing-pantry-id').value = '';
+  }
+  recalcEditorCosts();
+}
+
+function removeIngredientRow(rowId) {
+  const row = document.getElementById(rowId);
+  if (row) { row.remove(); recalcEditorCosts(); }
+}
+
+function recalcEditorCosts() {
+  const tbody = document.getElementById('re-ing-tbody');
+  if (!tbody) return;
+
+  let totalCost = 0;
+  let unknownCount = 0;
+  let totalFlourG = 0;
+
+  const rows = tbody.querySelectorAll('tr');
+  rows.forEach(tr => {
+    const weightInput = tr.querySelector('.ing-weight');
+    const pantryIdInput = tr.querySelector('.ing-pantry-id');
+    const costCell = tr.querySelector('.ing-cost-cell');
+    const weightG = parseFloat(weightInput?.value) || 0;
+    const pantryId = pantryIdInput?.value || '';
+    const cost = pantryId ? calcIngCost(weightG, pantryId) : null;
+
+    if (cost !== null) {
+      totalCost += cost;
+      if (costCell) costCell.textContent = `₪${cost.toFixed(2)}`;
+    } else {
+      unknownCount++;
+      if (costCell) costCell.textContent = pantryId ? '?' : '—';
+    }
+  });
+
+  const yieldCount  = parseInt(document.getElementById('re-yield-count')?.value) || 1;
+  const sellingPrice = parseFloat(document.getElementById('re-price')?.value) || 0;
+  const costPerUnit  = totalCost / yieldCount;
+  const fc = sellingPrice > 0 ? costPerUnit / sellingPrice : null;
+  const profit = sellingPrice - costPerUnit;
+
+  // Update summary
+  const csUnit    = document.getElementById('cs-cost-unit');
+  const csFC      = document.getElementById('cs-fc');
+  const csProfit  = document.getElementById('cs-profit');
+  if (csUnit)   csUnit.textContent   = `₪${costPerUnit.toFixed(2)}`;
+  if (csFC)     csFC.textContent     = fc !== null ? `${(fc*100).toFixed(1)}%` : '—';
+  if (csProfit) csProfit.textContent = sellingPrice > 0 ? `₪${profit.toFixed(2)}` : '—';
+
+  // Color the FC
+  if (csFC && fc !== null) {
+    csFC.style.color = fc <= 0.32 ? '#3A7A50' : fc <= 0.45 ? '#8B6800' : '#C4000A';
+  }
+}
+
+function updateScaleCalc() {
+  const targetQty = parseInt(document.getElementById('scale-target')?.value) || 0;
+  const yieldCount = parseInt(document.getElementById('re-yield-count')?.value) || 1;
+  const resultEl = document.getElementById('scale-result');
+  if (!resultEl) return;
+
+  if (!targetQty) { resultEl.textContent = ''; return; }
+
+  const scaleFactor = targetQty / yieldCount;
+  const tbody = document.getElementById('re-ing-tbody');
+  const rows = tbody.querySelectorAll('tr');
+  const parts = [];
+  rows.forEach(tr => {
+    const nameInput = tr.querySelector('.ing-name');
+    const weightInput = tr.querySelector('.ing-weight');
+    const name = nameInput?.value?.trim();
+    const weightG = parseFloat(weightInput?.value) || 0;
+    if (name && weightG) {
+      const scaled = weightG * scaleFactor;
+      const display = scaled >= 1000 ? `${(scaled/1000).toFixed(2)}ק"ג` : `${Math.round(scaled)}ג'`;
+      parts.push(`${name}: ${display}`);
+    }
+  });
+  resultEl.innerHTML = parts.slice(0, 5).join(' · ') + (parts.length > 5 ? ` + ${parts.length-5} עוד` : '');
+}
+
+function saveRecipe() {
+  const name     = document.getElementById('re-name').value.trim();
+  const category = document.getElementById('re-category').value;
+  const yieldCount  = parseInt(document.getElementById('re-yield-count').value) || 1;
+  const yieldWeightG = parseInt(document.getElementById('re-yield-weight').value) || 0;
+  const sellingPrice = parseFloat(document.getElementById('re-price').value) || 0;
+  const prepTimeMin  = parseInt(document.getElementById('re-prep-time').value) || 0;
+  const bakingTimeMin = parseInt(document.getElementById('re-bake-time').value) || 0;
+  const bakingTempC  = parseInt(document.getElementById('re-bake-temp').value) || 0;
+  const notes = document.getElementById('re-notes').value.trim();
+
+  if (!name) { alert('נא להזין שם מתכון'); return; }
+
+  // Collect ingredients
+  const tbody = document.getElementById('re-ing-tbody');
+  const ingredients = [];
+  tbody.querySelectorAll('tr').forEach(tr => {
+    const ingName  = tr.querySelector('.ing-name')?.value.trim();
+    const weightG  = parseFloat(tr.querySelector('.ing-weight')?.value) || 0;
+    const pantryId = tr.querySelector('.ing-pantry-id')?.value || '';
+    if (ingName && weightG > 0) {
+      ingredients.push({
+        id: 'ri_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+        name: ingName,
+        pantryId,
+        weightG,
+        bakerPct: 0
+      });
+    }
+  });
+
+  const recipe = { name, category, yieldCount, yieldWeightG, sellingPrice, prepTimeMin, bakingTimeMin, bakingTempC, notes, ingredients };
+
+  if (_editingRecipeId) {
+    const idx = RECIPES.findIndex(r => r.id === _editingRecipeId);
+    if (idx !== -1) { RECIPES[idx] = { ...RECIPES[idx], ...recipe }; }
+  } else {
+    RECIPES.push({ id: 'rec_' + Date.now(), ...recipe });
+  }
+
+  saveRecipes();
+  closeRecipeEditor();
+  renderRecipeGrid();
+}
+
+function deleteRecipe() {
+  if (!_editingRecipeId) return;
+  if (!confirm('למחוק מתכון זה?')) return;
+  const idx = RECIPES.findIndex(r => r.id === _editingRecipeId);
+  if (idx !== -1) RECIPES.splice(idx, 1);
+  delete WEEKLY_PLAN[_editingRecipeId];
+  saveRecipes();
+  saveWeeklyPlan();
+  closeRecipeEditor();
+  renderRecipeGrid();
+}
+
+// ─── PANTRY EDITOR ───────────────────────────────────────
+function openPantryEditor(pantryId) {
+  _editingPantryId = pantryId || null;
+  const modal = document.getElementById('pantry-edit-modal');
+  const titleEl = document.getElementById('pe-title');
+  const delBtn  = document.getElementById('pe-delete-btn');
+
+  if (pantryId) {
+    const p = PANTRY.find(p => p.id === pantryId);
+    if (!p) return;
+    titleEl.textContent = 'עריכת מרכיב';
+    document.getElementById('pe-id').value       = p.id;
+    document.getElementById('pe-name').value     = p.name;
+    document.getElementById('pe-price').value    = p.pricePerKg;
+    document.getElementById('pe-cat').value      = p.cat;
+    document.getElementById('pe-supplier').value = p.supplier || '';
+    document.getElementById('pe-waste').value    = p.waste ? (p.waste * 100).toFixed(0) : '0';
+    delBtn.style.display = 'block';
+  } else {
+    titleEl.textContent = 'הוספת מרכיב';
+    document.getElementById('pe-id').value       = '';
+    document.getElementById('pe-name').value     = '';
+    document.getElementById('pe-price').value    = '';
+    document.getElementById('pe-cat').value      = 'קמח';
+    document.getElementById('pe-supplier').value = '';
+    document.getElementById('pe-waste').value    = '5';
+    delBtn.style.display = 'none';
+  }
+
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePantryEditor() {
+  document.getElementById('pantry-edit-modal').classList.remove('open');
+  document.body.style.overflow = '';
+  _editingPantryId = null;
+}
+
+function savePantryItem() {
+  const name     = document.getElementById('pe-name').value.trim();
+  const priceStr = document.getElementById('pe-price').value;
+  const cat      = document.getElementById('pe-cat').value;
+  const supplier = document.getElementById('pe-supplier').value.trim();
+  const wasteStr = document.getElementById('pe-waste').value;
+
+  if (!name || !priceStr) { alert('נא למלא שם ומחיר'); return; }
+
+  const item = {
+    name,
+    pricePerKg: parseFloat(priceStr),
+    cat,
+    supplier,
+    waste: (parseFloat(wasteStr) || 0) / 100,
+    vat: 0.17
+  };
+
+  if (_editingPantryId) {
+    const idx = PANTRY.findIndex(p => p.id === _editingPantryId);
+    if (idx !== -1) PANTRY[idx] = { ...PANTRY[idx], ...item };
+  } else {
+    PANTRY.push({ id: 'pi_' + Date.now(), ...item });
+  }
+
+  savePantry();
+  closePantryEditor();
+  renderPantry();
+}
+
+function deletePantryItem() {
+  if (!_editingPantryId) return;
+  if (!confirm('למחוק מרכיב זה מהמחסן?')) return;
+  const idx = PANTRY.findIndex(p => p.id === _editingPantryId);
+  if (idx !== -1) PANTRY.splice(idx, 1);
+  savePantry();
+  closePantryEditor();
+  renderPantry();
+}
+
+// ─── KITCHEN INIT (called from openAdminPanel) ──────────
+function initKitchen() {
+  loadKitchenData();
 }
 </script>
 </body>
