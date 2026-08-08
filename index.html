@@ -1514,6 +1514,9 @@
     }
 
   </style>
+  <!-- Firebase Realtime Database (compat SDK) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 </head>
 <body class="font-sans text-ink">
 
@@ -2533,6 +2536,61 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// ─── FIREBASE ─────────────────────────────────────────
+firebase.initializeApp({
+  apiKey: "AIzaSyBH1KnxvJVBuMCkQ4vRjoBT0kfIn5ZEtqQ",
+  authDomain: "nuika-5371f.firebaseapp.com",
+  databaseURL: "https://nuika-5371f-default-rtdb.firebaseio.com",
+  projectId: "nuika-5371f",
+  storageBucket: "nuika-5371f.firebasestorage.app",
+  messagingSenderId: "652173710332",
+  appId: "1:652173710332:web:ab1d01485446fb2075d879"
+});
+const db = firebase.database();
+const ROOT = 'nuika';
+
+// Local caches — populated by Firebase listeners
+let ORDER_LOG = [];
+let _settingsCache = {};
+
+// Products listener — runs whenever products change in Firebase
+db.ref(`${ROOT}/products`).on('value', snap => {
+  const data = snap.val();
+  if (!data) {
+    // First run: push hardcoded defaults to Firebase
+    const toSave = {};
+    PRODUCTS.forEach(p => {
+      toSave[p.id] = { id: p.id, nameHe: p.nameHe, nameEn: p.nameEn, descHe: p.descHe, descEn: p.descEn, price: p.price, illustration: p.illustration || null, soldOut: p.soldOut || false, maxStock: p.maxStock || null, tag: p.tag || null };
+    });
+    db.ref(`${ROOT}/products`).set(toSave);
+    return;
+  }
+  PRODUCTS.length = 0;
+  Object.values(data).sort((a, b) => a.id - b.id).forEach(p => PRODUCTS.push({ ...p, svg: null }));
+  renderProducts();
+  const panel = document.getElementById('admin-panel');
+  if (panel && panel.classList.contains('open')) renderAdminProducts();
+});
+
+// Settings listener — ordersOpen, bitLink, deadline
+db.ref(`${ROOT}/settings`).on('value', snap => {
+  _settingsCache = snap.val() || {};
+  updateOrdersOpenBanner();
+  const bitLinkEl = document.getElementById('bit-link');
+  if (bitLinkEl && _settingsCache.bitLink) bitLinkEl.href = _settingsCache.bitLink;
+  updateCountdown();
+});
+
+// Orders listener — populates ORDER_LOG, refreshes admin panel
+db.ref(`${ROOT}/orders`).on('value', snap => {
+  ORDER_LOG = [];
+  if (snap.val()) snap.forEach(child => ORDER_LOG.push(child.val()));
+  ORDER_LOG.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+  const panel = document.getElementById('admin-panel');
+  if (panel && panel.classList.contains('open')) renderOrderManagement();
+  updateOrdersTabBadge();
+});
+
 // ─── LANDING ────────────────────────────────────────
 function enterSite() {
   const landing = document.getElementById('landing');
@@ -2731,9 +2789,8 @@ const OWNER_EMAIL    = 'shaharazmon24@gmail.com';
 function getStockRemaining(productId) {
   const p = PRODUCTS.find(p => p.id === productId);
   if (!p || !p.maxStock) return null;
-  const orders = JSON.parse(localStorage.getItem('nuika_order_log') || '[]');
   let sold = 0;
-  orders.filter(o => !o.archived && o.status !== 'done').forEach(o => {
+  ORDER_LOG.filter(o => !o.archived && o.status !== 'done').forEach(o => {
     (o.itemsArr || []).forEach(item => {
       if ((item.id && item.id === productId) || item.name === p.nameHe) sold += item.qty;
     });
@@ -3176,11 +3233,11 @@ function closeAdminLogin() {
 }
 
 function openAdminPanel() {
-  const savedBit = localStorage.getItem('nuika_bit_link') || '';
+  const savedBit = _settingsCache.bitLink || localStorage.getItem('nuika_bit_link') || '';
   document.getElementById('admin-bit-link').value = savedBit;
 
   // Orders toggle state
-  const isOpen = localStorage.getItem('nuika_orders_open') !== '0';
+  const isOpen = _settingsCache.ordersOpen !== false;
   const tog = document.getElementById('orders-toggle');
   if (tog) {
     tog.checked = isOpen;
@@ -3240,16 +3297,13 @@ function liveToggleSoldOut(id, checkbox) {
 }
 
 function saveAdminSettings() {
-  // Save Bit link
+  // Save Bit link to Firebase
   const bitVal = document.getElementById('admin-bit-link').value.trim();
-  if (bitVal) localStorage.setItem('nuika_bit_link', bitVal);
+  if (bitVal) {
+    db.ref(`${ROOT}/settings/bitLink`).set(bitVal);
+    localStorage.setItem('nuika_bit_link', bitVal); // offline fallback
+  }
 
-  // Save soldOut states
-  const soldOutMap = {};
-  PRODUCTS.forEach(p => { soldOutMap[p.id] = p.soldOut; });
-  localStorage.setItem('nuika_soldout', JSON.stringify(soldOutMap));
-
-  // Re-render products with new states
   renderProducts();
   updateCartBar();
 
@@ -3272,38 +3326,19 @@ updateOrdersOpenBanner();
 
 // Load saved settings on page load
 (function loadSavedSettings() {
-  // Bit link
+  // Bit link — offline fallback until Firebase settings listener fires
   const savedBit = localStorage.getItem('nuika_bit_link');
   if (savedBit) {
     const bitLinkEl = document.getElementById('bit-link');
     if (bitLinkEl) bitLinkEl.href = savedBit;
   }
-
-  // Full products (if saved via admin)
-  const savedProducts = localStorage.getItem('nuika_products');
-  if (savedProducts) {
-    try {
-      const saved = JSON.parse(savedProducts);
-      // Replace PRODUCTS array in place
-      PRODUCTS.length = 0;
-      saved.forEach(p => PRODUCTS.push({ ...p, svg: null }));
-    } catch(e) {}
-  } else {
-    // Fallback: load only soldOut states
-    const savedSoldOut = localStorage.getItem('nuika_soldout');
-    if (savedSoldOut) {
-      const map = JSON.parse(savedSoldOut);
-      PRODUCTS.forEach(p => {
-        if (map[p.id] !== undefined) p.soldOut = map[p.id];
-      });
-    }
-  }
+  // Products are loaded from Firebase (products listener above)
 })();
 
 // ─── ORDERS ON/OFF ─────────────────────────────────
 function toggleOrdersStatus(checkbox) {
   const isOpen = checkbox.checked;
-  localStorage.setItem('nuika_orders_open', isOpen ? '1' : '0');
+  db.ref(`${ROOT}/settings/ordersOpen`).set(isOpen);
   const statusText = document.getElementById('orders-status-text');
   statusText.textContent = isOpen
     ? 'פתוחה — לקוחות יכולים להזמין'
@@ -3313,7 +3348,7 @@ function toggleOrdersStatus(checkbox) {
 }
 
 function updateOrdersOpenBanner() {
-  const isOpen = localStorage.getItem('nuika_orders_open') !== '0';
+  const isOpen = _settingsCache.ordersOpen !== false;
   let banner = document.getElementById('orders-closed-banner');
   if (!isOpen) {
     if (!banner) {
@@ -3346,7 +3381,6 @@ function updateOrdersOpenBanner() {
 let currentFilter = 'all';
 
 function saveOrderToLog(orderData) {
-  const log = JSON.parse(localStorage.getItem('nuika_order_log') || '[]');
   const entry = {
     ...orderData,
     id: Date.now(),
@@ -3355,38 +3389,35 @@ function saveOrderToLog(orderData) {
     status: 'new',
     archived: false
   };
-  log.unshift(entry);
-  if (log.length > 200) log.pop();
-  localStorage.setItem('nuika_order_log', JSON.stringify(log));
+  db.ref(`${ROOT}/orders/${entry.id}`).set(entry);
 }
 
 function getOrders() {
-  const log = JSON.parse(localStorage.getItem('nuika_order_log') || '[]');
   const now = Date.now();
   const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
-  // Auto-archive orders older than 7 days
-  let changed = false;
-  log.forEach(o => {
+  ORDER_LOG.forEach(o => {
     if (!o.archived && o.status === 'done' && (now - o.timestamp) > SEVEN_DAYS) {
-      o.archived = true; changed = true;
+      o.archived = true;
+      db.ref(`${ROOT}/orders/${o.id}/archived`).set(true);
     }
   });
-  if (changed) localStorage.setItem('nuika_order_log', JSON.stringify(log));
-  return log;
+  return ORDER_LOG;
 }
 
 function updateOrderStatus(id, status) {
-  const log = getOrders();
-  const o = log.find(o => o.id === id);
+  const update = { status };
+  if (status === 'done') update.doneAt = Date.now();
+  db.ref(`${ROOT}/orders/${id}`).update(update);
+  // Update local cache immediately for snappy UI
+  const o = ORDER_LOG.find(o => o.id === id);
   if (o) { o.status = status; if (status === 'done') o.doneAt = Date.now(); }
-  localStorage.setItem('nuika_order_log', JSON.stringify(log));
   renderOrderManagement();
 }
 
 function deleteOrder(id) {
   if (!confirm('למחוק הזמנה זו?')) return;
-  const log = getOrders().filter(o => o.id !== id);
-  localStorage.setItem('nuika_order_log', JSON.stringify(log));
+  db.ref(`${ROOT}/orders/${id}`).remove();
+  ORDER_LOG = ORDER_LOG.filter(o => o.id !== id);
   renderOrderManagement();
 }
 
@@ -3584,7 +3615,8 @@ function printBakingList() {
 function renderOrderLog() { renderOrderManagement(); }
 function clearOrderLog() {
   if (!confirm('למחוק את כל ההזמנות?')) return;
-  localStorage.removeItem('nuika_order_log');
+  db.ref(`${ROOT}/orders`).remove();
+  ORDER_LOG = [];
   renderOrderManagement();
 }
 
@@ -3743,16 +3775,20 @@ function handleEditBackdrop(e) {
 }
 
 function saveAllProducts() {
-  // Save full products array (without SVGs which are large) to localStorage
-  const toSave = PRODUCTS.map(p => ({
-    id: p.id, nameHe: p.nameHe, nameEn: p.nameEn,
-    descHe: p.descHe, descEn: p.descEn,
-    price: p.price, illustration: p.illustration,
-    soldOut: p.soldOut,
-    maxStock: p.maxStock || null,
-    tag: p.tag || null
-  }));
-  localStorage.setItem('nuika_products', JSON.stringify(toSave));
+  const toSave = {};
+  PRODUCTS.forEach(p => {
+    toSave[p.id] = {
+      id: p.id, nameHe: p.nameHe, nameEn: p.nameEn,
+      descHe: p.descHe, descEn: p.descEn,
+      price: p.price, illustration: p.illustration || null,
+      soldOut: p.soldOut || false,
+      maxStock: p.maxStock || null,
+      tag: p.tag || null
+    };
+  });
+  db.ref(`${ROOT}/products`).set(toSave);
+  // localStorage as offline fallback
+  localStorage.setItem('nuika_products', JSON.stringify(Object.values(toSave)));
 }
 
 // ─── LANGUAGE TOGGLE ───────────────────────────────
@@ -3858,7 +3894,7 @@ renderProducts();
 
 // ─── DEADLINE MANAGEMENT ───────────────────────────
 function getCustomDeadline() {
-  const saved = localStorage.getItem('nuika_deadline');
+  const saved = _settingsCache.deadline;
   if (!saved) return null;
   const d = new Date(saved);
   return isNaN(d.getTime()) ? null : d;
@@ -3880,7 +3916,7 @@ function getNextTuesdayDeadline() {
 }
 
 function clearDeadline() {
-  localStorage.removeItem('nuika_deadline');
+  db.ref(`${ROOT}/settings/deadline`).remove();
   const dateEl = document.getElementById('admin-deadline-date');
   const timeEl = document.getElementById('admin-deadline-time');
   if (dateEl) dateEl.value = '';
@@ -3908,7 +3944,7 @@ function updateDeadlinePreview() {
 }
 
 function loadDeadlineIntoAdmin() {
-  const saved = localStorage.getItem('nuika_deadline');
+  const saved = _settingsCache.deadline || null;
   const dateEl = document.getElementById('admin-deadline-date');
   const timeEl = document.getElementById('admin-deadline-time');
   if (!dateEl) return;
@@ -3929,7 +3965,8 @@ function saveDeadlineFromAdmin() {
   const timeEl = document.getElementById('admin-deadline-time');
   if (!dateEl || !dateEl.value) return;
   const iso = dateEl.value + 'T' + (timeEl.value || '17:00') + ':00';
-  localStorage.setItem('nuika_deadline', iso);
+  db.ref(`${ROOT}/settings/deadline`).set(iso);
+  _settingsCache.deadline = iso; // update local cache immediately
   updateDeadlinePreview();
   updateCountdown();
 }
@@ -3937,7 +3974,7 @@ function saveDeadlineFromAdmin() {
 
 // ─── CSV EXPORT ────────────────────────────────────
 function exportOrdersCSV() {
-  const orders = JSON.parse(localStorage.getItem('nuika_order_log') || '[]');
+  const orders = ORDER_LOG;
   if (orders.length === 0) { alert('אין הזמנות לייצוא'); return; }
 
   const BOM = '﻿';
@@ -3972,7 +4009,7 @@ function renderCustomers() {
   const el = document.getElementById('customers-list');
   if (!el) return;
 
-  const allOrders = JSON.parse(localStorage.getItem('nuika_order_log') || '[]');
+  const allOrders = ORDER_LOG;
   if (allOrders.length === 0) {
     el.innerHTML = `<div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.85rem;text-align:center;padding:24px 0;">אין נתוני לקוחות עדיין</div>`;
     return;
