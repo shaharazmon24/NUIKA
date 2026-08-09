@@ -1,0 +1,97 @@
+{
+  "//": "NUIKA database rules. Paste into Firebase Console -> Realtime Database -> Rules -> Publish. Apply ONLY after the auth-aware app code is live and Noy's uid is listed under nuika/admins. See SECURITY.md.",
+
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "nuika": {
+
+      "//": "Read at this level so the app can check whether the tree has been seeded. Nothing sensitive lives directly here; orders and kitchen carry their own denials below, and those cannot be widened by a parent grant.",
+      ".read": false,
+      ".write": false,
+
+      "admins": {
+        "//": "Written by hand in the console, never by the app. Each key is a Firebase Auth uid.",
+        ".read": "auth != null && root.child('nuika/admins').child(auth.uid).val() === true",
+        ".write": false
+      },
+
+      "products": {
+        "//": "The menu is public. Only an admin may change it.",
+        ".read": true,
+        ".write": "auth != null && root.child('nuika/admins').child(auth.uid).val() === true"
+      },
+
+      "settings": {
+        "//": "Opening hours, deadline and payment links are public; only an admin sets them.",
+        ".read": true,
+        ".write": "auth != null && root.child('nuika/admins').child(auth.uid).val() === true"
+      },
+
+      "stockUsed": {
+        "//": "Per-cycle tally so customers see remaining stock without reading anyone's order. Admin write sits at THIS level so a whole cycle can be recomputed. A customer may only raise a single counter — never lower it, never delete it.",
+        ".read": true,
+        ".write": "auth != null && root.child('nuika/admins').child(auth.uid).val() === true",
+        "$cycle": {
+          ".validate": "$cycle.matches(/^[0-9]{10,15}$/)",
+          "$productId": {
+            ".write": "auth != null && (newData.exists() || root.child('nuika/admins').child(auth.uid).val() === true)",
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000 && (!data.exists() || newData.val() > data.val() || root.child('nuika/admins').child(auth.uid).val() === true)"
+          }
+        }
+      },
+
+      "orders": {
+        "//": "Customer names, phone numbers and addresses. Readable ONLY by an admin. A customer may create one order and may not read, edit, overwrite or delete any order, including their own. Every field is typed: an untyped field is an HTML injection route into the admin panel.",
+        ".read": "auth != null && root.child('nuika/admins').child(auth.uid).val() === true",
+        ".write": "auth != null && root.child('nuika/admins').child(auth.uid).val() === true",
+
+        "$orderId": {
+          ".write": "auth != null && ((!data.exists() && newData.exists()) || root.child('nuika/admins').child(auth.uid).val() === true)",
+          ".validate": "newData.hasChildren(['name','phone','total','timestamp'])",
+
+          "name":          { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80" },
+          "phone":         { ".validate": "newData.isString() && newData.val().length <= 25" },
+          "total":         { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000" },
+          "timestamp":     { ".validate": "newData.isNumber()" },
+          "id":            { ".validate": "newData.isNumber()" },
+          "date":          { ".validate": "newData.isString() && newData.val().length <= 40" },
+          "status":        { ".validate": "newData.isString() && newData.val().matches(/^(new|confirmed|ready|done)$/)" },
+          "archived":      { ".validate": "newData.isBoolean()" },
+          "doneAt":        { ".validate": "newData.isNumber()" },
+          "delivery":      { ".validate": "newData.isString() && newData.val().matches(/^(pickup|delivery)$/)" },
+          "paymentMethod": { ".validate": "newData.isString() && newData.val().length <= 20" },
+          "notes":         { ".validate": "newData.isString() && newData.val().length <= 500" },
+          "address":       { ".validate": "newData.isString() && newData.val().length <= 200" },
+          "items":         { ".validate": "newData.isString() && newData.val().length <= 4000" },
+
+          "itemsArr": {
+            "$i": {
+              ".validate": "newData.hasChildren(['id','name','qty'])",
+              "id":     { ".validate": "newData.isNumber()" },
+              "name":   { ".validate": "newData.isString() && newData.val().length <= 80" },
+              "qty":    { ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 500" },
+              "price":  { ".validate": "newData.isNumber() && newData.val() >= 0" },
+              "$other": { ".validate": false }
+            }
+          },
+
+          "$other": { ".validate": false }
+        }
+      },
+
+      "kitchen": {
+        "//": "Recipes, supplier prices and margins. Noy's business data, not public.",
+        ".read": "auth != null && root.child('nuika/admins').child(auth.uid).val() === true",
+        ".write": "auth != null && root.child('nuika/admins').child(auth.uid).val() === true"
+      },
+
+      "_seeded": {
+        "//": "One-time seed marker. Public read so the app can tell a fresh database from a deliberately emptied one. Create it by hand in the console at rollout; admin-only thereafter.",
+        ".read": true,
+        ".write": "auth != null && root.child('nuika/admins').child(auth.uid).val() === true"
+      }
+    }
+  }
+}

@@ -1524,6 +1524,7 @@
   <!-- Firebase Realtime Database (compat SDK) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 </head>
 <body class="font-sans text-ink">
 
@@ -1772,12 +1773,12 @@
       <div>
         <label class="block font-sans font-semibold text-ink mb-2 text-sm" for="cust-name" lang-content="he">שם מלא</label>
         <label class="block font-sans font-semibold text-ink mb-2 text-sm" for="cust-name" lang-content="en">Full Name</label>
-        <input class="field" id="cust-name" type="text" placeholder="שם" />
+        <input class="field" id="cust-name" maxlength="80" type="text" placeholder="שם" />
       </div>
       <div>
         <label class="block font-sans font-semibold text-ink mb-2 text-sm" for="cust-phone" lang-content="he">טלפון</label>
         <label class="block font-sans font-semibold text-ink mb-2 text-sm" for="cust-phone" lang-content="en">Phone</label>
-        <input class="field" id="cust-phone" type="tel" placeholder="05X-XXXXXXX" dir="ltr" />
+        <input class="field" id="cust-phone" maxlength="25" type="tel" placeholder="05X-XXXXXXX" dir="ltr" />
       </div>
     </div>
 
@@ -1785,7 +1786,7 @@
     <div class="mb-6">
       <label class="block font-sans font-semibold text-ink mb-2 text-sm" for="notes" lang-content="he">הערות (אופציונלי)</label>
       <label class="block font-sans font-semibold text-ink mb-2 text-sm" for="notes" lang-content="en">Notes (optional)</label>
-      <textarea class="field resize-none" id="notes" rows="2" placeholder="אלרגיות, בקשות מיוחדות..."></textarea>
+      <textarea class="field resize-none" id="notes" maxlength="500" rows="2" placeholder="אלרגיות, בקשות מיוחדות..."></textarea>
     </div>
 
     <!-- Total -->
@@ -1863,10 +1864,21 @@
     <h2 style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.4rem;font-weight:700;margin-bottom:4px;">כניסת מנהלת</h2>
     <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.85rem;margin-bottom:20px;">הזיני את הסיסמה שלך</p>
     <input
+      id="admin-email-input"
+      type="email"
+      placeholder="אימייל"
+      class="field"
+      autocomplete="username"
+      style="text-align:center;margin-bottom:10px;"
+      onkeydown="if(event.key==='Enter')document.getElementById('admin-password-input').focus()"
+      dir="ltr"
+    />
+    <input
       id="admin-password-input"
       type="password"
       placeholder="סיסמה"
       class="field"
+      autocomplete="current-password"
       style="text-align:center;letter-spacing:0.2em;margin-bottom:12px;"
       onkeydown="if(event.key==='Enter')checkAdminPassword()"
       dir="ltr"
@@ -1888,6 +1900,7 @@
       <div style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.25rem;font-weight:700;line-height:1.1;">לוח ניהול</div>
       <div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.75rem;">נואיקה — לחם בוטיק</div>
     </div>
+    <button onclick="adminSignOut()" title="התנתקי מהחשבון" style="background:transparent;border:none;color:#9B8B75;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;cursor:pointer;padding:6px 10px;flex-shrink:0;">התנתקי</button>
     <button onclick="closeAdminPanel()" style="background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;" aria-label="סגור">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
@@ -2579,7 +2592,7 @@ if ('serviceWorker' in navigator) {
 }
 
 // ─── FIREBASE ─────────────────────────────────────────
-if (typeof firebase === 'undefined') {
+if (typeof firebase === 'undefined' || typeof firebase.auth !== 'function') {
   document.addEventListener('DOMContentLoaded', () => {
     const b = document.createElement('div');
     b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#B45032;color:#F7F2E8;padding:10px 16px;text-align:center;font-family:sans-serif;font-size:0.9rem;';
@@ -2600,6 +2613,55 @@ firebase.initializeApp({
 });
 const db = firebase.database();
 const ROOT = 'nuika';
+
+// ─── AUTH ─────────────────────────────────────────────────────────────
+// Customers sign in anonymously: the database rules require an identity to
+// write an order, which stops a stranger with the public config from wiping
+// or harvesting the shop. Noy signs in with a real account, and her uid is
+// listed under nuika/admins, which is what the rules check for write access
+// to products, settings and the kitchen.
+let IS_ADMIN = false;
+let _authReady = false;
+let _authRetries = 0;
+const _authWaiters = [];
+
+function whenAuthReady(fn) {
+  if (_authReady) fn();
+  else _authWaiters.push(fn);
+}
+
+function _markAuthReady() {
+  if (_authReady) return;
+  _authReady = true;
+  _authWaiters.splice(0).forEach(fn => { try { fn(); } catch (e) { console.error(e); } });
+}
+
+firebase.auth().onAuthStateChanged(user => {
+  if (!user) {
+    IS_ADMIN = false;
+    // Anonymous sign-in can fail if the provider is disabled in the console.
+    // The shop must still render, so never block on it.
+    firebase.auth().signInAnonymously().catch(err => {
+      console.warn('anonymous sign-in unavailable:', err && err.code);
+      _markAuthReady();
+      // Retry with backoff. Without this, a tab that was open while the
+      // console setting was flipped — or a browser that blocks the SDK's
+      // storage — stays unauthenticated for its whole life, and every order
+      // it places is rejected while the customer is told it was sent.
+      if (_authRetries < 5) {
+        _authRetries++;
+        setTimeout(() => firebase.auth().signInAnonymously().catch(() => {}), _authRetries * 4000);
+      }
+    });
+    return;
+  }
+  // An anonymous user is never an admin, so skip the lookup for customers.
+  if (user.isAnonymous) { IS_ADMIN = false; _markAuthReady(); return; }
+  db.ref(`${ROOT}/admins/${user.uid}`).once('value')
+    .then(snap => { IS_ADMIN = snap.val() === true; })
+    .catch(() => { IS_ADMIN = false; })
+    .then(() => { _markAuthReady(); attachAdminListeners(); });
+});
 
 // Every Firebase write used to be fire-and-forget: a failure was completely
 // silent and the UI still reported success. Route them all through this.
@@ -2638,8 +2700,23 @@ var SEED_PRODUCTS = [];
 
 db.ref(`${ROOT}/_seeded`).once('value').then(seedSnap => {
   if (seedSnap.val()) return;                    // seeded once, never again
-  return db.ref(ROOT).once('value').then(rootSnap => {
-    const cur = rootSnap.val() || {};
+  // Read each subtree separately. Reading the whole `nuika` node would be
+  // denied once the rules are locked down, because orders and kitchen are
+  // admin-only and a parent read has to satisfy the strictest child.
+  return Promise.all([
+    db.ref(`${ROOT}/products`).once('value').then(s => s.val()).catch(() => 'denied'),
+    db.ref(`${ROOT}/kitchen/pantry`).once('value').then(s => s.val()).catch(() => 'denied'),
+    db.ref(`${ROOT}/kitchen/recipes`).once('value').then(s => s.val()).catch(() => 'denied')
+  ]).then(([products, pantry, recipes]) => {
+    // 'denied' means the tree exists but this session may not read it, which is
+    // the normal case for a customer. Never seed on a denial.
+    // 'denied' means the read failed or is not permitted — never a reason to
+    // seed. Only a genuine null means the tree is absent.
+    if (products === 'denied') return;
+    const cur = {
+      products,
+      kitchen: (pantry === 'denied' || recipes === 'denied') ? { pantry: true, recipes: true } : { pantry, recipes }
+    };
     const updates = { _seeded: { at: Date.now() } };
 
     // Only fill subtrees that genuinely do not exist. Writing defaults
@@ -2690,6 +2767,9 @@ db.ref(`${ROOT}/products`).on('value', snap => {
 // Settings listener — ordersOpen, bitLink, deadline
 db.ref(`${ROOT}/settings`).on('value', snap => {
   _settingsCache = snap.val() || {};
+  // The stock tally is keyed by cycle, and the cycle comes from the deadline.
+  // Re-check the subscription whenever the deadline can have moved.
+  watchStock();
   updateOrdersOpenBanner();
   const bitLinkEl = document.getElementById('bit-link');
   if (bitLinkEl && _settingsCache.bitLink) bitLinkEl.href = _settingsCache.bitLink;
@@ -2697,7 +2777,24 @@ db.ref(`${ROOT}/settings`).on('value', snap => {
 });
 
 // Orders listener — populates ORDER_LOG, refreshes admin panel
-db.ref(`${ROOT}/orders`).on('value', snap => {
+// Attached only once the session is confirmed as Noy's. Previously every
+// visitor subscribed to nuika/orders and downloaded every customer's name,
+// phone and address into their own browser.
+let _ordersAttached = false;
+function attachAdminListeners() {
+  if (!IS_ADMIN || _ordersAttached) return;
+  _ordersAttached = true;
+  db.ref(`${ROOT}/orders`).on('value', ordersSnapshot, err => {
+    // A denial here means the session is not really an admin. Without this the
+    // panel rendered empty with no error and would not re-attach on retry.
+    _ordersAttached = false;
+    console.error('orders read denied:', err && err.code);
+    alert('אין הרשאה לקרוא הזמנות — נסי להתחבר מחדש.');
+  });
+  attachKitchenListener();
+}
+
+function ordersSnapshot(snap) {
   ORDER_LOG = [];
   if (snap.val()) snap.forEach(child => ORDER_LOG.push(child.val()));
   ORDER_LOG.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
@@ -2713,10 +2810,25 @@ db.ref(`${ROOT}/orders`).on('value', snap => {
   const panel = document.getElementById('admin-panel');
   if (panel && panel.classList.contains('open')) renderOrderManagement();
   updateOrdersTabBadge();
-});
+  // Only once real orders are in hand — reconciling against an empty cache
+  // would zero the public tally and resell everything already sold.
+  reconcileStock();
+}
 
 // Kitchen listener — pantry, recipes, weekly plan (admin only, syncs across devices)
-db.ref(`${ROOT}/kitchen`).on('value', snap => {
+// Recipes and supplier prices are Noy's business data. Customers have no
+// reason to hold them, and the rules will refuse the read anyway.
+function attachKitchenListener() {
+  if (!IS_ADMIN) return;
+  db.ref(`${ROOT}/kitchen`).on('value', kitchenSnapshot, err => {
+    // Otherwise _kitchenLoaded stays false and every kitchen save alerts
+    // "still loading" forever, with no clue why.
+    console.error('kitchen read denied:', err && err.code);
+    alert('אין הרשאה לקרוא את נתוני המטבח — נסי להתחבר מחדש.');
+  });
+}
+
+function kitchenSnapshot(snap) {
   const data = snap.val() || {};
   _kitchenLoaded = true;
   // Sort by category then name: ids are strings ('pi1'), so a-b yields NaN
@@ -2744,7 +2856,11 @@ db.ref(`${ROOT}/kitchen`).on('value', snap => {
       switchKitchenTab(_currentKitchenTab || 'pantry');
     }
   }
-});
+}
+
+// Public read, so no need to wait for sign-in. Called again whenever the
+// deadline changes, because the cycle key is derived from it.
+watchStock();
 
 // ─── LANDING ────────────────────────────────────────
 function enterSite() {
@@ -2954,9 +3070,52 @@ function pruneCart() {
   });
 }
 
+// Start of the current ordering cycle, used to key the public stock counter
+// so it resets by itself every week.
+function currentCycle() {
+  const WEEK = 7 * 24 * 60 * 60 * 1000;
+  let end = (getNextTuesdayDeadline() || new Date()).getTime();
+  while (end < Date.now()) end += WEEK;
+  return { start: end - WEEK, end };
+}
+
+// Public per-product tally for the current cycle. Customers read this instead
+// of the order log, which holds names, phone numbers and addresses.
+// var, not let: watchStock() is called near the top of the script, above
+// this point, so a let binding would be in the temporal dead zone and would
+// abort the whole file.
+var STOCK_USED = {};
+var _stockRef = null;
+
+function watchStock() {
+  const key = String(currentCycle().start);
+  const path = `${ROOT}/stockUsed/${key}`;
+  if (_stockRef && _stockRef.path === path) return;
+  if (_stockRef) _stockRef.ref.off('value', _stockRef.cb);
+  const ref = db.ref(path);
+  const cb = snap => {
+    STOCK_USED = snap.val() || {};
+    if (_productsLoaded) {
+      pruneCart();
+      renderProducts();
+      Object.keys(cart).forEach(id => updateCard(+id));
+      updateCartBar();
+      updateOrdersOpenBanner();
+    }
+  };
+  ref.on('value', cb);
+  _stockRef = { path, ref, cb };
+}
+
 function getStockRemaining(productId) {
   const p = PRODUCTS.find(p => p.id === productId);
   if (!p || !p.maxStock) return null;
+
+  // Customers cannot read the order log, so they use the public tally.
+  if (!IS_ADMIN) {
+    return Math.max(0, p.maxStock - (+STOCK_USED[productId] || 0));
+  }
+
   let sold = 0;
   // Filtering on status !== 'done' meant that ticking orders off as delivered
   // handed their units back to the shop mid-week and let it oversell.
@@ -3449,27 +3608,82 @@ function backToMenu() {
 }
 
 // ─── ADMIN PANEL ───────────────────────────────────
-const ADMIN_PASSWORD = 'nuika2026'; // ← שני את הסיסמה כאן
+// Noy's Firebase Auth account. The password is NOT stored here — it lives in
+// Firebase and is checked by their servers.
+const ADMIN_EMAIL = 'noynaamad@gmail.com';
+// Only used if email sign-in has not been enabled in the console yet, so the
+// shop is never unmanageable. Delete once the real account is in use.
+const ADMIN_PASSWORD = 'nuika2026';
 
 // פתיחת לוח הניהול: הקלידי את הסיסמה ב-URL — index.html?admin
 (function checkAdminAccess() {
-  if (window.location.search.includes('admin')) {
+  if (new URLSearchParams(window.location.search).has('admin')) {
     document.getElementById('admin-login-overlay').classList.add('open');
+    // Prefill Noy's address; Shahar can type his own over it.
+    const emailEl = document.getElementById('admin-email-input');
+    if (emailEl && !emailEl.value) emailEl.value = ADMIN_EMAIL;
     document.body.style.overflow = 'hidden';
   }
 })();
 
 function checkAdminPassword() {
-  const input = document.getElementById('admin-password-input').value;
-  const errEl = document.getElementById('admin-pw-error');
-  if (input === ADMIN_PASSWORD) {
-    closeAdminLogin();
-    openAdminPanel();
-  } else {
-    errEl.textContent = 'סיסמה שגויה, נסי שוב';
-    document.getElementById('admin-password-input').value = '';
-    document.getElementById('admin-password-input').focus();
-  }
+  const emailEl = document.getElementById('admin-email-input');
+  const input   = document.getElementById('admin-password-input');
+  const errEl   = document.getElementById('admin-pw-error');
+  const email   = (emailEl && emailEl.value.trim()) || ADMIN_EMAIL;
+  const pass    = input.value;
+
+  if (!pass) { errEl.textContent = 'נא להזין סיסמה'; return; }
+  errEl.textContent = 'מתחברת...';
+
+  // A real account, so the database rules can tell Noy apart from a stranger.
+  // The old check compared against a constant sitting in the page source.
+  firebase.auth().signInWithEmailAndPassword(email, pass)
+    .then(cred => db.ref(`${ROOT}/admins/${cred.user.uid}`).once('value')
+      // The rules let only an admin read this node, so a denial here means
+      // "signed in, but not an admin" — not a bad password. Without this the
+      // generic failure message sends people resetting a correct password.
+      .catch(() => ({ val: () => false })))
+    .then(snap => {
+      if (snap.val() !== true) throw { code: 'not-admin' };
+      IS_ADMIN = true;
+      attachAdminListeners();
+      closeAdminLogin();
+      openAdminPanel();
+    })
+    .catch(err => {
+      const code = (err && err.code) || '';
+      if (code === 'auth/operation-not-allowed' || code === 'auth/configuration-not-found') {
+        // Covers ONLY the case where email sign-in is switched off in the
+        // console. It deliberately does not cover "provider on but account
+        // missing" or "account exists but not listed as admin" — allowing the
+        // page-source password through in those states would be a real hole.
+        // Do SECURITY.md steps 1-3 in one sitting, then delete this branch.
+        if (pass === ADMIN_PASSWORD) {
+          console.warn('Firebase Auth is not configured; using the legacy password.');
+          IS_ADMIN = true;
+          attachAdminListeners();
+          closeAdminLogin();
+          openAdminPanel();
+          return;
+        }
+      }
+      errEl.textContent =
+        code === 'not-admin'                ? 'החשבון הזה אינו מנהל'
+      : code === 'auth/wrong-password'      ? 'סיסמה שגויה, נסי שוב'
+      : code === 'auth/invalid-credential'  ? 'סיסמה שגויה, נסי שוב'
+      : code === 'auth/user-not-found'      ? 'המשתמש לא נמצא'
+      : code === 'auth/too-many-requests'   ? 'יותר מדי נסיונות — נסי בעוד כמה דקות'
+      : 'ההתחברות נכשלה, נסי שוב';
+      input.value = '';
+      input.focus();
+    });
+}
+
+function adminSignOut() {
+  IS_ADMIN = false;
+  firebase.auth().signOut().catch(() => {});
+  location.href = location.pathname;
 }
 
 function closeAdminLogin() {
@@ -3641,7 +3855,52 @@ function saveOrderToLog(orderData) {
     status: 'new',
     archived: false
   };
-  return db.ref(`${ROOT}/orders/${entry.id}`).set(entry);
+  // Save the order first. Incrementing the public tally before the write meant
+  // a rejected order still decremented stock, and nothing rolled it back.
+  return db.ref(`${ROOT}/orders/${entry.id}`).set(entry).then(() => {
+    const key = String(currentCycle().start);
+    (entry.itemsArr || []).forEach(item => {
+      if (!item || item.id == null) return;   // id 0 is a valid product id
+      db.ref(`${ROOT}/stockUsed/${key}/${item.id}`)
+        .transaction(v => (v || 0) + (item.qty || 0))
+        .catch(() => {});
+    });
+  });
+}
+
+// The public tally can drift — a customer can close the tab mid-write, and a
+// determined one could inflate it. Noy's session holds the real orders, so
+// recompute from them whenever she opens the panel.
+function reconcileStock() {
+  if (!IS_ADMIN) return;
+  const { start, end } = currentCycle();
+  // Nothing to reconcile against yet — writing now would zero the tally.
+  if (!ORDER_LOG.length) return;
+
+  const counts = {};
+  ORDER_LOG.filter(o => !o.archived && (o.timestamp || 0) >= start && (o.timestamp || 0) < end)
+    .forEach(o => (o.itemsArr || []).forEach(i => {
+      if (!i) return;
+      // Older orders carry no id, so fall back to the name the way the
+      // admin-side stock count does. Otherwise reconciling deletes those units.
+      let pid = i.id;
+      if (pid == null) {
+        const match = PRODUCTS.find(p => p.nameHe === i.name);
+        if (!match) return;
+        pid = match.id;
+      }
+      counts[pid] = (counts[pid] || 0) + (i.qty || 0);
+    }));
+  // Per product and inside a transaction. A read-then-write, or a set() at the
+  // parent, would clobber any customer increment still in flight.
+  const base = db.ref(`${ROOT}/stockUsed/${String(start)}`);
+  base.once('value').then(snap => {
+    const ids = new Set([...Object.keys(snap.val() || {}), ...Object.keys(counts)]);
+    ids.forEach(id => {
+      const want = counts[id] || 0;
+      base.child(id).transaction(cur => (cur === want ? undefined : want)).catch(() => {});
+    });
+  }).catch(() => {});
 }
 
 function getOrders() {
@@ -3733,7 +3992,7 @@ function renderBakingSummary() {
   el.innerHTML = entries.sort((a,b) => b[1]-a[1]).map(([name, qty]) => `
     <div class="baking-row">
       <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.88rem;color:#2C1810;font-weight:600;">${esc(name)}</div>
-      <div style="font-family:'Noto Serif Hebrew',serif;font-size:1.1rem;font-weight:700;color:#6B2E1E;">${qty} <span style="font-size:0.75rem;font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-weight:400;">יח'</span></div>
+      <div style="font-family:'Noto Serif Hebrew',serif;font-size:1.1rem;font-weight:700;color:#6B2E1E;">${+qty || 0} <span style="font-size:0.75rem;font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-weight:400;">יח'</span></div>
     </div>
   `).join('');
 }
@@ -3759,7 +4018,7 @@ function renderOrderList() {
   const nextLabel  = { new:'אשרי', confirmed:'מוכנה', ready:'נמסרה' };
 
   el.innerHTML = orders.map(o => `
-    <div class="order-card" id="ocard-${o.id}">
+    <div class="order-card" id="ocard-${+o.id || 0}">
       <div class="order-card-header">
         <div>
           <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#2C1810;font-size:0.95rem;">${esc(o.name)}</div>
@@ -3786,10 +4045,10 @@ function renderOrderList() {
           ${esc(o.phone)}
         </a>
         ${nextStatus[o.status] ? `
-        <button onclick="updateOrderStatus(${o.id},'${nextStatus[o.status]}')" class="btn-status">
+        <button onclick="updateOrderStatus(${+o.id || 0},'${nextStatus[o.status]}')" class="btn-status">
           ${nextLabel[o.status]} ←
         </button>` : ''}
-        <button onclick="deleteOrder(${o.id})" class="btn-delete-order" aria-label="מחק הזמנה">
+        <button onclick="deleteOrder(${+o.id || 0})" class="btn-delete-order" aria-label="מחק הזמנה">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
         </button>
       </div>
@@ -3853,7 +4112,7 @@ function printBakingList() {
         </tr>
         ${entries.map(([n,q]) => `
           <tr style="border-bottom:1px solid #EFE1C7;">
-            <td style="padding:8px 0;font-size:1rem;">${n}</td>
+            <td style="padding:8px 0;font-size:1rem;">${esc(n)}</td>
             <td style="padding:8px 0;font-size:1.1rem;font-weight:700;color:#6B2E1E;text-align:left;">${q}</td>
           </tr>`).join('')}
       </table>
@@ -4361,7 +4620,7 @@ function renderCustomers() {
           <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.68rem;color:#5A8A5A;">סה"כ</div>
         </div>
       </div>
-      ${topItem ? `<div class="order-items-row">הכי מזמין: ${topItem[0]} (${topItem[1]} יח')</div>` : ''}
+      ${topItem ? `<div class="order-items-row">הכי מזמין: ${esc(topItem[0])} (${+topItem[1] || 0} יח')</div>` : ''}
       <div class="order-actions">
         <button class="btn-wa" onclick="window.open('https://wa.me/${intl}','_blank')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
