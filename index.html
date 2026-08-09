@@ -2591,6 +2591,27 @@ db.ref(`${ROOT}/orders`).on('value', snap => {
   updateOrdersTabBadge();
 });
 
+// Kitchen listener — pantry, recipes, weekly plan (admin only, syncs across devices)
+db.ref(`${ROOT}/kitchen`).on('value', snap => {
+  const data = snap.val();
+  if (!data) {
+    // First run: push defaults to Firebase
+    const pantryObj = {}, recipesObj = {};
+    DEFAULT_PANTRY.forEach(p => { pantryObj[p.id] = { ...p }; });
+    DEFAULT_RECIPES.forEach(r => { recipesObj[r.id] = { ...r }; });
+    db.ref(`${ROOT}/kitchen`).set({ pantry: pantryObj, recipes: recipesObj, weeklyPlan: {} });
+    return;
+  }
+  if (data.pantry)   PANTRY      = Object.values(data.pantry).sort((a, b) => a.id - b.id);
+  if (data.recipes)  RECIPES     = Object.values(data.recipes).sort((a, b) => a.id - b.id);
+  WEEKLY_PLAN = data.weeklyPlan || {};
+  // Re-render active kitchen tab if panel is open
+  const panel = document.getElementById('admin-panel');
+  if (panel && panel.classList.contains('open') && typeof _currentKitchenTab !== 'undefined') {
+    switchKitchenTab(_currentKitchenTab || 'pantry');
+  }
+});
+
 // ─── LANDING ────────────────────────────────────────
 function enterSite() {
   const landing = document.getElementById('landing');
@@ -4236,19 +4257,24 @@ let _editingPantryId = null;
 
 // ─── LOAD / SAVE ─────────────────────────────────────────
 function loadKitchenData() {
-  try {
-    PANTRY  = JSON.parse(localStorage.getItem('nuika_pantry'))  || DEFAULT_PANTRY.map(p=>({...p}));
-    RECIPES = JSON.parse(localStorage.getItem('nuika_recipes')) || DEFAULT_RECIPES.map(r=>({...r}));
-    WEEKLY_PLAN = JSON.parse(localStorage.getItem('nuika_weekly_plan')) || {};
-  } catch(e) {
-    PANTRY = DEFAULT_PANTRY.map(p=>({...p}));
-    RECIPES = DEFAULT_RECIPES.map(r=>({...r}));
-    WEEKLY_PLAN = {};
-  }
+  // Data is kept in sync by the Firebase kitchen listener.
+  // Use defaults only if Firebase hasn't responded yet (first frame).
+  if (!PANTRY.length)  PANTRY  = DEFAULT_PANTRY.map(p => ({ ...p }));
+  if (!RECIPES.length) RECIPES = DEFAULT_RECIPES.map(r => ({ ...r }));
 }
-function savePantry()      { localStorage.setItem('nuika_pantry', JSON.stringify(PANTRY)); }
-function saveRecipes()     { localStorage.setItem('nuika_recipes', JSON.stringify(RECIPES)); }
-function saveWeeklyPlan()  { localStorage.setItem('nuika_weekly_plan', JSON.stringify(WEEKLY_PLAN)); }
+function savePantry() {
+  const obj = {};
+  PANTRY.forEach(p => { obj[p.id] = { ...p }; });
+  db.ref(`${ROOT}/kitchen/pantry`).set(obj);
+}
+function saveRecipes() {
+  const obj = {};
+  RECIPES.forEach(r => { obj[r.id] = { ...r }; });
+  db.ref(`${ROOT}/kitchen/recipes`).set(obj);
+}
+function saveWeeklyPlan() {
+  db.ref(`${ROOT}/kitchen/weeklyPlan`).set(WEEKLY_PLAN || {});
+}
 
 // ─── TAB SWITCHING ───────────────────────────────────────
 function switchKitchenTab(tab) {
