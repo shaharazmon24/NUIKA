@@ -2567,7 +2567,19 @@ db.ref(`${ROOT}/products`).on('value', snap => {
   }
   PRODUCTS.length = 0;
   Object.values(data).sort((a, b) => a.id - b.id).forEach(p => PRODUCTS.push({ ...p, svg: null }));
+
+  // Drop cart items whose product was deleted or marked sold out
+  Object.keys(cart).forEach(id => {
+    const p = PRODUCTS.find(p => p.id === +id);
+    if (!p || p.soldOut) delete cart[+id];
+  });
+
   renderProducts();
+  // Re-apply cart visual state — renderProducts rebuilds the grid from scratch
+  Object.keys(cart).forEach(id => updateCard(+id));
+  updateCartBar();
+  updateOrdersOpenBanner(); // re-apply disabled state to the new cards
+
   const panel = document.getElementById('admin-panel');
   if (panel && panel.classList.contains('open')) renderAdminProducts();
 });
@@ -2970,6 +2982,9 @@ function updateCard(id) {
   const controls= document.getElementById(`qty-controls-${id}`);
   const display = document.getElementById(`qty-display-${id}`);
 
+  // Card may be gone (product deleted in admin while in someone's cart)
+  if (!card || !badge || !icon || !controls) return;
+
   if (qty > 0) {
     card.classList.add('in-cart');
     badge.textContent = qty;
@@ -3114,7 +3129,7 @@ function submitOrder(method) {
     return `• ${p.nameHe} x${qty} = ₪${p.price * qty}`;
   });
   const delivery = deliveryMethod === 'delivery' ? DELIVERY_COST : 0;
-  const grandTotal = itemsTotal + delivery;
+  const grandTotal = getCartTotal() + delivery;
 
   const deliveryLine = deliveryMethod === 'delivery'
     ? `📦 משלוח: ₪${DELIVERY_COST}\nכתובת: ${address}`
@@ -3201,8 +3216,10 @@ function showThankYou({ name, lines, grandTotal, phone }) {
     </div>
   `;
 
-  // Bit link — from localStorage or default
-  bitLink.href = localStorage.getItem('nuika_bit_link') || 'https://bit.ly/nuika-bit';
+  // Bit link — from Firebase settings, localStorage fallback for offline
+  bitLink.href = _settingsCache.bitLink
+    || localStorage.getItem('nuika_bit_link')
+    || 'https://bit.ly/nuika-bit';
 
   overlay.classList.add('open');
   document.body.style.overflow = 'hidden';
