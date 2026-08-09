@@ -2532,7 +2532,19 @@
 // ─── PWA SERVICE WORKER ─────────────────────────────
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      // Pull a fresh copy of sw.js on every load so updates are never missed
+      reg.update().catch(() => {});
+    }).catch(() => {});
+
+    // When a new service worker takes control, reload once so the user
+    // immediately gets the new code instead of a stale cached page.
+    let _reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (_reloading) return;
+      _reloading = true;
+      window.location.reload();
+    });
   });
 }
 
