@@ -1,0 +1,30 @@
+name: Validate site
+
+# Runs on every push and pull request. Its job is to catch a whole-file
+# upload that silently reverts working code — that has already happened once
+# and took the entire Firebase layer and a batch of bug fixes with it.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check JavaScript parses
+        run: node scripts/validate.mjs --syntax
+
+      - name: Check critical features are present
+        run: node scripts/validate.mjs --features
+
+      - name: Check referenced files exist
+        run: node scripts/validate.mjs --assets
