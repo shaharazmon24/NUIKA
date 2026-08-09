@@ -2,6 +2,7 @@
   "name": "נואיקה — לחם בוטיק",
   "short_name": "נואיקה",
   "description": "לחם בוטיק ביתי | מחמצת, קמחים איכותיים, אפייה שבועית ברחובות",
+  "id": "/NUIKA/",
   "start_url": "/NUIKA/",
   "scope": "/NUIKA/",
   "display": "standalone",
@@ -12,16 +13,28 @@
   "dir": "rtl",
   "icons": [
     {
-      "src": "logo.png.png",
+      "src": "icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "logo.png.png",
+      "src": "icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "shortcuts": [
@@ -32,7 +45,7 @@
       "url": "/NUIKA/?admin",
       "icons": [
         {
-          "src": "logo.png.png",
+          "src": "icon-192.png",
           "sizes": "192x192",
           "type": "image/png"
         }

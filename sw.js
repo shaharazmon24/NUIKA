@@ -7,6 +7,8 @@ const ASSETS = [
   './',
   './index.html',
   './logo.png.png',
+  './icon-192.png',
+  './icon-512.png',
   './manifest.json',
   './images/1-lechem-mushalam.jpg',
   './images/2-lechem-kusmin.jpg',
