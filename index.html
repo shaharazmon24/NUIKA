@@ -1888,6 +1888,7 @@
       <button onclick="checkAdminPassword()" class="admin-save-btn" style="flex:1;">כניסה</button>
       <button onclick="closeAdminLogin()" style="flex:1;background:transparent;border:2px solid #6B2E1E;color:#6B2E1E;font-family:'Noto Serif Hebrew',serif;font-weight:700;font-size:1rem;padding:13px 16px;border-radius:100px;cursor:pointer;">ביטול</button>
     </div>
+    <button onclick="sendAdminPasswordReset()" style="margin-top:14px;background:none;border:none;color:#9B8B75;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;text-decoration:underline;cursor:pointer;">שכחתי סיסמה — שלחו לי קישור לאיפוס</button>
   </div>
 </div>
 
@@ -3634,6 +3635,7 @@ function checkAdminPassword() {
   const pass    = input.value;
 
   if (!pass) { errEl.textContent = 'נא להזין סיסמה'; return; }
+  errEl.style.color = '#B45032';   // reset from the reset-link success colour
   errEl.textContent = 'מתחברת...';
 
   // A real account, so the database rules can tell Noy apart from a stranger.
@@ -3683,6 +3685,33 @@ function checkAdminPassword() {
       console.error('admin sign-in failed:', code, err);
       input.value = '';
       input.focus();
+    });
+}
+
+// A password typed into the console with the keyboard in Hebrew is stored as
+// Hebrew characters and can never be retyped in English. A reset link avoids
+// that class of problem entirely, and Noy can use it on her own.
+function sendAdminPasswordReset() {
+  const emailEl = document.getElementById('admin-email-input');
+  const errEl   = document.getElementById('admin-pw-error');
+  const email   = (emailEl && emailEl.value.trim()) || ADMIN_EMAIL;
+
+  if (!email) { errEl.textContent = 'נא להזין אימייל'; return; }
+  errEl.textContent = 'שולחת...';
+
+  firebase.auth().sendPasswordResetEmail(email)
+    .then(() => {
+      errEl.style.color = '#4C7A4E';
+      errEl.textContent = 'נשלח אימייל עם קישור לאיפוס — בדקי גם בספאם';
+    })
+    .catch(err => {
+      errEl.style.color = '#B45032';
+      const code = (err && err.code) || '';
+      errEl.textContent =
+        code === 'auth/user-not-found'  ? 'לא קיים חשבון עם האימייל הזה'
+      : code === 'auth/invalid-email'   ? 'כתובת האימייל אינה תקינה'
+      : 'שליחת האיפוס נכשלה' + (code ? ' (' + code + ')' : '');
+      console.error('password reset failed:', code, err);
     });
 }
 
