@@ -2,9 +2,9 @@
   "name": "נואיקה — לחם בוטיק",
   "short_name": "נואיקה",
   "description": "לחם בוטיק ביתי | מחמצת, קמחים איכותיים, אפייה שבועית ברחובות",
-  "id": "/NUIKA/",
-  "start_url": "/NUIKA/",
-  "scope": "/NUIKA/",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#F7F2E8",
   "theme_color": "#6B3A2A",
@@ -42,7 +42,7 @@
       "name": "לוח ניהול",
       "short_name": "ניהול",
       "description": "כניסה ישירה ללוח הניהול של נואיקה",
-      "url": "/NUIKA/?admin",
+      "url": "./?admin",
       "icons": [
         {
           "src": "icon-192.png",
