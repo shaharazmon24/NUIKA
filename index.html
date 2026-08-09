@@ -4255,12 +4255,41 @@ function previewImage(input) {
   const file = input.files[0];
   const reader = new FileReader();
   reader.onload = function(e) {
-    pendingImageDataUrl = e.target.result;
-    const preview = document.getElementById('edit-img-preview');
-    const placeholder = document.getElementById('edit-img-placeholder');
-    preview.src = pendingImageDataUrl;
-    preview.style.display = 'block';
-    placeholder.style.display = 'none';
+    // A phone photo is 3-5 MB. Stored raw it goes into the products node as
+    // base64, is re-downloaded by every visitor on every load, and can blow
+    // the write limit outright. Shrink it here, before it is ever saved.
+    const img = new Image();
+    img.onload = function() {
+      const MAX = 900;
+      const scale = Math.min(1, MAX / img.naturalWidth);
+      const w = Math.round(img.naturalWidth * scale);
+      const h = Math.round(img.naturalHeight * scale);
+
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, w, h);
+
+      pendingImageDataUrl = c.toDataURL('image/jpeg', 0.82);
+
+      const preview = document.getElementById('edit-img-preview');
+      const placeholder = document.getElementById('edit-img-placeholder');
+      preview.src = pendingImageDataUrl;
+      preview.style.display = 'block';
+      placeholder.style.display = 'none';
+    };
+    // If the browser cannot decode it, fall back to the original rather than
+    // silently losing the photo.
+    img.onerror = function() {
+      pendingImageDataUrl = e.target.result;
+      const preview = document.getElementById('edit-img-preview');
+      const placeholder = document.getElementById('edit-img-placeholder');
+      preview.src = pendingImageDataUrl;
+      preview.style.display = 'block';
+      placeholder.style.display = 'none';
+    };
+    img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
