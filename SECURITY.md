@@ -1,6 +1,11 @@
-# Locking down the database
+# Database security — DONE
 
-Right now the database is world-readable and world-writable. Anyone who opens
+> **Completed 10 August 2026.** Rules are published and verified: an
+> unauthenticated read of `nuika/orders` and `nuika/kitchen` returns
+> PERMISSION_DENIED, the menu still loads publicly, and ordering works.
+> The steps below are kept as a record and for rebuilding from scratch.
+
+Before this was done, the database was world-readable and world-writable. Anyone who opens
 the site can read every order — **names, phone numbers, addresses** — or delete
 the entire shop with a single request. The admin password sitting in the page
 source protects the panel's appearance, nothing more.
@@ -111,12 +116,14 @@ statuses. If it fails, ask Claude to clean the legacy rows.
 
 ---
 
-## 6. Remove the fallback password
+## 6. Remove the fallback password — DONE
 
-`index.html` still contains `ADMIN_PASSWORD = 'nuika2026'`, used only when
-email sign-in has not been enabled yet, so nobody could get locked out
-mid-setup. Once step 5 passes, ask Claude to delete it and the branch that uses
-it. Until then it is a second way in, and it is written in the page source.
+The temporary `ADMIN_PASSWORD` constant and the branch that used it have been
+deleted. No password appears anywhere in the source now: Firebase verifies it
+server-side, and the rules are what protect the data.
+
+If a password is ever forgotten, use the **שכחתי סיסמה** link on the admin
+sign-in screen rather than editing anything in the console.
 
 ---
 

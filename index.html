@@ -3611,12 +3611,12 @@ function backToMenu() {
 // ─── ADMIN PANEL ───────────────────────────────────
 // Noy's Firebase Auth account. The password is NOT stored here — it lives in
 // Firebase and is checked by their servers.
+// Prefills the sign-in field only. No password lives in this file: Firebase
+// checks it on their servers, and the database rules — not this page — are
+// what actually protect the data.
 const ADMIN_EMAIL = 'noynaamad@gmail.com';
-// Only used if email sign-in has not been enabled in the console yet, so the
-// shop is never unmanageable. Delete once the real account is in use.
-const ADMIN_PASSWORD = 'nuika2026';
 
-// פתיחת לוח הניהול: הקלידי את הסיסמה ב-URL — index.html?admin
+// פתיחת לוח הניהול: index.html?admin
 (function checkAdminAccess() {
   if (new URLSearchParams(window.location.search).has('admin')) {
     document.getElementById('admin-login-overlay').classList.add('open');
@@ -3655,21 +3655,6 @@ function checkAdminPassword() {
     })
     .catch(err => {
       const code = (err && err.code) || '';
-      if (code === 'auth/operation-not-allowed' || code === 'auth/configuration-not-found') {
-        // Covers ONLY the case where email sign-in is switched off in the
-        // console. It deliberately does not cover "provider on but account
-        // missing" or "account exists but not listed as admin" — allowing the
-        // page-source password through in those states would be a real hole.
-        // Do SECURITY.md steps 1-3 in one sitting, then delete this branch.
-        if (pass === ADMIN_PASSWORD) {
-          console.warn('Firebase Auth is not configured; using the legacy password.');
-          IS_ADMIN = true;
-          attachAdminListeners();
-          closeAdminLogin();
-          openAdminPanel();
-          return;
-        }
-      }
       // Firebase deliberately returns the same code for a wrong password, a
       // missing account and a mistyped address, so the message must not claim
       // it was the password.
