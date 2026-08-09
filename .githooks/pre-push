@@ -1,0 +1,46 @@
+#!/bin/sh
+# Blocks a push that would break the live shop.
+#
+# CI catches this too, but CI catches it *after* the commit is public and the
+# site may already be serving it. Catching it here means the mistake never
+# leaves the machine.
+#
+# Installed by: node scripts/setup.mjs
+# Emergency bypass (avoid): git push --no-verify
+
+echo "Checking the site before pushing..."
+
+if ! node scripts/validate.mjs; then
+  echo ""
+  echo "──────────────────────────────────────────────"
+  echo "  הדחיפה נעצרה — יש בעיה באתר"
+  echo ""
+  echo "  משהו באתר שבור, אז לא דחפתי."
+  echo "  בקשי מ-Claude: \"תקן את מה שהבדיקה מצאה\""
+  echo "──────────────────────────────────────────────"
+  exit 1
+fi
+
+# A push that is behind the remote means someone else has work you have not
+# taken yet. Merging it here rather than there is what caused the last wipe.
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+git fetch origin "$BRANCH" --quiet 2>/dev/null || true
+
+if git rev-parse "origin/$BRANCH" >/dev/null 2>&1; then
+  BEHIND=$(git rev-list --count "HEAD..origin/$BRANCH" 2>/dev/null || echo 0)
+  if [ "$BEHIND" -gt 0 ]; then
+    echo ""
+    echo "──────────────────────────────────────────────"
+    echo "  הדחיפה נעצרה — יש עדכונים חדשים בשרת"
+    echo ""
+    echo "  מישהו אחר שינה משהו ($BEHIND שינויים)."
+    echo "  אם תדחפי עכשיו, העבודה שלו תימחק."
+    echo ""
+    echo "  הריצי קודם:  git pull"
+    echo "──────────────────────────────────────────────"
+    exit 1
+  fi
+fi
+
+echo "Looks good."
+exit 0
