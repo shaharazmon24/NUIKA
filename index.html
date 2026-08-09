@@ -1514,9 +1514,6 @@
     }
 
   </style>
-  <!-- Firebase Realtime Database (compat SDK) -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 </head>
 <body class="font-sans text-ink">
 
@@ -1687,8 +1684,8 @@
             <div class="font-serif font-bold" style="font-size:1.15rem;color:#F7EEE0;line-height:1.3;" id="cart-total">₪0</div>
           </div>
         </div>
-        <button onclick="openOrderModal()" class="font-serif font-bold cursor-pointer transition-all" style="background:#D6A54A;color:#2C1810;font-size:0.92rem;padding:11px 22px;border-radius:100px;border:none;letter-spacing:0.01em;" lang-content="he">לביצוע הזמנה ←</button>
-        <button onclick="openOrderModal()" class="font-serif font-bold cursor-pointer transition-all" style="background:#D6A54A;color:#2C1810;font-size:0.92rem;padding:11px 22px;border-radius:100px;border:none;letter-spacing:0.01em;" lang-content="en">Place Order →</button>
+        <button id="cart-order-btn-he" onclick="openOrderModal()" class="font-serif font-bold transition-all" style="background:#D6A54A;color:#2C1810;font-size:0.92rem;padding:11px 22px;border-radius:100px;border:none;letter-spacing:0.01em;" lang-content="he">לביצוע הזמנה ←</button>
+        <button id="cart-order-btn-en" onclick="openOrderModal()" class="font-serif font-bold transition-all" style="background:#D6A54A;color:#2C1810;font-size:0.92rem;padding:11px 22px;border-radius:100px;border:none;letter-spacing:0.01em;" lang-content="en">Place Order →</button>
       </div>
     </div>
   </div>
@@ -1716,43 +1713,48 @@
     <!-- Divider -->
     <hr class="border-parchment mb-6" />
 
-    <!-- Delivery method -->
+    <!-- Pickup info -->
     <div class="mb-5">
       <label class="block font-sans font-semibold text-ink mb-3 text-sm" lang-content="he">אופן קבלה</label>
-      <label class="block font-sans font-semibold text-ink mb-3 text-sm" lang-content="en">Delivery Method</label>
-      <div class="flex gap-3">
-        <label class="flex-1 cursor-pointer">
-          <input type="radio" name="delivery" value="delivery" class="sr-only" onchange="toggleDelivery(this)" />
-          <div class="delivery-option border-2 border-parchment rounded-xl p-3 text-center transition-colors hover:border-terracotta">
-            <div class="text-2xl mb-1">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mx-auto"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-            </div>
-            <div class="text-sm font-sans text-ink font-semibold" lang-content="he">משלוח</div>
-            <div class="text-sm font-sans text-ink font-semibold" lang-content="en">Delivery</div>
-            <div class="text-xs text-muted" lang-content="he">+25 ₪</div>
-            <div class="text-xs text-muted" lang-content="en">+₪25</div>
-          </div>
-        </label>
-        <label class="flex-1 cursor-pointer">
-          <input type="radio" name="delivery" value="pickup" class="sr-only" onchange="toggleDelivery(this)" checked />
-          <div class="delivery-option border-2 border-earth rounded-xl p-3 text-center transition-colors hover:border-earth" id="pickup-option-box">
-            <div class="text-2xl mb-1">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mx-auto"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-            </div>
-            <div class="text-sm font-sans text-ink font-semibold" lang-content="he">איסוף עצמי</div>
-            <div class="text-sm font-sans text-ink font-semibold" lang-content="en">Pickup</div>
-            <div class="text-xs text-muted" lang-content="he">ח' בן ציון • חינם</div>
-            <div class="text-xs text-muted" lang-content="en">Ben Zion St · Free</div>
-          </div>
-        </label>
+      <label class="block font-sans font-semibold text-ink mb-3 text-sm" lang-content="en">Pickup</label>
+      <div class="border-2 border-earth rounded-xl p-3 flex items-center gap-3" style="background:#FDFAF4;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <div>
+          <div class="text-sm font-sans text-ink font-semibold" lang-content="he">איסוף עצמי</div>
+          <div class="text-sm font-sans text-ink font-semibold" lang-content="en">Self Pickup</div>
+          <div class="text-xs text-muted" lang-content="he">ש. בן ציון 13, רחובות</div>
+          <div class="text-xs text-muted" lang-content="en">S. Ben Zion 13, Rehovot</div>
+        </div>
       </div>
     </div>
 
-    <!-- Address (shown only for delivery) -->
-    <div id="address-field" class="mb-5 hidden">
-      <label class="block font-sans font-semibold text-ink mb-2 text-sm" for="address" lang-content="he">כתובת למשלוח</label>
-      <label class="block font-sans font-semibold text-ink mb-2 text-sm" for="address" lang-content="en">Delivery Address</label>
-      <input class="field" id="address" type="text" placeholder="רחוב, מספר בית, עיר" dir="rtl" />
+    <!-- Payment method -->
+    <div class="mb-5">
+      <label class="block font-sans font-semibold text-ink mb-3 text-sm" lang-content="he">אופן תשלום</label>
+      <label class="block font-sans font-semibold text-ink mb-3 text-sm" lang-content="en">Payment Method</label>
+      <div class="flex gap-2">
+        <label class="flex-1 cursor-pointer">
+          <input type="radio" name="payment" value="cash" class="sr-only" onchange="togglePayment(this)" checked />
+          <div class="payment-option border-2 border-earth rounded-xl p-2.5 text-center transition-colors hover:border-earth">
+            <div class="text-sm font-sans text-ink font-semibold" lang-content="he">מזומן</div>
+            <div class="text-sm font-sans text-ink font-semibold" lang-content="en">Cash</div>
+          </div>
+        </label>
+        <label class="flex-1 cursor-pointer">
+          <input type="radio" name="payment" value="bit" class="sr-only" onchange="togglePayment(this)" />
+          <div class="payment-option border-2 border-parchment rounded-xl p-2.5 text-center transition-colors hover:border-terracotta">
+            <div class="text-sm font-sans text-ink font-semibold" lang-content="he">Bit</div>
+            <div class="text-sm font-sans text-ink font-semibold" lang-content="en">Bit</div>
+          </div>
+        </label>
+        <label class="flex-1 cursor-pointer">
+          <input type="radio" name="payment" value="paybox" class="sr-only" onchange="togglePayment(this)" />
+          <div class="payment-option border-2 border-parchment rounded-xl p-2.5 text-center transition-colors hover:border-terracotta">
+            <div class="text-sm font-sans text-ink font-semibold" lang-content="he">PayBox</div>
+            <div class="text-sm font-sans text-ink font-semibold" lang-content="en">PayBox</div>
+          </div>
+        </label>
+      </div>
     </div>
 
     <!-- Name & Phone -->
@@ -1783,22 +1785,16 @@
       <span class="font-serif font-bold text-earth text-xl" id="modal-total">₪0</span>
     </div>
 
-    <!-- Submit buttons -->
+    <!-- Submit -->
     <div class="flex flex-col gap-3">
-      <button onclick="submitOrder('whatsapp')" class="w-full bg-earth hover:bg-earth/90 text-cream font-serif font-bold text-base py-3.5 rounded-full transition-colors cursor-pointer flex items-center justify-center gap-2">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-        <span lang-content="he">שלח הזמנה בוואצאפ</span>
-        <span lang-content="en">Send via WhatsApp</span>
-      </button>
-      <button onclick="submitOrder('email')" class="w-full border-2 border-earth text-earth hover:bg-parchment font-serif font-bold text-base py-3 rounded-full transition-colors cursor-pointer flex items-center justify-center gap-2">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-        <span lang-content="he">שלח במייל</span>
-        <span lang-content="en">Send by Email</span>
+      <button onclick="submitOrder()" class="w-full bg-earth hover:bg-earth/90 text-cream font-serif font-bold text-base py-3.5 rounded-full transition-colors cursor-pointer flex items-center justify-center gap-2">
+        <span lang-content="he">שלח הזמנה</span>
+        <span lang-content="en">Send Order</span>
       </button>
     </div>
 
-    <p class="text-center text-muted text-xs mt-4 font-sans" lang-content="he">לאחר שליחת ההזמנה נשלח לך קישור לתשלום ב-Bit</p>
-    <p class="text-center text-muted text-xs mt-4 font-sans" lang-content="en">After submitting, we'll send you a Bit payment link</p>
+    <p class="text-center text-muted text-xs mt-4 font-sans" lang-content="he">איסוף עצמי מ-ש. בן ציון 13, רחובות</p>
+    <p class="text-center text-muted text-xs mt-4 font-sans" lang-content="en">Self pickup from S. Ben Zion 13, Rehovot</p>
   </div>
 </div>
 
@@ -1826,13 +1822,18 @@
     <!-- Order summary box -->
     <div class="ty-summary bg-white/70 border border-parchment rounded-2xl p-5 mb-6 text-right" id="ty-order-box" style="backdrop-filter:blur(8px);"></div>
 
-    <!-- Bit payment button -->
+    <!-- Bit payment QR -->
     <div class="ty-btn flex flex-col gap-3">
-      <a id="bit-link" href="#" target="_blank" rel="noopener"
+      <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:16px;padding:16px;text-align:center;">
+        <p class="font-serif font-bold" style="color:#6B2E1E;font-size:0.92rem;margin-bottom:10px;" lang-content="he">סרקו לתשלום ב-Bit</p>
+        <p class="font-serif font-bold" style="color:#6B2E1E;font-size:0.92rem;margin-bottom:10px;" lang-content="en">Scan to pay via Bit</p>
+        <img src="images/bit-qr.jpg" alt="קוד QR לתשלום ב-Bit" style="width:180px;max-width:60%;margin:0 auto;border-radius:8px;display:block;" />
+      </div>
+      <a id="paybox-link" href="#" target="_blank" rel="noopener"
          class="block w-full text-center font-serif font-bold text-base py-3.5 rounded-full transition-colors cursor-pointer"
-         style="background:#6B2E1E;color:#F7EEE0;">
-        <span lang-content="he">תשלום ב-Bit →</span>
-        <span lang-content="en">Pay via Bit →</span>
+         style="background:#BD4D30;color:#F7EEE0;display:none;">
+        <span lang-content="he">תשלום ב-PayBox →</span>
+        <span lang-content="en">Pay via PayBox →</span>
       </a>
       <button onclick="backToMenu()"
         class="w-full border-2 border-earth text-earth hover:bg-parchment font-serif font-bold text-base py-3 rounded-full transition-colors cursor-pointer" style="background:transparent;">
@@ -2094,6 +2095,15 @@
       </label>
       <input id="admin-bit-link" type="url" class="field" placeholder="https://bit.ly/..." dir="ltr" style="font-size:0.88rem;" />
       <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;margin-top:6px;">אפליקציית Bit ← "קבלת כסף" ← "שלח קישור"</p>
+    </div>
+
+    <!-- PayBox link -->
+    <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:14px;padding:18px;margin-bottom:14px;">
+      <label style="display:block;font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-weight:700;font-size:0.95rem;margin-bottom:8px;">
+        🔗 קישור PayBox לתשלום
+      </label>
+      <input id="admin-paybox-link" type="url" class="field" placeholder="https://paybox.money/..." dir="ltr" style="font-size:0.88rem;" />
+      <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;margin-top:6px;">אם משאירים ריק, כפתור PayBox לא יופיע ללקוח בדף התודה.</p>
     </div>
 
     <!-- Deadline -->
@@ -2453,25 +2463,27 @@
     <!-- Name Hebrew -->
     <div style="margin-bottom:12px;">
       <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:6px;">שם המנה (עברית)</label>
-      <input id="edit-name-he" type="text" class="field" placeholder="לחם מושלם לסופ״ש" />
+      <input id="edit-name-he" type="text" class="field" placeholder="לחם מושלם לסופ״ש" onblur="autoTranslateField('edit-name-he','edit-name-en','edit-name-en-note')" />
     </div>
 
     <!-- Name English -->
     <div style="margin-bottom:12px;">
       <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:6px;">שם המנה (אנגלית)</label>
       <input id="edit-name-en" type="text" class="field" dir="ltr" placeholder="Perfect Weekend Loaf" />
+      <div id="edit-name-en-note" style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.7rem;margin-top:3px;"></div>
     </div>
 
     <!-- Desc Hebrew -->
     <div style="margin-bottom:12px;">
       <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:6px;">תיאור (עברית)</label>
-      <textarea id="edit-desc-he" class="field" rows="2" placeholder="קמח חיטה כפרי, מחמצת שיפון..."></textarea>
+      <textarea id="edit-desc-he" class="field" rows="2" placeholder="קמח חיטה כפרי, מחמצת שיפון..." onblur="autoTranslateField('edit-desc-he','edit-desc-en','edit-desc-en-note')"></textarea>
     </div>
 
     <!-- Desc English -->
     <div style="margin-bottom:12px;">
       <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:6px;">תיאור (אנגלית)</label>
       <textarea id="edit-desc-en" class="field" rows="2" dir="ltr" placeholder="Country wheat flour, rye sourdough..."></textarea>
+      <div id="edit-desc-en-note" style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.7rem;margin-top:3px;"></div>
     </div>
 
     <!-- Price -->
@@ -2518,7 +2530,7 @@
 <footer style="background:#EFE1C7;border-top:1px solid #D5C9B5;margin-top:0;padding-bottom:8rem;">
   <div class="max-w-5xl mx-auto px-4 text-center" style="padding-top:2.5rem;padding-bottom:2rem;">
     <div class="font-serif text-earth font-bold mb-2" style="font-size:1.35rem;">נואיקה • NUIKA</div>
-    <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#6B5D4E;font-size:0.85rem;margin-bottom:1.1rem;">לחם בוטיק ביתי • רחוב ש. בן ציון, רחובות</p>
+    <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#6B5D4E;font-size:0.85rem;margin-bottom:1.1rem;">לחם בוטיק ביתי • ש. בן ציון 13, רחובות</p>
     <div class="flex justify-center items-center gap-3">
       <a href="https://wa.me/972547382282" target="_blank" rel="noopener" style="font-family:'Noto Sans Hebrew',sans-serif;color:#8B7260;font-size:0.85rem;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#6B2E1E'" onmouseout="this.style.color='#8B7260'">054-7382282</a>
       <span style="color:#C4B89A;font-size:0.6rem;">●</span>
@@ -2532,109 +2544,9 @@
 // ─── PWA SERVICE WORKER ─────────────────────────────
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').then(reg => {
-      // Pull a fresh copy of sw.js on every load so updates are never missed
-      reg.update().catch(() => {});
-    }).catch(() => {});
-
-    // When a new service worker takes control, reload once so the user
-    // immediately gets the new code instead of a stale cached page.
-    let _reloading = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (_reloading) return;
-      _reloading = true;
-      window.location.reload();
-    });
+    navigator.serviceWorker.register('sw.js').catch(() => {});
   });
 }
-
-// ─── FIREBASE ─────────────────────────────────────────
-firebase.initializeApp({
-  apiKey: "AIzaSyBH1KnxvJVBuMCkQ4vRjoBT0kfIn5ZEtqQ",
-  authDomain: "nuika-5371f.firebaseapp.com",
-  databaseURL: "https://nuika-5371f-default-rtdb.firebaseio.com",
-  projectId: "nuika-5371f",
-  storageBucket: "nuika-5371f.firebasestorage.app",
-  messagingSenderId: "652173710332",
-  appId: "1:652173710332:web:ab1d01485446fb2075d879"
-});
-const db = firebase.database();
-const ROOT = 'nuika';
-
-// Local caches — populated by Firebase listeners
-let ORDER_LOG = [];
-let _settingsCache = {};
-
-// Products listener — runs whenever products change in Firebase
-db.ref(`${ROOT}/products`).on('value', snap => {
-  const data = snap.val();
-  if (!data) {
-    // First run: push hardcoded defaults to Firebase
-    const toSave = {};
-    PRODUCTS.forEach(p => {
-      toSave[p.id] = { id: p.id, nameHe: p.nameHe, nameEn: p.nameEn, descHe: p.descHe, descEn: p.descEn, price: p.price, illustration: p.illustration || null, soldOut: p.soldOut || false, maxStock: p.maxStock || null, tag: p.tag || null };
-    });
-    db.ref(`${ROOT}/products`).set(toSave);
-    return;
-  }
-  PRODUCTS.length = 0;
-  Object.values(data).sort((a, b) => a.id - b.id).forEach(p => PRODUCTS.push({ ...p, svg: null }));
-
-  // Drop cart items whose product was deleted or marked sold out
-  Object.keys(cart).forEach(id => {
-    const p = PRODUCTS.find(p => p.id === +id);
-    if (!p || p.soldOut) delete cart[+id];
-  });
-
-  renderProducts();
-  // Re-apply cart visual state — renderProducts rebuilds the grid from scratch
-  Object.keys(cart).forEach(id => updateCard(+id));
-  updateCartBar();
-  updateOrdersOpenBanner(); // re-apply disabled state to the new cards
-
-  const panel = document.getElementById('admin-panel');
-  if (panel && panel.classList.contains('open')) renderAdminProducts();
-});
-
-// Settings listener — ordersOpen, bitLink, deadline
-db.ref(`${ROOT}/settings`).on('value', snap => {
-  _settingsCache = snap.val() || {};
-  updateOrdersOpenBanner();
-  const bitLinkEl = document.getElementById('bit-link');
-  if (bitLinkEl && _settingsCache.bitLink) bitLinkEl.href = _settingsCache.bitLink;
-  updateCountdown();
-});
-
-// Orders listener — populates ORDER_LOG, refreshes admin panel
-db.ref(`${ROOT}/orders`).on('value', snap => {
-  ORDER_LOG = [];
-  if (snap.val()) snap.forEach(child => ORDER_LOG.push(child.val()));
-  ORDER_LOG.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-  const panel = document.getElementById('admin-panel');
-  if (panel && panel.classList.contains('open')) renderOrderManagement();
-  updateOrdersTabBadge();
-});
-
-// Kitchen listener — pantry, recipes, weekly plan (admin only, syncs across devices)
-db.ref(`${ROOT}/kitchen`).on('value', snap => {
-  const data = snap.val();
-  if (!data) {
-    // First run: push defaults to Firebase
-    const pantryObj = {}, recipesObj = {};
-    DEFAULT_PANTRY.forEach(p => { pantryObj[p.id] = { ...p }; });
-    DEFAULT_RECIPES.forEach(r => { recipesObj[r.id] = { ...r }; });
-    db.ref(`${ROOT}/kitchen`).set({ pantry: pantryObj, recipes: recipesObj, weeklyPlan: {} });
-    return;
-  }
-  if (data.pantry)   PANTRY      = Object.values(data.pantry).sort((a, b) => a.id - b.id);
-  if (data.recipes)  RECIPES     = Object.values(data.recipes).sort((a, b) => a.id - b.id);
-  WEEKLY_PLAN = data.weeklyPlan || {};
-  // Re-render active kitchen tab if panel is open
-  const panel = document.getElementById('admin-panel');
-  if (panel && panel.classList.contains('open') && typeof _currentKitchenTab !== 'undefined') {
-    switchKitchenTab(_currentKitchenTab || 'pantry');
-  }
-});
 
 // ─── LANDING ────────────────────────────────────────
 function enterSite() {
@@ -2823,8 +2735,8 @@ const PRODUCTS = [
 
 // ─── STATE ─────────────────────────────────────────
 const cart = {}; // { productId: quantity }
-let deliveryMethod = 'pickup';
-const DELIVERY_COST = 25;
+let paymentMethod = 'cash';
+const PICKUP_ADDRESS = 'ש. בן ציון 13, רחובות';
 const MIN_ORDER_ITEMS = 3;
 const OWNER_WHATSAPP = '972547382282';
 const OWNER_EMAIL    = 'shaharazmon24@gmail.com';
@@ -2834,8 +2746,9 @@ const OWNER_EMAIL    = 'shaharazmon24@gmail.com';
 function getStockRemaining(productId) {
   const p = PRODUCTS.find(p => p.id === productId);
   if (!p || !p.maxStock) return null;
+  const orders = JSON.parse(localStorage.getItem('nuika_order_log') || '[]');
   let sold = 0;
-  ORDER_LOG.filter(o => !o.archived && o.status !== 'done').forEach(o => {
+  orders.filter(o => !o.archived && o.status !== 'done').forEach(o => {
     (o.itemsArr || []).forEach(item => {
       if ((item.id && item.id === productId) || item.name === p.nameHe) sold += item.qty;
     });
@@ -2994,9 +2907,6 @@ function updateCard(id) {
   const controls= document.getElementById(`qty-controls-${id}`);
   const display = document.getElementById(`qty-display-${id}`);
 
-  // Card may be gone (product deleted in admin while in someone's cart)
-  if (!card || !badge || !icon || !controls) return;
-
   if (qty > 0) {
     card.classList.add('in-cart');
     badge.textContent = qty;
@@ -3040,12 +2950,22 @@ function updateCartBar() {
   document.getElementById('cart-total').textContent = `₪${total}`;
   if (count > 0) bar.classList.add('visible');
   else bar.classList.remove('visible');
+
+  const canOrder = count >= MIN_ORDER_ITEMS;
+  ['cart-order-btn-he', 'cart-order-btn-en'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.disabled = !canOrder;
+    btn.style.opacity = canOrder ? '1' : '0.45';
+    btn.style.cursor = canOrder ? 'pointer' : 'not-allowed';
+  });
+
   updateProgressBar();
 }
 
 // ─── ORDER MODAL ───────────────────────────────────
 function openOrderModal() {
-  if (getCartCount() === 0) return;
+  if (getCartCount() < MIN_ORDER_ITEMS) return;
   const modal = document.getElementById('order-modal');
   modal.classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -3084,37 +3004,28 @@ function renderOrderSummary() {
 }
 
 function updateModalTotal() {
-  const itemsTotal = getCartTotal();
-  const delivery = deliveryMethod === 'delivery' ? DELIVERY_COST : 0;
-  const grandTotal = itemsTotal + delivery;
+  const grandTotal = getCartTotal();
   document.getElementById('modal-total').textContent = `₪${grandTotal}`;
 }
 
-function toggleDelivery(radio) {
-  deliveryMethod = radio.value;
-  const addressField = document.getElementById('address-field');
-  const options = document.querySelectorAll('.delivery-option');
+function togglePayment(radio) {
+  paymentMethod = radio.value;
+  const options = document.querySelectorAll('.payment-option');
   options.forEach(o => {
-    o.style.borderColor = '';
     o.classList.remove('border-earth');
     o.classList.add('border-parchment');
   });
-  radio.closest('label').querySelector('.delivery-option').classList.remove('border-parchment');
-  radio.closest('label').querySelector('.delivery-option').classList.add('border-earth');
-
-  if (deliveryMethod === 'delivery') {
-    addressField.classList.remove('hidden');
-  } else {
-    addressField.classList.add('hidden');
-  }
-  updateModalTotal();
+  radio.closest('label').querySelector('.payment-option').classList.remove('border-parchment');
+  radio.closest('label').querySelector('.payment-option').classList.add('border-earth');
 }
 
 // ─── SUBMIT ORDER ──────────────────────────────────
-function submitOrder(method) {
+const PAYMENT_LABELS_HE = { cash: 'מזומן', bit: 'Bit', paybox: 'PayBox' };
+const PAYMENT_LABELS_EN = { cash: 'Cash', bit: 'Bit', paybox: 'PayBox' };
+
+function submitOrder() {
   const name  = document.getElementById('cust-name').value.trim();
   const phone = document.getElementById('cust-phone').value.trim();
-  const address = document.getElementById('address').value.trim();
   const notes = document.getElementById('notes').value.trim();
   const isEn  = document.body.classList.contains('lang-en');
 
@@ -3123,10 +3034,6 @@ function submitOrder(method) {
     return;
   }
   saveCustomerDetails(name, phone);
-  if (deliveryMethod === 'delivery' && !address) {
-    alert(isEn ? 'Please enter a delivery address.' : 'נא להזין כתובת למשלוח.');
-    return;
-  }
   const itemsCount = getCartCount();
   if (itemsCount < MIN_ORDER_ITEMS) {
     alert(isEn
@@ -3140,19 +3047,16 @@ function submitOrder(method) {
     const p = PRODUCTS.find(p => p.id === +id);
     return `• ${p.nameHe} x${qty} = ₪${p.price * qty}`;
   });
-  const delivery = deliveryMethod === 'delivery' ? DELIVERY_COST : 0;
-  const grandTotal = getCartTotal() + delivery;
-
-  const deliveryLine = deliveryMethod === 'delivery'
-    ? `📦 משלוח: ₪${DELIVERY_COST}\nכתובת: ${address}`
-    : `🏠 איסוף עצמי מרחוב ש. בן ציון`;
+  const grandTotal = getCartTotal();
+  const paymentLabel = PAYMENT_LABELS_HE[paymentMethod] || paymentMethod;
 
   const msg = [
     `שלום! הזמנה חדשה מ-${name} 🥖`,
     ``,
     ...lines,
     ``,
-    deliveryLine,
+    `🏠 איסוף עצמי מ-${PICKUP_ADDRESS}`,
+    `💳 אופן תשלום: ${paymentLabel}`,
     ``,
     `סה"כ לתשלום: ₪${grandTotal}`,
     `טלפון: ${phone}`,
@@ -3161,25 +3065,19 @@ function submitOrder(method) {
 
   const encoded = encodeURIComponent(msg);
 
-  if (method === 'whatsapp') {
-    // Send to owner
-    window.open(`https://wa.me/${OWNER_WHATSAPP}?text=${encoded}`, '_blank');
-    // Send confirmation to customer (after short delay so both open)
-    setTimeout(() => {
-      const customerPhone = phone.replace(/\D/g, '');
-      const customerIntl = customerPhone.startsWith('0')
-        ? '972' + customerPhone.slice(1)
-        : customerPhone;
-      const confirmMsg = encodeURIComponent(
-        `שלום ${name}! 🌾\nקיבלנו את ההזמנה שלך מנואיקה ✔️\n\n${lines.join('\n')}\n\nסה"כ: ₪${grandTotal}\nנשלח לך קישור לתשלום ב-Bit בקרוב 🍞`
-      );
-      window.open(`https://wa.me/${customerIntl}?text=${confirmMsg}`, '_blank');
-    }, 600);
-  } else {
-    const subject = encodeURIComponent(`הזמנה מנואיקה — ${name}`);
-    const body = encodeURIComponent(msg);
-    window.open(`mailto:${OWNER_EMAIL}?subject=${subject}&body=${body}`, '_blank');
-  }
+  // Send to owner
+  window.open(`https://wa.me/${OWNER_WHATSAPP}?text=${encoded}`, '_blank');
+  // Send confirmation to customer (after short delay so both open)
+  setTimeout(() => {
+    const customerPhone = phone.replace(/\D/g, '');
+    const customerIntl = customerPhone.startsWith('0')
+      ? '972' + customerPhone.slice(1)
+      : customerPhone;
+    const confirmMsg = encodeURIComponent(
+      `שלום ${name}! 🌾\nקיבלנו את ההזמנה שלך מנואיקה ✔️\n\n${lines.join('\n')}\n\nסה"כ: ₪${grandTotal}\nאיסוף מ-${PICKUP_ADDRESS}\nתשלום: ${paymentLabel} 🍞`
+    );
+    window.open(`https://wa.me/${customerIntl}?text=${confirmMsg}`, '_blank');
+  }, 600);
 
   // Build structured items array for baking summary
   const itemsArr = Object.entries(cart).map(([id, qty]) => {
@@ -3198,8 +3096,9 @@ function submitOrder(method) {
     items: lines.join(' | '),
     itemsArr,
     total: grandTotal,
-    delivery: deliveryMethod,
-    address: deliveryMethod === 'delivery' ? address : '',
+    delivery: 'pickup',
+    address: PICKUP_ADDRESS,
+    paymentMethod,
     notes
   });
 
@@ -3213,7 +3112,6 @@ function submitOrder(method) {
 function showThankYou({ name, lines, grandTotal, phone }) {
   const overlay = document.getElementById('thankyou-overlay');
   const box     = document.getElementById('ty-order-box');
-  const bitLink = document.getElementById('bit-link');
   const isHe    = !document.body.classList.contains('lang-en');
 
   // Build summary HTML
@@ -3228,10 +3126,17 @@ function showThankYou({ name, lines, grandTotal, phone }) {
     </div>
   `;
 
-  // Bit link — from Firebase settings, localStorage fallback for offline
-  bitLink.href = _settingsCache.bitLink
-    || localStorage.getItem('nuika_bit_link')
-    || 'https://bit.ly/nuika-bit';
+  // PayBox link — only shown if the baker set one
+  const payboxLinkEl = document.getElementById('paybox-link');
+  const savedPaybox = localStorage.getItem('nuika_paybox_link');
+  if (payboxLinkEl) {
+    if (savedPaybox) {
+      payboxLinkEl.href = savedPaybox;
+      payboxLinkEl.style.display = 'block';
+    } else {
+      payboxLinkEl.style.display = 'none';
+    }
+  }
 
   overlay.classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -3283,11 +3188,13 @@ function closeAdminLogin() {
 }
 
 function openAdminPanel() {
-  const savedBit = _settingsCache.bitLink || localStorage.getItem('nuika_bit_link') || '';
+  const savedBit = localStorage.getItem('nuika_bit_link') || '';
   document.getElementById('admin-bit-link').value = savedBit;
+  const savedPaybox = localStorage.getItem('nuika_paybox_link') || '';
+  document.getElementById('admin-paybox-link').value = savedPaybox;
 
   // Orders toggle state
-  const isOpen = _settingsCache.ordersOpen !== false;
+  const isOpen = localStorage.getItem('nuika_orders_open') !== '0';
   const tog = document.getElementById('orders-toggle');
   if (tog) {
     tog.checked = isOpen;
@@ -3347,13 +3254,19 @@ function liveToggleSoldOut(id, checkbox) {
 }
 
 function saveAdminSettings() {
-  // Save Bit link to Firebase
+  // Save Bit link
   const bitVal = document.getElementById('admin-bit-link').value.trim();
-  if (bitVal) {
-    db.ref(`${ROOT}/settings/bitLink`).set(bitVal);
-    localStorage.setItem('nuika_bit_link', bitVal); // offline fallback
-  }
+  if (bitVal) localStorage.setItem('nuika_bit_link', bitVal);
+  const payboxVal = document.getElementById('admin-paybox-link').value.trim();
+  if (payboxVal) localStorage.setItem('nuika_paybox_link', payboxVal);
+  else localStorage.removeItem('nuika_paybox_link');
 
+  // Save soldOut states
+  const soldOutMap = {};
+  PRODUCTS.forEach(p => { soldOutMap[p.id] = p.soldOut; });
+  localStorage.setItem('nuika_soldout', JSON.stringify(soldOutMap));
+
+  // Re-render products with new states
   renderProducts();
   updateCartBar();
 
@@ -3376,19 +3289,38 @@ updateOrdersOpenBanner();
 
 // Load saved settings on page load
 (function loadSavedSettings() {
-  // Bit link — offline fallback until Firebase settings listener fires
+  // Bit link
   const savedBit = localStorage.getItem('nuika_bit_link');
   if (savedBit) {
     const bitLinkEl = document.getElementById('bit-link');
     if (bitLinkEl) bitLinkEl.href = savedBit;
   }
-  // Products are loaded from Firebase (products listener above)
+
+  // Full products (if saved via admin)
+  const savedProducts = localStorage.getItem('nuika_products');
+  if (savedProducts) {
+    try {
+      const saved = JSON.parse(savedProducts);
+      // Replace PRODUCTS array in place
+      PRODUCTS.length = 0;
+      saved.forEach(p => PRODUCTS.push({ ...p, svg: null }));
+    } catch(e) {}
+  } else {
+    // Fallback: load only soldOut states
+    const savedSoldOut = localStorage.getItem('nuika_soldout');
+    if (savedSoldOut) {
+      const map = JSON.parse(savedSoldOut);
+      PRODUCTS.forEach(p => {
+        if (map[p.id] !== undefined) p.soldOut = map[p.id];
+      });
+    }
+  }
 })();
 
 // ─── ORDERS ON/OFF ─────────────────────────────────
 function toggleOrdersStatus(checkbox) {
   const isOpen = checkbox.checked;
-  db.ref(`${ROOT}/settings/ordersOpen`).set(isOpen);
+  localStorage.setItem('nuika_orders_open', isOpen ? '1' : '0');
   const statusText = document.getElementById('orders-status-text');
   statusText.textContent = isOpen
     ? 'פתוחה — לקוחות יכולים להזמין'
@@ -3398,7 +3330,7 @@ function toggleOrdersStatus(checkbox) {
 }
 
 function updateOrdersOpenBanner() {
-  const isOpen = _settingsCache.ordersOpen !== false;
+  const isOpen = localStorage.getItem('nuika_orders_open') !== '0';
   let banner = document.getElementById('orders-closed-banner');
   if (!isOpen) {
     if (!banner) {
@@ -3431,6 +3363,7 @@ function updateOrdersOpenBanner() {
 let currentFilter = 'all';
 
 function saveOrderToLog(orderData) {
+  const log = JSON.parse(localStorage.getItem('nuika_order_log') || '[]');
   const entry = {
     ...orderData,
     id: Date.now(),
@@ -3439,35 +3372,38 @@ function saveOrderToLog(orderData) {
     status: 'new',
     archived: false
   };
-  db.ref(`${ROOT}/orders/${entry.id}`).set(entry);
+  log.unshift(entry);
+  if (log.length > 200) log.pop();
+  localStorage.setItem('nuika_order_log', JSON.stringify(log));
 }
 
 function getOrders() {
+  const log = JSON.parse(localStorage.getItem('nuika_order_log') || '[]');
   const now = Date.now();
   const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
-  ORDER_LOG.forEach(o => {
+  // Auto-archive orders older than 7 days
+  let changed = false;
+  log.forEach(o => {
     if (!o.archived && o.status === 'done' && (now - o.timestamp) > SEVEN_DAYS) {
-      o.archived = true;
-      db.ref(`${ROOT}/orders/${o.id}/archived`).set(true);
+      o.archived = true; changed = true;
     }
   });
-  return ORDER_LOG;
+  if (changed) localStorage.setItem('nuika_order_log', JSON.stringify(log));
+  return log;
 }
 
 function updateOrderStatus(id, status) {
-  const update = { status };
-  if (status === 'done') update.doneAt = Date.now();
-  db.ref(`${ROOT}/orders/${id}`).update(update);
-  // Update local cache immediately for snappy UI
-  const o = ORDER_LOG.find(o => o.id === id);
+  const log = getOrders();
+  const o = log.find(o => o.id === id);
   if (o) { o.status = status; if (status === 'done') o.doneAt = Date.now(); }
+  localStorage.setItem('nuika_order_log', JSON.stringify(log));
   renderOrderManagement();
 }
 
 function deleteOrder(id) {
   if (!confirm('למחוק הזמנה זו?')) return;
-  db.ref(`${ROOT}/orders/${id}`).remove();
-  ORDER_LOG = ORDER_LOG.filter(o => o.id !== id);
+  const log = getOrders().filter(o => o.id !== id);
+  localStorage.setItem('nuika_order_log', JSON.stringify(log));
   renderOrderManagement();
 }
 
@@ -3571,6 +3507,7 @@ function renderOrderList() {
         ${(o.items || '').replace(/\|/g, '<br>')}
         <div style="margin-top:4px;color:#8B7260;">
           ${o.delivery === 'delivery' ? `📦 משלוח — ${o.address||''}` : '🏠 איסוף עצמי'}
+          ${o.paymentMethod ? ` · 💳 ${PAYMENT_LABELS_HE[o.paymentMethod] || o.paymentMethod}` : ''}
           ${o.notes ? ` · הערה: ${o.notes}` : ''}
         </div>
       </div>
@@ -3665,14 +3602,41 @@ function printBakingList() {
 function renderOrderLog() { renderOrderManagement(); }
 function clearOrderLog() {
   if (!confirm('למחוק את כל ההזמנות?')) return;
-  db.ref(`${ROOT}/orders`).remove();
-  ORDER_LOG = [];
+  localStorage.removeItem('nuika_order_log');
   renderOrderManagement();
 }
 
 // ─── EDIT / ADD / DELETE PRODUCT ───────────────────
 let editingNewProduct = false;
 let pendingImageDataUrl = null;
+
+// ─── AUTO-TRANSLATE (HE → EN) ───────────────────────
+// תרגום אוטומטי מעברית לאנגלית לשדות שם/תיאור. תמיד אפשר לערוך ידנית -
+// אם השדה האנגלי כבר לא ריק, לא דורסים אותו (כדי לא לאבד עריכה ידנית).
+async function translateHeToEn(text) {
+  if (!text || !text.trim()) return '';
+  try {
+    const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.trim())}&langpair=he|en`);
+    const data = await res.json();
+    return (data && data.responseData && data.responseData.translatedText) || '';
+  } catch (e) {
+    return '';
+  }
+}
+async function autoTranslateField(heFieldId, enFieldId, noteId) {
+  const heEl = document.getElementById(heFieldId);
+  const enEl = document.getElementById(enFieldId);
+  if (!heEl || !enEl || enEl.value.trim() || !heEl.value.trim()) return;
+  const note = noteId ? document.getElementById(noteId) : null;
+  if (note) note.textContent = 'מתרגם...';
+  const translated = await translateHeToEn(heEl.value);
+  if (translated && !enEl.value.trim()) {
+    enEl.value = translated;
+    if (note) note.textContent = 'תורגם אוטומטית — אפשר לערוך בעצמך';
+  } else if (note) {
+    note.textContent = '';
+  }
+}
 
 function openEditProduct(id) {
   const p = PRODUCTS.find(p => p.id === id);
@@ -3686,6 +3650,8 @@ function openEditProduct(id) {
   document.getElementById('edit-name-en').value   = p.nameEn;
   document.getElementById('edit-desc-he').value   = p.descHe;
   document.getElementById('edit-desc-en').value   = p.descEn;
+  document.getElementById('edit-name-en-note').textContent = '';
+  document.getElementById('edit-desc-en-note').textContent = '';
   document.getElementById('edit-price').value     = p.price;
   document.getElementById('edit-stock').value     = p.maxStock || '';
   // Tag radio
@@ -3719,6 +3685,8 @@ function openAddProduct() {
   document.getElementById('edit-name-en').value    = '';
   document.getElementById('edit-desc-he').value    = '';
   document.getElementById('edit-desc-en').value    = '';
+  document.getElementById('edit-name-en-note').textContent = '';
+  document.getElementById('edit-desc-en-note').textContent = '';
   document.getElementById('edit-price').value      = '';
   document.getElementById('edit-stock').value      = '';
   // Clear tag radios
@@ -3825,20 +3793,16 @@ function handleEditBackdrop(e) {
 }
 
 function saveAllProducts() {
-  const toSave = {};
-  PRODUCTS.forEach(p => {
-    toSave[p.id] = {
-      id: p.id, nameHe: p.nameHe, nameEn: p.nameEn,
-      descHe: p.descHe, descEn: p.descEn,
-      price: p.price, illustration: p.illustration || null,
-      soldOut: p.soldOut || false,
-      maxStock: p.maxStock || null,
-      tag: p.tag || null
-    };
-  });
-  db.ref(`${ROOT}/products`).set(toSave);
-  // localStorage as offline fallback
-  localStorage.setItem('nuika_products', JSON.stringify(Object.values(toSave)));
+  // Save full products array (without SVGs which are large) to localStorage
+  const toSave = PRODUCTS.map(p => ({
+    id: p.id, nameHe: p.nameHe, nameEn: p.nameEn,
+    descHe: p.descHe, descEn: p.descEn,
+    price: p.price, illustration: p.illustration,
+    soldOut: p.soldOut,
+    maxStock: p.maxStock || null,
+    tag: p.tag || null
+  }));
+  localStorage.setItem('nuika_products', JSON.stringify(toSave));
 }
 
 // ─── LANGUAGE TOGGLE ───────────────────────────────
@@ -3944,7 +3908,7 @@ renderProducts();
 
 // ─── DEADLINE MANAGEMENT ───────────────────────────
 function getCustomDeadline() {
-  const saved = _settingsCache.deadline;
+  const saved = localStorage.getItem('nuika_deadline');
   if (!saved) return null;
   const d = new Date(saved);
   return isNaN(d.getTime()) ? null : d;
@@ -3966,7 +3930,7 @@ function getNextTuesdayDeadline() {
 }
 
 function clearDeadline() {
-  db.ref(`${ROOT}/settings/deadline`).remove();
+  localStorage.removeItem('nuika_deadline');
   const dateEl = document.getElementById('admin-deadline-date');
   const timeEl = document.getElementById('admin-deadline-time');
   if (dateEl) dateEl.value = '';
@@ -3994,7 +3958,7 @@ function updateDeadlinePreview() {
 }
 
 function loadDeadlineIntoAdmin() {
-  const saved = _settingsCache.deadline || null;
+  const saved = localStorage.getItem('nuika_deadline');
   const dateEl = document.getElementById('admin-deadline-date');
   const timeEl = document.getElementById('admin-deadline-time');
   if (!dateEl) return;
@@ -4015,8 +3979,7 @@ function saveDeadlineFromAdmin() {
   const timeEl = document.getElementById('admin-deadline-time');
   if (!dateEl || !dateEl.value) return;
   const iso = dateEl.value + 'T' + (timeEl.value || '17:00') + ':00';
-  db.ref(`${ROOT}/settings/deadline`).set(iso);
-  _settingsCache.deadline = iso; // update local cache immediately
+  localStorage.setItem('nuika_deadline', iso);
   updateDeadlinePreview();
   updateCountdown();
 }
@@ -4024,11 +3987,11 @@ function saveDeadlineFromAdmin() {
 
 // ─── CSV EXPORT ────────────────────────────────────
 function exportOrdersCSV() {
-  const orders = ORDER_LOG;
+  const orders = JSON.parse(localStorage.getItem('nuika_order_log') || '[]');
   if (orders.length === 0) { alert('אין הזמנות לייצוא'); return; }
 
   const BOM = '﻿';
-  const headers = ['תאריך','שם','טלפון','פריטים','סה"כ','אופן קבלה','כתובת','הערות','סטטוס'];
+  const headers = ['תאריך','שם','טלפון','פריטים','סה"כ','אופן קבלה','כתובת','אופן תשלום','הערות','סטטוס'];
   const statusMap = { new:'חדשה', confirmed:'אושרה', ready:'מוכנה', done:'נמסרה' };
 
   const rows = orders.map(o => [
@@ -4039,6 +4002,7 @@ function exportOrdersCSV() {
     o.total || 0,
     o.delivery === 'delivery' ? 'משלוח' : 'איסוף עצמי',
     o.address || '',
+    o.paymentMethod ? (PAYMENT_LABELS_HE[o.paymentMethod] || o.paymentMethod) : '',
     o.notes || '',
     statusMap[o.status] || o.status || ''
   ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
@@ -4059,7 +4023,7 @@ function renderCustomers() {
   const el = document.getElementById('customers-list');
   if (!el) return;
 
-  const allOrders = ORDER_LOG;
+  const allOrders = JSON.parse(localStorage.getItem('nuika_order_log') || '[]');
   if (allOrders.length === 0) {
     el.innerHTML = `<div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.85rem;text-align:center;padding:24px 0;">אין נתוני לקוחות עדיין</div>`;
     return;
@@ -4286,24 +4250,19 @@ let _editingPantryId = null;
 
 // ─── LOAD / SAVE ─────────────────────────────────────────
 function loadKitchenData() {
-  // Data is kept in sync by the Firebase kitchen listener.
-  // Use defaults only if Firebase hasn't responded yet (first frame).
-  if (!PANTRY.length)  PANTRY  = DEFAULT_PANTRY.map(p => ({ ...p }));
-  if (!RECIPES.length) RECIPES = DEFAULT_RECIPES.map(r => ({ ...r }));
+  try {
+    PANTRY  = JSON.parse(localStorage.getItem('nuika_pantry'))  || DEFAULT_PANTRY.map(p=>({...p}));
+    RECIPES = JSON.parse(localStorage.getItem('nuika_recipes')) || DEFAULT_RECIPES.map(r=>({...r}));
+    WEEKLY_PLAN = JSON.parse(localStorage.getItem('nuika_weekly_plan')) || {};
+  } catch(e) {
+    PANTRY = DEFAULT_PANTRY.map(p=>({...p}));
+    RECIPES = DEFAULT_RECIPES.map(r=>({...r}));
+    WEEKLY_PLAN = {};
+  }
 }
-function savePantry() {
-  const obj = {};
-  PANTRY.forEach(p => { obj[p.id] = { ...p }; });
-  db.ref(`${ROOT}/kitchen/pantry`).set(obj);
-}
-function saveRecipes() {
-  const obj = {};
-  RECIPES.forEach(r => { obj[r.id] = { ...r }; });
-  db.ref(`${ROOT}/kitchen/recipes`).set(obj);
-}
-function saveWeeklyPlan() {
-  db.ref(`${ROOT}/kitchen/weeklyPlan`).set(WEEKLY_PLAN || {});
-}
+function savePantry()      { localStorage.setItem('nuika_pantry', JSON.stringify(PANTRY)); }
+function saveRecipes()     { localStorage.setItem('nuika_recipes', JSON.stringify(RECIPES)); }
+function saveWeeklyPlan()  { localStorage.setItem('nuika_weekly_plan', JSON.stringify(WEEKLY_PLAN)); }
 
 // ─── TAB SWITCHING ───────────────────────────────────────
 function switchKitchenTab(tab) {
