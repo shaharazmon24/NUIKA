@@ -3668,13 +3668,19 @@ function checkAdminPassword() {
           return;
         }
       }
+      // Firebase deliberately returns the same code for a wrong password, a
+      // missing account and a mistyped address, so the message must not claim
+      // it was the password.
       errEl.textContent =
-        code === 'not-admin'                ? 'החשבון הזה אינו מנהל'
-      : code === 'auth/wrong-password'      ? 'סיסמה שגויה, נסי שוב'
-      : code === 'auth/invalid-credential'  ? 'סיסמה שגויה, נסי שוב'
-      : code === 'auth/user-not-found'      ? 'המשתמש לא נמצא'
-      : code === 'auth/too-many-requests'   ? 'יותר מדי נסיונות — נסי בעוד כמה דקות'
-      : 'ההתחברות נכשלה, נסי שוב';
+        code === 'not-admin'                  ? 'החשבון קיים אך אינו רשום כמנהל'
+      : code === 'auth/invalid-credential'    ? 'האימייל או הסיסמה שגויים — בדקי שהאימייל למעלה הוא זה שיצרת בו את החשבון'
+      : code === 'auth/wrong-password'        ? 'סיסמה שגויה, נסי שוב'
+      : code === 'auth/user-not-found'        ? 'לא קיים חשבון עם האימייל הזה'
+      : code === 'auth/invalid-email'         ? 'כתובת האימייל אינה תקינה'
+      : code === 'auth/too-many-requests'     ? 'יותר מדי נסיונות — נסי בעוד כמה דקות'
+      : code === 'auth/network-request-failed'? 'אין חיבור לאינטרנט'
+      : 'ההתחברות נכשלה' + (code ? ' (' + code + ')' : '');
+      console.error('admin sign-in failed:', code, err);
       input.value = '';
       input.focus();
     });
