@@ -1,8 +1,8 @@
 // Bump this version on every deploy that must reach existing users.
-const CACHE = 'nuika-v3';
+const CACHE = 'nuika-v4';
 
-// Relative paths — the app is served from /NUIKA/ on GitHub Pages,
-// so absolute '/index.html' would 404 and silently break the precache.
+// Relative paths, so the same worker is correct whether the site is served
+// from the domain root (nuika.co.il) or a subdirectory.
 const ASSETS = [
   './',
   './index.html',
@@ -41,8 +41,22 @@ self.addEventListener('fetch', e => {
 
   const url = new URL(e.request.url);
 
-  // Never cache Firebase — it must always hit the network to stay live.
-  if (url.hostname.endsWith('firebaseio.com') || url.hostname.endsWith('googleapis.com')) return;
+  // Never cache the live database. fonts.googleapis.com also ends in
+  // googleapis.com, so match it exactly rather than by suffix.
+  if (url.hostname.endsWith('firebaseio.com') || url.hostname === 'www.googleapis.com') return;
+
+  // Only store a genuinely good response. Without this a transient Cloudflare
+  // or GitHub Pages error page — which is text/html and matches the HTML test —
+  // gets written into the cache AS the shop, and stays there until CACHE is
+  // bumped. Opaque responses (status 0) are cross-origin scripts and fonts,
+  // which are fine to keep.
+  const cacheable = res => res && (res.ok || res.type === 'opaque') && !res.redirected;
+
+  const store = (req, res) => {
+    if (!cacheable(res)) return;
+    const copy = res.clone();
+    caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
+  };
 
   const isHTML = e.request.mode === 'navigate'
     || (e.request.headers.get('accept') || '').includes('text/html');
@@ -52,11 +66,7 @@ self.addEventListener('fetch', e => {
     // Falls back to cache only when genuinely offline.
     e.respondWith(
       fetch(e.request)
-        .then(res => {
-          const copy = res.clone();
-          caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
-          return res;
-        })
+        .then(res => { store(e.request, res); return res; })
         .catch(() => caches.match(e.request).then(r => r || caches.match('./index.html')))
     );
     return;
@@ -65,11 +75,9 @@ self.addEventListener('fetch', e => {
   // Cache-first for images and static assets, refreshing in the background.
   e.respondWith(
     caches.match(e.request).then(cached => {
-      const network = fetch(e.request).then(res => {
-        const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
-        return res;
-      }).catch(() => cached);
+      const network = fetch(e.request)
+        .then(res => { store(e.request, res); return res; })
+        .catch(() => cached);
       return cached || network;
     })
   );

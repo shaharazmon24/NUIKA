@@ -2561,14 +2561,17 @@ if ('serviceWorker' in navigator) {
 
     // When a new service worker takes control, reload once so the user
     // immediately gets the new code instead of a stale cached page.
+    // On a first visit there is no controller, so clients.claim() fires
+    // controllerchange and would reload the page out from under the visitor.
+    const _hadController = !!navigator.serviceWorker.controller;
     let _reloading = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (_reloading) return;
+      if (!_hadController || _reloading) return;
       // Reloading while the cart is full or the order form is open would
       // wipe the customer's order with no explanation.
       const modal = document.getElementById('order-modal');
       if (modal && modal.classList.contains('open')) return;
-      if (Object.keys(cart).length) return;
+      if (typeof cart === 'undefined' || Object.keys(cart).length) return;
       _reloading = true;
       window.location.reload();
     });
@@ -2628,6 +2631,11 @@ let _settingsCache = {};
 // One-time seeding, guarded by a transaction so two devices loading at once
 // cannot both seed. A listener must NEVER seed: an empty tree there means
 // "Noy deleted everything", and re-seeding would resurrect deleted data.
+// Filled in just below the PRODUCTS declaration. It cannot be read here:
+// PRODUCTS is a const declared further down, so touching it at this point
+// aborts the whole script with a temporal-dead-zone error.
+var SEED_PRODUCTS = [];
+
 db.ref(`${ROOT}/_seeded`).once('value').then(seedSnap => {
   if (seedSnap.val()) return;                    // seeded once, never again
   return db.ref(ROOT).once('value').then(rootSnap => {
@@ -2638,7 +2646,7 @@ db.ref(`${ROOT}/_seeded`).once('value').then(seedSnap => {
     // unconditionally would race the listeners and could overwrite live data.
     if (!cur.products) {
       const prod = {};
-      PRODUCTS.forEach(p => {
+      SEED_PRODUCTS.forEach(p => {
         prod[p.id] = { id: p.id, nameHe: p.nameHe, nameEn: p.nameEn, descHe: p.descHe, descEn: p.descEn, price: p.price, illustration: p.illustration || null, soldOut: p.soldOut || false, maxStock: p.maxStock || null, tag: p.tag || null };
       });
       updates.products = prod;
@@ -2664,13 +2672,11 @@ db.ref(`${ROOT}/products`).on('value', snap => {
   PRODUCTS.length = 0;
   if (data) Object.values(data).sort((a, b) => a.id - b.id).forEach(p => PRODUCTS.push({ ...p, svg: null }));
 
-  // Drop cart items whose product was deleted or marked sold out
-  Object.keys(cart).forEach(id => {
-    const p = PRODUCTS.find(p => p.id === +id);
-    if (!p || p.soldOut) delete cart[+id];
-  });
+  pruneCart();
 
-  if (!_cartRestored) { restoreCart(); _cartRestored = true; }
+  // Only latch once real products have arrived; latching on an empty fire
+  // discarded the saved cart permanently.
+  if (!_cartRestored && PRODUCTS.length) { restoreCart(); _cartRestored = true; }
   renderProducts();
   // Re-apply cart visual state — renderProducts rebuilds the grid from scratch
   Object.keys(cart).forEach(id => updateCard(+id));
@@ -2698,6 +2704,7 @@ db.ref(`${ROOT}/orders`).on('value', snap => {
   // Stock counts are derived from orders, so the grid has to redraw too —
   // otherwise "נותרו N" stays frozen at whatever it was on first paint.
   if (_productsLoaded) {
+    pruneCart();
     renderProducts();
     Object.keys(cart).forEach(id => updateCard(+id));
     updateCartBar();
@@ -2724,8 +2731,18 @@ db.ref(`${ROOT}/kitchen`).on('value', snap => {
   const panel = document.getElementById('admin-panel');
   const typing = document.activeElement
     && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
-  if (panel && panel.classList.contains('open') && !typing) {
-    switchKitchenTab(_currentKitchenTab || 'pantry');
+  if (panel && panel.classList.contains('open')) {
+    if (typing) {
+      // Repainting now would destroy the focused field. Repaint on blur
+      // instead — skipping it entirely left the table stale indefinitely.
+      document.addEventListener('focusout', function flush() {
+        document.removeEventListener('focusout', flush);
+        const p2 = document.getElementById('admin-panel');
+        if (p2 && p2.classList.contains('open')) switchKitchenTab(_currentKitchenTab || 'pantry');
+      }, { once: true });
+    } else {
+      switchKitchenTab(_currentKitchenTab || 'pantry');
+    }
   }
 });
 
@@ -2758,6 +2775,18 @@ window.addEventListener('appinstalled', () => {
 
 function installPWA() {
   if (!_deferredInstallPrompt) return;
+  const isEn = document.body.classList.contains('lang-en');
+
+  // Chrome builds the installed app from a Google template whose target API
+  // level currently trails Android 16/17, so Play Protect shows a scary
+  // "built for an older version of Android" warning for every PWA, not just
+  // this one. It is dismissible — but unexplained it reads as a virus alert
+  // and costs orders. Warn first, in plain language.
+  const proceed = confirm(isEn
+    ? 'Android may show a security warning during install. It is safe — tap "More details", then "Install anyway".\n\nContinue?'
+    : 'ייתכן שאנדרואיד יציג אזהרת אבטחה בהתקנה. זה תקין — יש ללחוץ על "פרטים נוספים" ואז "התקן בכל זאת".\n\nלהמשיך?');
+  if (!proceed) return;
+
   _deferredInstallPrompt.prompt();
   _deferredInstallPrompt.userChoice.then(() => {
     _deferredInstallPrompt = null;
@@ -2899,6 +2928,9 @@ const PRODUCTS = [
   },
 ];
 
+// Snapshot the build-time defaults before any listener can replace them.
+SEED_PRODUCTS = PRODUCTS.map(p => ({ ...p }));
+
 // ─── STATE ─────────────────────────────────────────
 const cart = {}; // { productId: quantity }
 let paymentMethod = 'cash';
@@ -2909,15 +2941,33 @@ const OWNER_EMAIL    = 'shaharazmon24@gmail.com';
 
 // ─── STOCK REMAINING ──────────────────────────────
 // Returns null if no limit set, otherwise units left after active orders.
+// A sold-out card has pointer-events:none, so anything left in the cart for it
+// can never be removed by tapping. Clamp or drop it instead.
+function pruneCart() {
+  Object.keys(cart).forEach(id => {
+    const p = PRODUCTS.find(p => p.id === +id);
+    if (!p || p.soldOut) { delete cart[+id]; return; }
+    const rem = getStockRemaining(+id);
+    if (rem === null) return;
+    if (rem <= 0) delete cart[+id];
+    else if (cart[+id] > rem) cart[+id] = rem;
+  });
+}
+
 function getStockRemaining(productId) {
   const p = PRODUCTS.find(p => p.id === productId);
   if (!p || !p.maxStock) return null;
   let sold = 0;
   // Filtering on status !== 'done' meant that ticking orders off as delivered
   // handed their units back to the shop mid-week and let it oversell.
-  const dl = getNextTuesdayDeadline();
-  const cycleStart = (dl ? dl.getTime() : Date.now()) - 7 * 24 * 60 * 60 * 1000;
-  ORDER_LOG.filter(o => !o.archived && (o.timestamp || 0) >= cycleStart).forEach(o => {
+  const WEEK = 7 * 24 * 60 * 60 * 1000;
+  let cycleEnd = (getNextTuesdayDeadline() || new Date()).getTime();
+  // A custom deadline left in the past would freeze the window open forever.
+  while (cycleEnd < Date.now()) cycleEnd += WEEK;
+  const cycleStart = cycleEnd - WEEK;
+  ORDER_LOG.filter(o => !o.archived
+    && (o.timestamp || 0) >= cycleStart
+    && (o.timestamp || 0) < cycleEnd).forEach(o => {
     (o.itemsArr || []).forEach(item => {
       if ((item.id && item.id === productId) || item.name === p.nameHe) sold += item.qty;
     });
@@ -2994,7 +3044,7 @@ function renderProducts() {
       onclick="${effectiveSoldOut ? '' : `toggleProduct(${p.id})`}"
       tabindex="${effectiveSoldOut ? '-1' : '0'}"
       role="button"
-      aria-label="${p.nameHe} — ${p.price} ₪${effectiveSoldOut ? ' — אזל המלאי' : ''}"
+      aria-label="${esc(p.nameHe)} — ${p.price} ₪${effectiveSoldOut ? ' — אזל המלאי' : ''}"
       aria-disabled="${effectiveSoldOut}"
       onkeydown="if(!${effectiveSoldOut}&&(event.key==='Enter'||event.key===' '))toggleProduct(${p.id})"
       style="position:relative;"
@@ -3011,7 +3061,7 @@ function renderProducts() {
       <!-- Illustration -->
       <div class="illus-wrap">
         ${p.illustration
-          ? `<img src="${p.illustration}" alt="${p.nameHe}" loading="lazy" style="width:100%;height:100%;object-fit:cover;" />`
+          ? `<img src="${esc(p.illustration)}" alt="${esc(p.nameHe)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;" />`
           : (p.svg || '')}
       </div>
 
@@ -3325,16 +3375,22 @@ function submitOrder() {
 
   // The write used to be fire-and-forget: on a flaky connection the customer
   // saw a thank-you page for an order that never reached Noy.
-  saveOrderToLog({
-    name, phone,
-    items: lines.join(' | '),
-    itemsArr,
-    total: grandTotal,
-    delivery: 'pickup',
-    address: PICKUP_ADDRESS,
-    paymentMethod,
-    notes
-  }).then(() => {
+  Promise.race([
+    saveOrderToLog({
+      name, phone,
+      items: lines.join(' | '),
+      itemsArr,
+      total: grandTotal,
+      delivery: 'pickup',
+      address: PICKUP_ADDRESS,
+      paymentMethod,
+      notes
+    }),
+    // Firebase set() does not settle until the server acknowledges. Offline,
+    // that is never — which used to leave the customer on a dead modal with
+    // no thank-you page and no way to pay.
+    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000))
+  ]).then(() => {
     closeOrderModal();
     showThankYou({ name, lines, grandTotal, phone });
   }).catch(err => {
@@ -3497,11 +3553,11 @@ function saveAdminSettings() {
   // Save Bit link to Firebase
   const bitVal = document.getElementById('admin-bit-link').value.trim();
   // Always write, so clearing the field actually clears the link
-  db.ref(`${ROOT}/settings/bitLink`).set(bitVal || null);
+  db.ref(`${ROOT}/settings/bitLink`).set(bitVal || null).catch(fbError);
   _settingsCache.bitLink = bitVal || '';
 
   const payboxVal = document.getElementById('admin-paybox-link').value.trim();
-  db.ref(`${ROOT}/settings/payboxLink`).set(payboxVal || null);
+  db.ref(`${ROOT}/settings/payboxLink`).set(payboxVal || null).catch(fbError);
   _settingsCache.payboxLink = payboxVal || '';
 
   // Persist sold-out flags — the toggles only mutate PRODUCTS in memory
@@ -3596,7 +3652,7 @@ function getOrders() {
     // off as delivered — taking its revenue off the dashboard with it.
     if (!o.archived && o.status === 'done' && (now - (o.doneAt || o.timestamp)) > SEVEN_DAYS) {
       o.archived = true;
-      db.ref(`${ROOT}/orders/${o.id}/archived`).set(true);
+      db.ref(`${ROOT}/orders/${o.id}/archived`).set(true).catch(fbError);
     }
   });
   return ORDER_LOG;
@@ -3605,7 +3661,7 @@ function getOrders() {
 function updateOrderStatus(id, status) {
   const update = { status };
   if (status === 'done') update.doneAt = Date.now();
-  db.ref(`${ROOT}/orders/${id}`).update(update);
+  db.ref(`${ROOT}/orders/${id}`).update(update).catch(fbError);
   // Update local cache immediately for snappy UI
   const o = ORDER_LOG.find(o => o.id === id);
   if (o) { o.status = status; if (status === 'done') o.doneAt = Date.now(); }
@@ -3614,7 +3670,7 @@ function updateOrderStatus(id, status) {
 
 function deleteOrder(id) {
   if (!confirm('למחוק הזמנה זו?')) return;
-  db.ref(`${ROOT}/orders/${id}`).remove();
+  db.ref(`${ROOT}/orders/${id}`).remove().catch(fbError);
   ORDER_LOG = ORDER_LOG.filter(o => o.id !== id);
   renderOrderManagement();
 }
@@ -3719,7 +3775,7 @@ function renderOrderList() {
         ${esc(o.items || '').replace(/\|/g, '<br>')}
         <div style="margin-top:4px;color:#8B7260;">
           ${o.delivery === 'delivery' ? `📦 משלוח — ${esc(o.address||'')}` : '🏠 איסוף עצמי'}
-          ${o.paymentMethod ? ` · 💳 ${PAYMENT_LABELS_HE[o.paymentMethod] || o.paymentMethod}` : ''}
+          ${o.paymentMethod ? ` · 💳 ${esc(PAYMENT_LABELS_HE[o.paymentMethod] || o.paymentMethod)}` : ''}
           ${o.notes ? ` · הערה: ${esc(o.notes)}` : ''}
         </div>
       </div>
@@ -3759,7 +3815,7 @@ function toggleArchive() {
               <span style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#8B7260;font-size:0.88rem;">${esc(o.name)}</span>
               <span style="font-family:'Noto Serif Hebrew',serif;color:#8B7260;font-size:0.88rem;">₪${o.total}</span>
             </div>
-            <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#9B8B75;">${o.date} · ${o.delivery==='delivery'?'משלוח':'איסוף'}</div>
+            <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#9B8B75;">${esc(o.date)} · ${o.delivery==='delivery'?'משלוח':'איסוף'}</div>
           </div>`).join('');
     el.style.display = 'block';
   } else {
@@ -3814,7 +3870,7 @@ function printBakingList() {
 function renderOrderLog() { renderOrderManagement(); }
 function clearOrderLog() {
   if (!confirm('למחוק את כל ההזמנות?')) return;
-  db.ref(`${ROOT}/orders`).remove();
+  db.ref(`${ROOT}/orders`).remove().catch(fbError);
   ORDER_LOG = [];
   renderOrderManagement();
 }
@@ -4006,6 +4062,9 @@ function handleEditBackdrop(e) {
 }
 
 function saveAllProducts() {
+  // Before the listener answers, PRODUCTS still holds the build-time defaults.
+  // Writing then replaces the real menu with them for every customer.
+  if (!_productsLoaded) { alert('הנתונים עדיין נטענים — רגע אחד ונסי שוב.'); return; }
   const toSave = {};
   PRODUCTS.forEach(p => {
     toSave[p.id] = {
@@ -4199,8 +4258,10 @@ function saveDeadlineFromAdmin() {
   const dateEl = document.getElementById('admin-deadline-date');
   const timeEl = document.getElementById('admin-deadline-time');
   if (!dateEl) return;
-  // Setting only the time used to bail out with no write and no feedback.
+  // Clearing the date means "back to the automatic deadline", not "invent one".
   if (!dateEl.value) {
+    if (!timeEl || !timeEl.value || timeEl.value === '17:00') { clearDeadline(); return; }
+    // Only a deliberate time change with no date picks up the automatic date.
     const d = getNextTuesdayDeadline();
     dateEl.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   }
@@ -4502,7 +4563,7 @@ function saveRecipes() {
 // Per-key write: a whole-node set() from one device would delete quantities
 // another device added in the same round-trip.
 function savePlanQty(recipeId, qty) {
-  if (!_kitchenLoaded) return;
+  if (!kitchenReady()) return;
   db.ref(`${ROOT}/kitchen/weeklyPlan/${recipeId}`).set(qty > 0 ? qty : null).catch(fbError);
 }
 function saveWeeklyPlan() {
@@ -4820,10 +4881,7 @@ function printShoppingList() {
   const w = window.open('', '_blank');
   w.document.write(`<html dir="rtl"><head><title>רשימת קניות — נואיקה</title>
     <style>
-    /* Only ever visible inside @media print; without this the generated
-       sheet stays rendered on the live page after the dialog closes. */
-    #print-area { display: none; }
-body{font-family:Arial,sans-serif;direction:rtl;padding:20px;max-width:400px;margin:0 auto;}
+    body{font-family:Arial,sans-serif;direction:rtl;padding:20px;max-width:400px;margin:0 auto;}
     h2{color:#6B2E1E;} .shop-cat-header{font-weight:bold;margin-top:14px;color:#8B7260;font-size:0.8rem;text-transform:uppercase;}
     .shop-item{display:flex;gap:10px;padding:5px 0;border-bottom:1px solid #eee;align-items:center;}
     .si-name{flex:1;} .si-amount{font-weight:bold;color:#6B2E1E;} .si-cost{color:#999;font-size:0.75rem;}
@@ -4945,8 +5003,10 @@ function onIngNameInput(input, rowId) {
   const row = document.getElementById(rowId);
   if (row && pantryItem) {
     row.querySelector('.ing-pantry-id').value = pantryItem.id;
-  } else if (row && !name) {
-    row.querySelector('.ing-pantry-id').value = '';   // only clear when emptied
+  } else if (row) {
+    // No match: unlink. A stale link silently prices this row against a
+    // completely different ingredient.
+    row.querySelector('.ing-pantry-id').value = '';
   }
   recalcEditorCosts();
 }
@@ -5025,7 +5085,7 @@ function updateScaleCalc() {
       parts.push(`${name}: ${display}`);
     }
   });
-  resultEl.innerHTML = parts.join(' · ') + (parts.length > 5 ? ` + ${parts.length-5} עוד` : '');
+  resultEl.innerHTML = esc(parts.join(' · '));
 }
 
 function saveRecipe() {
@@ -5044,17 +5104,20 @@ function saveRecipe() {
   // Collect ingredients
   const tbody = document.getElementById('re-ing-tbody');
   const ingredients = [];
-  tbody.querySelectorAll('tr').forEach(tr => {
+  // Carry each row's existing baker's % across the save instead of zeroing it.
+  const _prevRecipe = _editingRecipeId ? RECIPES.find(x => x.id === _editingRecipeId) : null;
+  tbody.querySelectorAll('tr').forEach((tr, rowIndex) => {
     const ingName  = tr.querySelector('.ing-name')?.value.trim();
     const weightG  = parseFloat(tr.querySelector('.ing-weight')?.value) || 0;
     const pantryId = tr.querySelector('.ing-pantry-id')?.value || '';
     if (ingName && weightG > 0) {
+      const prevIng = _prevRecipe && _prevRecipe.ingredients ? _prevRecipe.ingredients[rowIndex] : null;
       ingredients.push({
         id: 'ri_' + Date.now() + '_' + Math.random().toString(36).slice(2),
         name: ingName,
         pantryId,
         weightG,
-        bakerPct: (r && r.ingredients && r.ingredients[i] ? r.ingredients[i].bakerPct : 0) || 0
+        bakerPct: (prevIng && prevIng.bakerPct) || 0
       });
     }
   });

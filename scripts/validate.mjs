@@ -63,6 +63,9 @@ if (want('features')) {
     ['persistCart',             'cart survives a reload'],
     ['PICKUP_ADDRESS',          'pickup-only ordering'],
     ['togglePayment',           'cash / Bit / PayBox selection'],
+    ['rel="manifest"',          'the manifest is linked, or the app stops being installable'],
+    ['serviceWorker.register',  'the service worker is registered'],
+    ['pruneCart',               'sold-out items are cleared from the cart rather than becoming unremovable'],
   ];
   for (const [needle, why] of required) {
     if (html.includes(needle)) pass(why);
@@ -80,11 +83,51 @@ if (want('features')) {
 }
 
 if (want('assets')) {
+  console.log('Service worker:');
+  const sw = readFileSync(join(ROOT, 'sw.js'), 'utf8');
+  try {
+    new Function(sw);
+    pass('sw.js parses');
+  } catch (err) {
+    // A broken worker fails to install, so every existing visitor silently
+    // keeps the old cached app while a fresh browser looks perfectly fine.
+    fail(`sw.js syntax error: ${err.message}`);
+  }
+  // The precache swallows failures by design, so a typo'd path is invisible
+  // at runtime and stays broken forever.
+  const assetList = sw.match(/const ASSETS = \[([\s\S]*?)\]/);
+  if (assetList) {
+    for (const m of assetList[1].matchAll(/'\.\/([^']*)'/g)) {
+      const rel = m[1];
+      if (!rel || existsSync(join(ROOT, rel))) pass(`precache ./${rel}`);
+      else fail(`sw.js precaches a file that does not exist: ./${rel}`);
+    }
+  }
+
+  console.log('Deployment:');
+  // Deleting or altering CNAME unsets the GitHub Pages custom domain, which
+  // takes the whole shop offline. It has happened once already.
+  const cnamePath = join(ROOT, 'CNAME');
+  if (!existsSync(cnamePath)) fail('CNAME is missing — the custom domain will be unset and the site will go down');
+  else {
+    const host = readFileSync(cnamePath, 'utf8').trim();
+    if (host === 'nuika.co.il') pass('CNAME points at nuika.co.il');
+    else fail(`CNAME contains "${host}" — expected nuika.co.il`);
+  }
+
   console.log('Referenced assets:');
   const manifest = JSON.parse(readFileSync(join(ROOT, 'manifest.json'), 'utf8'));
   for (const icon of manifest.icons || []) {
-    if (existsSync(join(ROOT, icon.src))) pass(`manifest icon ${icon.src}`);
-    else fail(`manifest icon missing on disk: ${icon.src}`);
+    const p = join(ROOT, icon.src);
+    if (!existsSync(p)) { fail(`manifest icon missing on disk: ${icon.src}`); continue; }
+    // The original install bug was a 2400x1400 logo declared as 192x192.
+    // Read the real dimensions out of the PNG header rather than trusting it.
+    const buf = readFileSync(p);
+    if (buf.slice(0, 8).toString('hex') !== '89504e470d0a1a0a') { fail(`${icon.src} is not a PNG`); continue; }
+    const w = buf.readUInt32BE(16), h = buf.readUInt32BE(20);
+    const [dw, dh] = (icon.sizes || '').split('x').map(Number);
+    if (w === dw && h === dh) pass(`manifest icon ${icon.src} really is ${w}x${h}`);
+    else fail(`${icon.src} is ${w}x${h} but the manifest declares ${icon.sizes} — Android will refuse to build a proper app icon`);
   }
 
   // Local images referenced from the page must actually be committed.

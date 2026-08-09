@@ -1,6 +1,7 @@
 # NUIKA — working rules
 
-Boutique bread shop, run by **Noy**. Live at https://shaharazmon24.github.io/NUIKA
+Boutique bread shop, run by **Noy**. Live at https://nuika.co.il
+(also reachable via shaharazmon24.github.io/NUIKA, which redirects there)
 This is a real business. Orders placed here are real orders.
 
 ---
@@ -94,7 +95,11 @@ cache-first: that version pinned every visitor to a stale copy forever.
 `const orig = fn; function fn() { orig(); }` — it recurses infinitely. Edit the
 body directly.
 
-**GitHub Pages serves from `/NUIKA/`.** Absolute paths like `/index.html` 404.
+**The site serves from the domain root** (nuika.co.il), fronted by Cloudflare.
+Keep asset paths relative so they stay correct on either host. Never delete or
+edit `CNAME` — doing so unsets the GitHub Pages custom domain and takes the shop
+offline. Cloudflare must stay on SSL mode **Full**, never Full (strict): the
+origin certificate is GitHub's `*.github.io`, and strict mode rejects it.
 
 ## Money paths — check these whenever you touch ordering
 
