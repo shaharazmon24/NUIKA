@@ -50,6 +50,10 @@
     }
   </script>
   <style>
+    /* Only ever visible inside @media print; without this the generated
+       sheet stays rendered on the live page after the dialog closes. */
+    #print-area { display: none; }
+
     * { box-sizing: border-box; }
     body { background-color: #F7EEE0; }
 
@@ -489,10 +493,12 @@
       z-index: 300;
       background: #F0E9D8;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       flex-direction: column;
       text-align: center;
       padding: 24px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     #thankyou-overlay.open {
       display: flex;
@@ -1556,7 +1562,7 @@
     <div class="land-countdown mb-8">
       <div class="countdown-box" id="landing-countdown">
         <span class="countdown-dot" id="countdown-dot"></span>
-        <span id="countdown-text" lang-content="he">טוען...</span>
+        <span id="countdown-text">טוען...</span>
       </div>
     </div>
 
@@ -1670,7 +1676,7 @@
       <div id="cart-progress-wrap" style="display:none;">
         <div id="cart-progress-bar"></div>
       </div>
-      <div id="cart-progress-label" lang-content="he"></div>
+      <div id="cart-progress-label"></div>
 
       <!-- Main row -->
       <div class="flex items-center justify-between gap-4" style="margin-top:4px;">
@@ -1687,8 +1693,8 @@
             <div class="font-serif font-bold" style="font-size:1.15rem;color:#F7EEE0;line-height:1.3;" id="cart-total">₪0</div>
           </div>
         </div>
-        <button onclick="openOrderModal()" class="font-serif font-bold cursor-pointer transition-all" style="background:#D6A54A;color:#2C1810;font-size:0.92rem;padding:11px 22px;border-radius:100px;border:none;letter-spacing:0.01em;" lang-content="he">לביצוע הזמנה ←</button>
-        <button onclick="openOrderModal()" class="font-serif font-bold cursor-pointer transition-all" style="background:#D6A54A;color:#2C1810;font-size:0.92rem;padding:11px 22px;border-radius:100px;border:none;letter-spacing:0.01em;" lang-content="en">Place Order →</button>
+        <button id="cart-order-btn-he" onclick="openOrderModal()" class="font-serif font-bold transition-all" style="background:#D6A54A;color:#2C1810;font-size:0.92rem;padding:11px 22px;border-radius:100px;border:none;letter-spacing:0.01em;" lang-content="he">לביצוע הזמנה ←</button>
+        <button id="cart-order-btn-en" onclick="openOrderModal()" class="font-serif font-bold transition-all" style="background:#D6A54A;color:#2C1810;font-size:0.92rem;padding:11px 22px;border-radius:100px;border:none;letter-spacing:0.01em;" lang-content="en">Place Order →</button>
       </div>
     </div>
   </div>
@@ -1716,43 +1722,48 @@
     <!-- Divider -->
     <hr class="border-parchment mb-6" />
 
-    <!-- Delivery method -->
+    <!-- Pickup info -->
     <div class="mb-5">
       <label class="block font-sans font-semibold text-ink mb-3 text-sm" lang-content="he">אופן קבלה</label>
-      <label class="block font-sans font-semibold text-ink mb-3 text-sm" lang-content="en">Delivery Method</label>
-      <div class="flex gap-3">
-        <label class="flex-1 cursor-pointer">
-          <input type="radio" name="delivery" value="delivery" class="sr-only" onchange="toggleDelivery(this)" />
-          <div class="delivery-option border-2 border-parchment rounded-xl p-3 text-center transition-colors hover:border-terracotta">
-            <div class="text-2xl mb-1">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mx-auto"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-            </div>
-            <div class="text-sm font-sans text-ink font-semibold" lang-content="he">משלוח</div>
-            <div class="text-sm font-sans text-ink font-semibold" lang-content="en">Delivery</div>
-            <div class="text-xs text-muted" lang-content="he">+25 ₪</div>
-            <div class="text-xs text-muted" lang-content="en">+₪25</div>
-          </div>
-        </label>
-        <label class="flex-1 cursor-pointer">
-          <input type="radio" name="delivery" value="pickup" class="sr-only" onchange="toggleDelivery(this)" checked />
-          <div class="delivery-option border-2 border-earth rounded-xl p-3 text-center transition-colors hover:border-earth" id="pickup-option-box">
-            <div class="text-2xl mb-1">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="mx-auto"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-            </div>
-            <div class="text-sm font-sans text-ink font-semibold" lang-content="he">איסוף עצמי</div>
-            <div class="text-sm font-sans text-ink font-semibold" lang-content="en">Pickup</div>
-            <div class="text-xs text-muted" lang-content="he">ח' בן ציון • חינם</div>
-            <div class="text-xs text-muted" lang-content="en">Ben Zion St · Free</div>
-          </div>
-        </label>
+      <label class="block font-sans font-semibold text-ink mb-3 text-sm" lang-content="en">Pickup</label>
+      <div class="border-2 border-earth rounded-xl p-3 flex items-center gap-3" style="background:#FDFAF4;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <div>
+          <div class="text-sm font-sans text-ink font-semibold" lang-content="he">איסוף עצמי</div>
+          <div class="text-sm font-sans text-ink font-semibold" lang-content="en">Self Pickup</div>
+          <div class="text-xs text-muted" lang-content="he">ש. בן ציון 13, רחובות</div>
+          <div class="text-xs text-muted" lang-content="en">S. Ben Zion 13, Rehovot</div>
+        </div>
       </div>
     </div>
 
-    <!-- Address (shown only for delivery) -->
-    <div id="address-field" class="mb-5 hidden">
-      <label class="block font-sans font-semibold text-ink mb-2 text-sm" for="address" lang-content="he">כתובת למשלוח</label>
-      <label class="block font-sans font-semibold text-ink mb-2 text-sm" for="address" lang-content="en">Delivery Address</label>
-      <input class="field" id="address" type="text" placeholder="רחוב, מספר בית, עיר" dir="rtl" />
+    <!-- Payment method -->
+    <div class="mb-5">
+      <label class="block font-sans font-semibold text-ink mb-3 text-sm" lang-content="he">אופן תשלום</label>
+      <label class="block font-sans font-semibold text-ink mb-3 text-sm" lang-content="en">Payment Method</label>
+      <div class="flex gap-2">
+        <label class="flex-1 cursor-pointer">
+          <input type="radio" name="payment" value="cash" class="sr-only" onchange="togglePayment(this)" checked />
+          <div class="payment-option border-2 border-earth rounded-xl p-2.5 text-center transition-colors hover:border-earth">
+            <div class="text-sm font-sans text-ink font-semibold" lang-content="he">מזומן</div>
+            <div class="text-sm font-sans text-ink font-semibold" lang-content="en">Cash</div>
+          </div>
+        </label>
+        <label class="flex-1 cursor-pointer">
+          <input type="radio" name="payment" value="bit" class="sr-only" onchange="togglePayment(this)" />
+          <div class="payment-option border-2 border-parchment rounded-xl p-2.5 text-center transition-colors hover:border-terracotta">
+            <div class="text-sm font-sans text-ink font-semibold" lang-content="he">Bit</div>
+            <div class="text-sm font-sans text-ink font-semibold" lang-content="en">Bit</div>
+          </div>
+        </label>
+        <label class="flex-1 cursor-pointer">
+          <input type="radio" name="payment" value="paybox" class="sr-only" onchange="togglePayment(this)" />
+          <div class="payment-option border-2 border-parchment rounded-xl p-2.5 text-center transition-colors hover:border-terracotta">
+            <div class="text-sm font-sans text-ink font-semibold" lang-content="he">PayBox</div>
+            <div class="text-sm font-sans text-ink font-semibold" lang-content="en">PayBox</div>
+          </div>
+        </label>
+      </div>
     </div>
 
     <!-- Name & Phone -->
@@ -1783,22 +1794,16 @@
       <span class="font-serif font-bold text-earth text-xl" id="modal-total">₪0</span>
     </div>
 
-    <!-- Submit buttons -->
+    <!-- Submit -->
     <div class="flex flex-col gap-3">
-      <button onclick="submitOrder('whatsapp')" class="w-full bg-earth hover:bg-earth/90 text-cream font-serif font-bold text-base py-3.5 rounded-full transition-colors cursor-pointer flex items-center justify-center gap-2">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-        <span lang-content="he">שלח הזמנה בוואצאפ</span>
-        <span lang-content="en">Send via WhatsApp</span>
-      </button>
-      <button onclick="submitOrder('email')" class="w-full border-2 border-earth text-earth hover:bg-parchment font-serif font-bold text-base py-3 rounded-full transition-colors cursor-pointer flex items-center justify-center gap-2">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-        <span lang-content="he">שלח במייל</span>
-        <span lang-content="en">Send by Email</span>
+      <button onclick="submitOrder()" class="w-full bg-earth hover:bg-earth/90 text-cream font-serif font-bold text-base py-3.5 rounded-full transition-colors cursor-pointer flex items-center justify-center gap-2">
+        <span lang-content="he">שלח הזמנה</span>
+        <span lang-content="en">Send Order</span>
       </button>
     </div>
 
-    <p class="text-center text-muted text-xs mt-4 font-sans" lang-content="he">לאחר שליחת ההזמנה נשלח לך קישור לתשלום ב-Bit</p>
-    <p class="text-center text-muted text-xs mt-4 font-sans" lang-content="en">After submitting, we'll send you a Bit payment link</p>
+    <p class="text-center text-muted text-xs mt-4 font-sans" lang-content="he">איסוף עצמי מ-ש. בן ציון 13, רחובות</p>
+    <p class="text-center text-muted text-xs mt-4 font-sans" lang-content="en">Self pickup from S. Ben Zion 13, Rehovot</p>
   </div>
 </div>
 
@@ -1826,13 +1831,18 @@
     <!-- Order summary box -->
     <div class="ty-summary bg-white/70 border border-parchment rounded-2xl p-5 mb-6 text-right" id="ty-order-box" style="backdrop-filter:blur(8px);"></div>
 
-    <!-- Bit payment button -->
+    <!-- Bit payment QR -->
     <div class="ty-btn flex flex-col gap-3">
-      <a id="bit-link" href="#" target="_blank" rel="noopener"
+      <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:16px;padding:16px;text-align:center;">
+        <p class="font-serif font-bold" style="color:#6B2E1E;font-size:0.92rem;margin-bottom:10px;" lang-content="he">סרקו לתשלום ב-Bit</p>
+        <p class="font-serif font-bold" style="color:#6B2E1E;font-size:0.92rem;margin-bottom:10px;" lang-content="en">Scan to pay via Bit</p>
+        <img src="images/bit-qr.jpg" alt="קוד QR לתשלום ב-Bit" style="width:180px;max-width:60%;margin:0 auto;border-radius:8px;display:block;" />
+      </div>
+      <a id="paybox-link" href="#" target="_blank" rel="noopener"
          class="block w-full text-center font-serif font-bold text-base py-3.5 rounded-full transition-colors cursor-pointer"
-         style="background:#6B2E1E;color:#F7EEE0;">
-        <span lang-content="he">תשלום ב-Bit →</span>
-        <span lang-content="en">Pay via Bit →</span>
+         style="background:#BD4D30;color:#F7EEE0;display:none;">
+        <span lang-content="he">תשלום ב-PayBox →</span>
+        <span lang-content="en">Pay via PayBox →</span>
       </a>
       <button onclick="backToMenu()"
         class="w-full border-2 border-earth text-earth hover:bg-parchment font-serif font-bold text-base py-3 rounded-full transition-colors cursor-pointer" style="background:transparent;">
@@ -2094,6 +2104,15 @@
       </label>
       <input id="admin-bit-link" type="url" class="field" placeholder="https://bit.ly/..." dir="ltr" style="font-size:0.88rem;" />
       <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;margin-top:6px;">אפליקציית Bit ← "קבלת כסף" ← "שלח קישור"</p>
+    </div>
+
+    <!-- PayBox link -->
+    <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:14px;padding:18px;margin-bottom:14px;">
+      <label style="display:block;font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-weight:700;font-size:0.95rem;margin-bottom:8px;">
+        🔗 קישור PayBox לתשלום
+      </label>
+      <input id="admin-paybox-link" type="url" class="field" placeholder="https://paybox.money/..." dir="ltr" style="font-size:0.88rem;" />
+      <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;margin-top:6px;">אם משאירים ריק, כפתור PayBox לא יופיע ללקוח בדף התודה.</p>
     </div>
 
     <!-- Deadline -->
@@ -2453,25 +2472,27 @@
     <!-- Name Hebrew -->
     <div style="margin-bottom:12px;">
       <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:6px;">שם המנה (עברית)</label>
-      <input id="edit-name-he" type="text" class="field" placeholder="לחם מושלם לסופ״ש" />
+      <input id="edit-name-he" type="text" class="field" placeholder="לחם מושלם לסופ״ש" onblur="autoTranslateField('edit-name-he','edit-name-en','edit-name-en-note')" />
     </div>
 
     <!-- Name English -->
     <div style="margin-bottom:12px;">
       <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:6px;">שם המנה (אנגלית)</label>
       <input id="edit-name-en" type="text" class="field" dir="ltr" placeholder="Perfect Weekend Loaf" />
+      <div id="edit-name-en-note" style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.7rem;margin-top:3px;"></div>
     </div>
 
     <!-- Desc Hebrew -->
     <div style="margin-bottom:12px;">
       <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:6px;">תיאור (עברית)</label>
-      <textarea id="edit-desc-he" class="field" rows="2" placeholder="קמח חיטה כפרי, מחמצת שיפון..."></textarea>
+      <textarea id="edit-desc-he" class="field" rows="2" placeholder="קמח חיטה כפרי, מחמצת שיפון..." onblur="autoTranslateField('edit-desc-he','edit-desc-en','edit-desc-en-note')"></textarea>
     </div>
 
     <!-- Desc English -->
     <div style="margin-bottom:12px;">
       <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:6px;">תיאור (אנגלית)</label>
       <textarea id="edit-desc-en" class="field" rows="2" dir="ltr" placeholder="Country wheat flour, rye sourdough..."></textarea>
+      <div id="edit-desc-en-note" style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.7rem;margin-top:3px;"></div>
     </div>
 
     <!-- Price -->
@@ -2518,7 +2539,7 @@
 <footer style="background:#EFE1C7;border-top:1px solid #D5C9B5;margin-top:0;padding-bottom:8rem;">
   <div class="max-w-5xl mx-auto px-4 text-center" style="padding-top:2.5rem;padding-bottom:2rem;">
     <div class="font-serif text-earth font-bold mb-2" style="font-size:1.35rem;">נואיקה • NUIKA</div>
-    <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#6B5D4E;font-size:0.85rem;margin-bottom:1.1rem;">לחם בוטיק ביתי • רחוב ש. בן ציון, רחובות</p>
+    <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#6B5D4E;font-size:0.85rem;margin-bottom:1.1rem;">לחם בוטיק ביתי • ש. בן ציון 13, רחובות</p>
     <div class="flex justify-center items-center gap-3">
       <a href="https://wa.me/972547382282" target="_blank" rel="noopener" style="font-family:'Noto Sans Hebrew',sans-serif;color:#8B7260;font-size:0.85rem;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#6B2E1E'" onmouseout="this.style.color='#8B7260'">054-7382282</a>
       <span style="color:#C4B89A;font-size:0.6rem;">●</span>
@@ -2542,6 +2563,11 @@ if ('serviceWorker' in navigator) {
     let _reloading = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (_reloading) return;
+      // Reloading while the cart is full or the order form is open would
+      // wipe the customer's order with no explanation.
+      const modal = document.getElementById('order-modal');
+      if (modal && modal.classList.contains('open')) return;
+      if (Object.keys(cart).length) return;
       _reloading = true;
       window.location.reload();
     });
@@ -2549,6 +2575,16 @@ if ('serviceWorker' in navigator) {
 }
 
 // ─── FIREBASE ─────────────────────────────────────────
+if (typeof firebase === 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    const b = document.createElement('div');
+    b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#B45032;color:#F7F2E8;padding:10px 16px;text-align:center;font-family:sans-serif;font-size:0.9rem;';
+    b.textContent = 'אין חיבור — נסי לרענן את הדף';
+    document.body.prepend(b);
+  });
+  throw new Error('Firebase SDK failed to load');
+}
+
 firebase.initializeApp({
   apiKey: "AIzaSyBH1KnxvJVBuMCkQ4vRjoBT0kfIn5ZEtqQ",
   authDomain: "nuika-5371f.firebaseapp.com",
@@ -2561,24 +2597,71 @@ firebase.initializeApp({
 const db = firebase.database();
 const ROOT = 'nuika';
 
+// Every Firebase write used to be fire-and-forget: a failure was completely
+// silent and the UI still reported success. Route them all through this.
+// Customer-supplied text (name, notes, address) is rendered into the admin
+// panel with innerHTML. Unescaped, a crafted note runs arbitrary JS in Noy's
+// session, where the authenticated db handle is in scope.
+function esc(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+function fbError(err) {
+  console.error('Firebase write failed:', err);
+  alert('השמירה נכשלה — בדקי חיבור לאינטרנט ונסי שוב.');
+}
+
+// True once each tree has answered at least once. Until then the local arrays
+// are empty because nothing has loaded — NOT because the data is gone — so
+// saving would overwrite real data with defaults.
+let _productsLoaded = false;
+let _cartRestored  = false;
+let _kitchenLoaded  = false;
+
 // Local caches — populated by Firebase listeners
 let ORDER_LOG = [];
 let _settingsCache = {};
 
+// One-time seeding, guarded by a transaction so two devices loading at once
+// cannot both seed. A listener must NEVER seed: an empty tree there means
+// "Noy deleted everything", and re-seeding would resurrect deleted data.
+db.ref(`${ROOT}/_seeded`).once('value').then(seedSnap => {
+  if (seedSnap.val()) return;                    // seeded once, never again
+  return db.ref(ROOT).once('value').then(rootSnap => {
+    const cur = rootSnap.val() || {};
+    const updates = { _seeded: { at: Date.now() } };
+
+    // Only fill subtrees that genuinely do not exist. Writing defaults
+    // unconditionally would race the listeners and could overwrite live data.
+    if (!cur.products) {
+      const prod = {};
+      PRODUCTS.forEach(p => {
+        prod[p.id] = { id: p.id, nameHe: p.nameHe, nameEn: p.nameEn, descHe: p.descHe, descEn: p.descEn, price: p.price, illustration: p.illustration || null, soldOut: p.soldOut || false, maxStock: p.maxStock || null, tag: p.tag || null };
+      });
+      updates.products = prod;
+    }
+    if (!cur.kitchen || !cur.kitchen.pantry) {
+      const pantryObj = {};
+      DEFAULT_PANTRY.forEach(p => { pantryObj[p.id] = { ...p }; });
+      updates['kitchen/pantry'] = pantryObj;
+    }
+    if (!cur.kitchen || !cur.kitchen.recipes) {
+      const recipesObj = {};
+      DEFAULT_RECIPES.forEach(r => { recipesObj[r.id] = { ...r }; });
+      updates['kitchen/recipes'] = recipesObj;
+    }
+    return db.ref(ROOT).update(updates);
+  });
+}).catch(err => console.error('seed check failed:', err));
+
 // Products listener — runs whenever products change in Firebase
 db.ref(`${ROOT}/products`).on('value', snap => {
   const data = snap.val();
-  if (!data) {
-    // First run: push hardcoded defaults to Firebase
-    const toSave = {};
-    PRODUCTS.forEach(p => {
-      toSave[p.id] = { id: p.id, nameHe: p.nameHe, nameEn: p.nameEn, descHe: p.descHe, descEn: p.descEn, price: p.price, illustration: p.illustration || null, soldOut: p.soldOut || false, maxStock: p.maxStock || null, tag: p.tag || null };
-    });
-    db.ref(`${ROOT}/products`).set(toSave);
-    return;
-  }
+  _productsLoaded = true;
   PRODUCTS.length = 0;
-  Object.values(data).sort((a, b) => a.id - b.id).forEach(p => PRODUCTS.push({ ...p, svg: null }));
+  if (data) Object.values(data).sort((a, b) => a.id - b.id).forEach(p => PRODUCTS.push({ ...p, svg: null }));
 
   // Drop cart items whose product was deleted or marked sold out
   Object.keys(cart).forEach(id => {
@@ -2586,6 +2669,7 @@ db.ref(`${ROOT}/products`).on('value', snap => {
     if (!p || p.soldOut) delete cart[+id];
   });
 
+  if (!_cartRestored) { restoreCart(); _cartRestored = true; }
   renderProducts();
   // Re-apply cart visual state — renderProducts rebuilds the grid from scratch
   Object.keys(cart).forEach(id => updateCard(+id));
@@ -2610,6 +2694,14 @@ db.ref(`${ROOT}/orders`).on('value', snap => {
   ORDER_LOG = [];
   if (snap.val()) snap.forEach(child => ORDER_LOG.push(child.val()));
   ORDER_LOG.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+  // Stock counts are derived from orders, so the grid has to redraw too —
+  // otherwise "נותרו N" stays frozen at whatever it was on first paint.
+  if (_productsLoaded) {
+    renderProducts();
+    Object.keys(cart).forEach(id => updateCard(+id));
+    updateCartBar();
+    updateOrdersOpenBanner();
+  }
   const panel = document.getElementById('admin-panel');
   if (panel && panel.classList.contains('open')) renderOrderManagement();
   updateOrdersTabBadge();
@@ -2617,21 +2709,21 @@ db.ref(`${ROOT}/orders`).on('value', snap => {
 
 // Kitchen listener — pantry, recipes, weekly plan (admin only, syncs across devices)
 db.ref(`${ROOT}/kitchen`).on('value', snap => {
-  const data = snap.val();
-  if (!data) {
-    // First run: push defaults to Firebase
-    const pantryObj = {}, recipesObj = {};
-    DEFAULT_PANTRY.forEach(p => { pantryObj[p.id] = { ...p }; });
-    DEFAULT_RECIPES.forEach(r => { recipesObj[r.id] = { ...r }; });
-    db.ref(`${ROOT}/kitchen`).set({ pantry: pantryObj, recipes: recipesObj, weeklyPlan: {} });
-    return;
-  }
-  if (data.pantry)   PANTRY      = Object.values(data.pantry).sort((a, b) => a.id - b.id);
-  if (data.recipes)  RECIPES     = Object.values(data.recipes).sort((a, b) => a.id - b.id);
+  const data = snap.val() || {};
+  _kitchenLoaded = true;
+  // Sort by category then name: ids are strings ('pi1'), so a-b yields NaN
+  const byName = (a, b) => (a.cat || '').localeCompare(b.cat || '', 'he')
+                        || (a.name || '').localeCompare(b.name || '', 'he');
+  PANTRY      = data.pantry  ? Object.values(data.pantry).sort(byName) : [];
+  RECIPES     = data.recipes ? Object.values(data.recipes) : [];
   WEEKLY_PLAN = data.weeklyPlan || {};
-  // Re-render active kitchen tab if panel is open
+
+  // Don't rebuild the panel while she is typing in it — innerHTML would
+  // destroy the focused input mid-keystroke.
   const panel = document.getElementById('admin-panel');
-  if (panel && panel.classList.contains('open') && typeof _currentKitchenTab !== 'undefined') {
+  const typing = document.activeElement
+    && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
+  if (panel && panel.classList.contains('open') && !typing) {
     switchKitchenTab(_currentKitchenTab || 'pantry');
   }
 });
@@ -2671,21 +2763,6 @@ function installPWA() {
     const btn = document.getElementById('install-pwa-btn');
     if (btn) btn.style.display = 'none';
   });
-}
-
-function getNextTuesdayDeadline() {
-  const now = new Date();
-  const day = now.getDay(); // 0=Sun,1=Mon,2=Tue,...
-  // Days until next Tuesday (day=2)
-  let daysUntil = (2 - day + 7) % 7;
-  // If it's Tuesday and still before 17:00 — same day
-  if (day === 2 && now.getHours() < 17) daysUntil = 0;
-  // If it's Tuesday after 17:00 — next week
-  else if (day === 2 && now.getHours() >= 17) daysUntil = 7;
-  const deadline = new Date(now);
-  deadline.setDate(now.getDate() + daysUntil);
-  deadline.setHours(17, 0, 0, 0);
-  return deadline;
 }
 
 function updateCountdown() {
@@ -2823,8 +2900,8 @@ const PRODUCTS = [
 
 // ─── STATE ─────────────────────────────────────────
 const cart = {}; // { productId: quantity }
-let deliveryMethod = 'pickup';
-const DELIVERY_COST = 25;
+let paymentMethod = 'cash';
+const PICKUP_ADDRESS = 'ש. בן ציון 13, רחובות';
 const MIN_ORDER_ITEMS = 3;
 const OWNER_WHATSAPP = '972547382282';
 const OWNER_EMAIL    = 'shaharazmon24@gmail.com';
@@ -2835,7 +2912,11 @@ function getStockRemaining(productId) {
   const p = PRODUCTS.find(p => p.id === productId);
   if (!p || !p.maxStock) return null;
   let sold = 0;
-  ORDER_LOG.filter(o => !o.archived && o.status !== 'done').forEach(o => {
+  // Filtering on status !== 'done' meant that ticking orders off as delivered
+  // handed their units back to the shop mid-week and let it oversell.
+  const dl = getNextTuesdayDeadline();
+  const cycleStart = (dl ? dl.getTime() : Date.now()) - 7 * 24 * 60 * 60 * 1000;
+  ORDER_LOG.filter(o => !o.archived && (o.timestamp || 0) >= cycleStart).forEach(o => {
     (o.itemsArr || []).forEach(item => {
       if ((item.id && item.id === productId) || item.name === p.nameHe) sold += item.qty;
     });
@@ -2856,8 +2937,10 @@ function checkRepeatOrder() {
 }
 
 function repeatLastOrder() {
+  if (!ordersAreOpen()) { warnClosed(); return; }
   const last = JSON.parse(localStorage.getItem('nuika_last_order') || '[]');
   if (!last.length) return;
+  if (getCartCount() > 0 && !confirm('זה יחליף את מה שכבר בעגלה. להמשיך?')) return;
   // Clear current cart
   Object.keys(cart).forEach(id => { delete cart[+id]; updateCard(+id); });
   // Fill with last order (respect stock limits)
@@ -2871,7 +2954,14 @@ function repeatLastOrder() {
   });
   updateCartBar();
   haptic(40);
-  // Hide banner
+  // Every item may have been skipped as sold out — say so instead of
+  // silently doing nothing.
+  if (getCartCount() === 0) {
+    alert(document.body.classList.contains('lang-en')
+      ? "Last week's items aren't available right now."
+      : 'הפריטים מהשבוע שעבר לא זמינים כרגע.');
+    return;
+  }
   const banner = document.getElementById('repeat-order-banner');
   if (banner) banner.style.display = 'none';
   // Scroll to products
@@ -2921,7 +3011,7 @@ function renderProducts() {
       <div class="illus-wrap">
         ${p.illustration
           ? `<img src="${p.illustration}" alt="${p.nameHe}" loading="lazy" style="width:100%;height:100%;object-fit:cover;" />`
-          : p.svg}
+          : (p.svg || '')}
       </div>
 
       <!-- Info -->
@@ -3016,6 +3106,7 @@ function updateCard(id) {
 
 function animateCard(id) {
   const card = document.getElementById(`card-${id}`);
+  if (!card) return;
   card.classList.remove('pulse');
   requestAnimationFrame(() => card.classList.add('pulse'));
 }
@@ -3032,7 +3123,23 @@ function getCartCount() {
   return Object.values(cart).reduce((s, q) => s + q, 0);
 }
 
+// Persist the cart so a reload (or the service worker taking control) does
+// not silently discard an order in progress.
+function persistCart() {
+  try { localStorage.setItem('nuika_cart', JSON.stringify(cart)); } catch (e) {}
+}
+function restoreCart() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('nuika_cart') || '{}');
+    Object.entries(saved).forEach(([id, qty]) => {
+      const p = PRODUCTS.find(p => p.id === +id);
+      if (p && !p.soldOut && qty > 0) cart[+id] = qty;
+    });
+  } catch (e) {}
+}
+
 function updateCartBar() {
+  persistCart();
   const total = getCartTotal();
   const count = getCartCount();
   const bar = document.getElementById('cart-bar');
@@ -3040,12 +3147,23 @@ function updateCartBar() {
   document.getElementById('cart-total').textContent = `₪${total}`;
   if (count > 0) bar.classList.add('visible');
   else bar.classList.remove('visible');
+
+  const canOrder = count >= MIN_ORDER_ITEMS;
+  ['cart-order-btn-he', 'cart-order-btn-en'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.disabled = !canOrder;
+    btn.style.opacity = canOrder ? '1' : '0.45';
+    btn.style.cursor = canOrder ? 'pointer' : 'not-allowed';
+  });
+
   updateProgressBar();
 }
 
 // ─── ORDER MODAL ───────────────────────────────────
 function openOrderModal() {
-  if (getCartCount() === 0) return;
+  if (getCartCount() < MIN_ORDER_ITEMS) return;
+  if (!ordersAreOpen()) { warnClosed(); return; }
   const modal = document.getElementById('order-modal');
   modal.classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -3084,49 +3202,60 @@ function renderOrderSummary() {
 }
 
 function updateModalTotal() {
-  const itemsTotal = getCartTotal();
-  const delivery = deliveryMethod === 'delivery' ? DELIVERY_COST : 0;
-  const grandTotal = itemsTotal + delivery;
+  const grandTotal = getCartTotal();
   document.getElementById('modal-total').textContent = `₪${grandTotal}`;
 }
 
-function toggleDelivery(radio) {
-  deliveryMethod = radio.value;
-  const addressField = document.getElementById('address-field');
-  const options = document.querySelectorAll('.delivery-option');
+function togglePayment(radio) {
+  paymentMethod = radio.value;
+  const options = document.querySelectorAll('.payment-option');
   options.forEach(o => {
-    o.style.borderColor = '';
     o.classList.remove('border-earth');
     o.classList.add('border-parchment');
   });
-  radio.closest('label').querySelector('.delivery-option').classList.remove('border-parchment');
-  radio.closest('label').querySelector('.delivery-option').classList.add('border-earth');
+  radio.closest('label').querySelector('.payment-option').classList.remove('border-parchment');
+  radio.closest('label').querySelector('.payment-option').classList.add('border-earth');
+}
 
-  if (deliveryMethod === 'delivery') {
-    addressField.classList.remove('hidden');
-  } else {
-    addressField.classList.add('hidden');
-  }
-  updateModalTotal();
+// Orders were only blocked by pointer-events on the product cards, so the
+// cart bar and the repeat-order banner both walked straight past a closed shop.
+function ordersAreOpen() {
+  if (_settingsCache.ordersOpen === false) return false;
+  const dl = getNextTuesdayDeadline();
+  return !dl || dl.getTime() > Date.now();
+}
+function warnClosed() {
+  const isEn = document.body.classList.contains('lang-en');
+  alert(isEn ? 'Orders are closed right now.' : 'ההזמנות סגורות כרגע.');
 }
 
 // ─── SUBMIT ORDER ──────────────────────────────────
-function submitOrder(method) {
+const PAYMENT_LABELS_HE = { cash: 'מזומן', bit: 'Bit', paybox: 'PayBox' };
+const PAYMENT_LABELS_EN = { cash: 'Cash', bit: 'Bit', paybox: 'PayBox' };
+
+let _submitting = false;
+
+function submitOrder() {
+  if (_submitting) return;              // double-tap would create two orders
   const name  = document.getElementById('cust-name').value.trim();
   const phone = document.getElementById('cust-phone').value.trim();
-  const address = document.getElementById('address').value.trim();
   const notes = document.getElementById('notes').value.trim();
   const isEn  = document.body.classList.contains('lang-en');
+
+  if (!ordersAreOpen()) { warnClosed(); return; }
 
   if (!name || !phone) {
     alert(isEn ? 'Please fill in name and phone.' : 'נא למלא שם וטלפון.');
     return;
   }
-  saveCustomerDetails(name, phone);
-  if (deliveryMethod === 'delivery' && !address) {
-    alert(isEn ? 'Please enter a delivery address.' : 'נא להזין כתובת למשלוח.');
+  // Anything non-numeric used to pass, producing a wa.me link addressed to
+  // nobody and an order Noy could not call back.
+  const digits = phone.replace(/\D/g, '');
+  if (!/^(0\d{8,9}|972\d{8,9})$/.test(digits)) {
+    alert(isEn ? 'Please enter a valid phone number.' : 'נא להזין מספר טלפון תקין.');
     return;
   }
+  saveCustomerDetails(name, phone);
   const itemsCount = getCartCount();
   if (itemsCount < MIN_ORDER_ITEMS) {
     alert(isEn
@@ -3134,25 +3263,39 @@ function submitOrder(method) {
       : `מינימום הזמנה ${MIN_ORDER_ITEMS} פריטים. יש לך כרגע ${itemsCount}.`);
     return;
   }
+  // Stock was only checked when items went into the cart. Re-check now: the
+  // cart may have sat open while someone else bought the last units.
+  for (const [id, qty] of Object.entries(cart)) {
+    const p = PRODUCTS.find(p => p.id === +id);
+    if (!p) { delete cart[+id]; continue; }
+    const rem = getStockRemaining(+id);
+    if (rem !== null && qty > rem) {
+      alert(isEn
+        ? `Only ${rem} left of ${p.nameEn}. Please adjust your order.`
+        : `נותרו רק ${rem} יחידות מ${p.nameHe}. נא לעדכן את ההזמנה.`);
+      renderProducts();
+      Object.keys(cart).forEach(i => updateCard(+i));
+      renderOrderSummary();
+      return;
+    }
+  }
 
   // Build message
   const lines = Object.entries(cart).map(([id, qty]) => {
     const p = PRODUCTS.find(p => p.id === +id);
-    return `• ${p.nameHe} x${qty} = ₪${p.price * qty}`;
-  });
-  const delivery = deliveryMethod === 'delivery' ? DELIVERY_COST : 0;
-  const grandTotal = getCartTotal() + delivery;
-
-  const deliveryLine = deliveryMethod === 'delivery'
-    ? `📦 משלוח: ₪${DELIVERY_COST}\nכתובת: ${address}`
-    : `🏠 איסוף עצמי מרחוב ש. בן ציון`;
+    if (!p) return null;
+    return `• ${isEn ? p.nameEn : p.nameHe} x${qty} = ₪${p.price * qty}`;
+  }).filter(Boolean);
+  const grandTotal = getCartTotal();
+  const paymentLabel = PAYMENT_LABELS_HE[paymentMethod] || paymentMethod;
 
   const msg = [
     `שלום! הזמנה חדשה מ-${name} 🥖`,
     ``,
     ...lines,
     ``,
-    deliveryLine,
+    `🏠 איסוף עצמי מ-${PICKUP_ADDRESS}`,
+    `💳 אופן תשלום: ${paymentLabel}`,
     ``,
     `סה"כ לתשלום: ₪${grandTotal}`,
     `טלפון: ${phone}`,
@@ -3161,25 +3304,12 @@ function submitOrder(method) {
 
   const encoded = encodeURIComponent(msg);
 
-  if (method === 'whatsapp') {
-    // Send to owner
-    window.open(`https://wa.me/${OWNER_WHATSAPP}?text=${encoded}`, '_blank');
-    // Send confirmation to customer (after short delay so both open)
-    setTimeout(() => {
-      const customerPhone = phone.replace(/\D/g, '');
-      const customerIntl = customerPhone.startsWith('0')
-        ? '972' + customerPhone.slice(1)
-        : customerPhone;
-      const confirmMsg = encodeURIComponent(
-        `שלום ${name}! 🌾\nקיבלנו את ההזמנה שלך מנואיקה ✔️\n\n${lines.join('\n')}\n\nסה"כ: ₪${grandTotal}\nנשלח לך קישור לתשלום ב-Bit בקרוב 🍞`
-      );
-      window.open(`https://wa.me/${customerIntl}?text=${confirmMsg}`, '_blank');
-    }, 600);
-  } else {
-    const subject = encodeURIComponent(`הזמנה מנואיקה — ${name}`);
-    const body = encodeURIComponent(msg);
-    window.open(`mailto:${OWNER_EMAIL}?subject=${subject}&body=${body}`, '_blank');
-  }
+  _submitting = true;
+
+  // Opened synchronously so it stays inside the user gesture. A second
+  // window.open on a timer was silently popup-blocked on iOS, and the page
+  // still claimed a confirmation had been sent.
+  window.open(`https://wa.me/${OWNER_WHATSAPP}?text=${encoded}`, '_blank');
 
   // Build structured items array for baking summary
   const itemsArr = Object.entries(cart).map(([id, qty]) => {
@@ -3192,34 +3322,39 @@ function submitOrder(method) {
     Object.entries(cart).map(([id, qty]) => ({ id: +id, qty }))
   ));
 
-  // Save to order log
+  // The write used to be fire-and-forget: on a flaky connection the customer
+  // saw a thank-you page for an order that never reached Noy.
   saveOrderToLog({
     name, phone,
     items: lines.join(' | '),
     itemsArr,
     total: grandTotal,
-    delivery: deliveryMethod,
-    address: deliveryMethod === 'delivery' ? address : '',
+    delivery: 'pickup',
+    address: PICKUP_ADDRESS,
+    paymentMethod,
     notes
-  });
-
-  // Close order modal
-  closeOrderModal();
-
-  // Show thank-you page
-  showThankYou({ name, lines, grandTotal, phone });
+  }).then(() => {
+    closeOrderModal();
+    showThankYou({ name, lines, grandTotal, phone });
+  }).catch(err => {
+    console.error('order write failed:', err);
+    alert(isEn
+      ? 'Your order was sent on WhatsApp but could not be saved. Please make sure Noy received it.'
+      : 'ההזמנה נשלחה בוואטסאפ אך לא נשמרה במערכת. נא לוודא מול נוי שהיא התקבלה.');
+    closeOrderModal();
+    showThankYou({ name, lines, grandTotal, phone });
+  }).then(() => { _submitting = false; });
 }
 
 function showThankYou({ name, lines, grandTotal, phone }) {
   const overlay = document.getElementById('thankyou-overlay');
   const box     = document.getElementById('ty-order-box');
-  const bitLink = document.getElementById('bit-link');
   const isHe    = !document.body.classList.contains('lang-en');
 
   // Build summary HTML
   box.innerHTML = `
     <div class="font-sans text-bark text-sm font-semibold mb-3" style="color:#6B2E1E;">
-      ${isHe ? `הזמנה של ${name}` : `Order for ${name}`}
+      ${isHe ? `הזמנה של ${esc(name)}` : `Order for ${esc(name)}`}
     </div>
     ${lines.map(l => `<div class="font-sans text-ink text-sm py-1 border-b border-parchment">${l}</div>`).join('')}
     <div class="flex justify-between items-center pt-3 mt-1">
@@ -3228,10 +3363,17 @@ function showThankYou({ name, lines, grandTotal, phone }) {
     </div>
   `;
 
-  // Bit link — from Firebase settings, localStorage fallback for offline
-  bitLink.href = _settingsCache.bitLink
-    || localStorage.getItem('nuika_bit_link')
-    || 'https://bit.ly/nuika-bit';
+  // PayBox link — from Firebase so it reaches every customer, not just this device
+  const payboxLinkEl = document.getElementById('paybox-link');
+  const savedPaybox = _settingsCache.payboxLink || '';
+  if (payboxLinkEl) {
+    if (savedPaybox) {
+      payboxLinkEl.href = savedPaybox;
+      payboxLinkEl.style.display = 'block';
+    } else {
+      payboxLinkEl.style.display = 'none';
+    }
+  }
 
   overlay.classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -3283,8 +3425,8 @@ function closeAdminLogin() {
 }
 
 function openAdminPanel() {
-  const savedBit = _settingsCache.bitLink || localStorage.getItem('nuika_bit_link') || '';
-  document.getElementById('admin-bit-link').value = savedBit;
+  document.getElementById('admin-bit-link').value    = _settingsCache.bitLink    || '';
+  document.getElementById('admin-paybox-link').value = _settingsCache.payboxLink || '';
 
   // Orders toggle state
   const isOpen = _settingsCache.ordersOpen !== false;
@@ -3342,17 +3484,27 @@ function liveToggleSoldOut(id, checkbox) {
   if (!p) return;
   p.soldOut = !checkbox.checked;
   const statusEl = document.getElementById(`admin-status-${id}`);
-  statusEl.textContent = p.soldOut ? 'אזל' : 'זמין';
-  statusEl.style.color = p.soldOut ? '#B45032' : '#7A9A50';
+  if (statusEl) {
+    statusEl.textContent = p.soldOut ? 'אזל' : 'זמין';
+    statusEl.style.color = p.soldOut ? '#B45032' : '#7A9A50';
+  }
+  // Write per-key so this cannot clobber a concurrent edit on another device.
+  db.ref(`${ROOT}/products/${id}/soldOut`).set(p.soldOut).catch(fbError);
 }
 
 function saveAdminSettings() {
   // Save Bit link to Firebase
   const bitVal = document.getElementById('admin-bit-link').value.trim();
-  if (bitVal) {
-    db.ref(`${ROOT}/settings/bitLink`).set(bitVal);
-    localStorage.setItem('nuika_bit_link', bitVal); // offline fallback
-  }
+  // Always write, so clearing the field actually clears the link
+  db.ref(`${ROOT}/settings/bitLink`).set(bitVal || null);
+  _settingsCache.bitLink = bitVal || '';
+
+  const payboxVal = document.getElementById('admin-paybox-link').value.trim();
+  db.ref(`${ROOT}/settings/payboxLink`).set(payboxVal || null);
+  _settingsCache.payboxLink = payboxVal || '';
+
+  // Persist sold-out flags — the toggles only mutate PRODUCTS in memory
+  saveAllProducts();
 
   renderProducts();
   updateCartBar();
@@ -3375,20 +3527,13 @@ function closeAdminPanel() {
 updateOrdersOpenBanner();
 
 // Load saved settings on page load
-(function loadSavedSettings() {
-  // Bit link — offline fallback until Firebase settings listener fires
-  const savedBit = localStorage.getItem('nuika_bit_link');
-  if (savedBit) {
-    const bitLinkEl = document.getElementById('bit-link');
-    if (bitLinkEl) bitLinkEl.href = savedBit;
-  }
-  // Products are loaded from Firebase (products listener above)
-})();
+// Products and settings both arrive via the Firebase listeners above.
 
 // ─── ORDERS ON/OFF ─────────────────────────────────
 function toggleOrdersStatus(checkbox) {
   const isOpen = checkbox.checked;
-  db.ref(`${ROOT}/settings/ordersOpen`).set(isOpen);
+  db.ref(`${ROOT}/settings/ordersOpen`).set(isOpen).catch(fbError);
+  _settingsCache.ordersOpen = isOpen;   // banner reads the cache synchronously
   const statusText = document.getElementById('orders-status-text');
   statusText.textContent = isOpen
     ? 'פתוחה — לקוחות יכולים להזמין'
@@ -3439,14 +3584,16 @@ function saveOrderToLog(orderData) {
     status: 'new',
     archived: false
   };
-  db.ref(`${ROOT}/orders/${entry.id}`).set(entry);
+  return db.ref(`${ROOT}/orders/${entry.id}`).set(entry);
 }
 
 function getOrders() {
   const now = Date.now();
   const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
   ORDER_LOG.forEach(o => {
-    if (!o.archived && o.status === 'done' && (now - o.timestamp) > SEVEN_DAYS) {
+    // Keyed on o.timestamp, an old order vanished the instant it was ticked
+    // off as delivered — taking its revenue off the dashboard with it.
+    if (!o.archived && o.status === 'done' && (now - (o.doneAt || o.timestamp)) > SEVEN_DAYS) {
       o.archived = true;
       db.ref(`${ROOT}/orders/${o.id}/archived`).set(true);
     }
@@ -3528,7 +3675,7 @@ function renderBakingSummary() {
   }
   el.innerHTML = entries.sort((a,b) => b[1]-a[1]).map(([name, qty]) => `
     <div class="baking-row">
-      <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.88rem;color:#2C1810;font-weight:600;">${name}</div>
+      <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.88rem;color:#2C1810;font-weight:600;">${esc(name)}</div>
       <div style="font-family:'Noto Serif Hebrew',serif;font-size:1.1rem;font-weight:700;color:#6B2E1E;">${qty} <span style="font-size:0.75rem;font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-weight:400;">יח'</span></div>
     </div>
   `).join('');
@@ -3558,8 +3705,8 @@ function renderOrderList() {
     <div class="order-card" id="ocard-${o.id}">
       <div class="order-card-header">
         <div>
-          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#2C1810;font-size:0.95rem;">${o.name}</div>
-          <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#9B8B75;">${o.date}</div>
+          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#2C1810;font-size:0.95rem;">${esc(o.name)}</div>
+          <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#9B8B75;">${esc(o.date)}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span class="status-badge ${statusClasses[o.status]||'status-new'}">${statusLabels[o.status]||'חדשה'}</span>
@@ -3568,17 +3715,18 @@ function renderOrderList() {
       </div>
 
       <div class="order-items-row">
-        ${(o.items || '').replace(/\|/g, '<br>')}
+        ${esc(o.items || '').replace(/\|/g, '<br>')}
         <div style="margin-top:4px;color:#8B7260;">
-          ${o.delivery === 'delivery' ? `📦 משלוח — ${o.address||''}` : '🏠 איסוף עצמי'}
-          ${o.notes ? ` · הערה: ${o.notes}` : ''}
+          ${o.delivery === 'delivery' ? `📦 משלוח — ${esc(o.address||'')}` : '🏠 איסוף עצמי'}
+          ${o.paymentMethod ? ` · 💳 ${PAYMENT_LABELS_HE[o.paymentMethod] || o.paymentMethod}` : ''}
+          ${o.notes ? ` · הערה: ${esc(o.notes)}` : ''}
         </div>
       </div>
 
       <div class="order-actions">
-        <a href="https://wa.me/972${(o.phone||'').replace(/\D/g,'').replace(/^0/,'')}" target="_blank" class="btn-wa">
+        <a href="https://wa.me/${(o.phone||'').replace(/\D/g,'').replace(/^0/,'972')}" target="_blank" class="btn-wa">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.096.547 4.142 1.588 5.945L0 24l6.305-1.654A11.882 11.882 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.013-1.375l-.36-.213-3.732.979.997-3.636-.235-.373A9.818 9.818 0 1112 21.818z"/></svg>
-          ${o.phone}
+          ${esc(o.phone)}
         </a>
         ${nextStatus[o.status] ? `
         <button onclick="updateOrderStatus(${o.id},'${nextStatus[o.status]}')" class="btn-status">
@@ -3607,7 +3755,7 @@ function toggleArchive() {
       : archived.map(o => `
           <div style="background:#FDFAF4;border:1px solid #E5D9C5;border-radius:10px;padding:10px 12px;margin-bottom:8px;">
             <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
-              <span style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#8B7260;font-size:0.88rem;">${o.name}</span>
+              <span style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#8B7260;font-size:0.88rem;">${esc(o.name)}</span>
               <span style="font-family:'Noto Serif Hebrew',serif;color:#8B7260;font-size:0.88rem;">₪${o.total}</span>
             </div>
             <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#9B8B75;">${o.date} · ${o.delivery==='delivery'?'משלוח':'איסוף'}</div>
@@ -3674,6 +3822,34 @@ function clearOrderLog() {
 let editingNewProduct = false;
 let pendingImageDataUrl = null;
 
+// ─── AUTO-TRANSLATE (HE → EN) ───────────────────────
+// תרגום אוטומטי מעברית לאנגלית לשדות שם/תיאור. תמיד אפשר לערוך ידנית -
+// אם השדה האנגלי כבר לא ריק, לא דורסים אותו (כדי לא לאבד עריכה ידנית).
+async function translateHeToEn(text) {
+  if (!text || !text.trim()) return '';
+  try {
+    const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.trim())}&langpair=he|en`);
+    const data = await res.json();
+    return (data && data.responseData && data.responseData.translatedText) || '';
+  } catch (e) {
+    return '';
+  }
+}
+async function autoTranslateField(heFieldId, enFieldId, noteId) {
+  const heEl = document.getElementById(heFieldId);
+  const enEl = document.getElementById(enFieldId);
+  if (!heEl || !enEl || enEl.value.trim() || !heEl.value.trim()) return;
+  const note = noteId ? document.getElementById(noteId) : null;
+  if (note) note.textContent = 'מתרגם...';
+  const translated = await translateHeToEn(heEl.value);
+  if (translated && !enEl.value.trim()) {
+    enEl.value = translated;
+    if (note) note.textContent = 'תורגם אוטומטית — אפשר לערוך בעצמך';
+  } else if (note) {
+    note.textContent = '';
+  }
+}
+
 function openEditProduct(id) {
   const p = PRODUCTS.find(p => p.id === id);
   if (!p) return;
@@ -3686,6 +3862,8 @@ function openEditProduct(id) {
   document.getElementById('edit-name-en').value   = p.nameEn;
   document.getElementById('edit-desc-he').value   = p.descHe;
   document.getElementById('edit-desc-en').value   = p.descEn;
+  document.getElementById('edit-name-en-note').textContent = '';
+  document.getElementById('edit-desc-en-note').textContent = '';
   document.getElementById('edit-price').value     = p.price;
   document.getElementById('edit-stock').value     = p.maxStock || '';
   // Tag radio
@@ -3719,6 +3897,8 @@ function openAddProduct() {
   document.getElementById('edit-name-en').value    = '';
   document.getElementById('edit-desc-he').value    = '';
   document.getElementById('edit-desc-en').value    = '';
+  document.getElementById('edit-name-en-note').textContent = '';
+  document.getElementById('edit-desc-en-note').textContent = '';
   document.getElementById('edit-price').value      = '';
   document.getElementById('edit-stock').value      = '';
   // Clear tag radios
@@ -3836,9 +4016,9 @@ function saveAllProducts() {
       tag: p.tag || null
     };
   });
-  db.ref(`${ROOT}/products`).set(toSave);
-  // localStorage as offline fallback
-  localStorage.setItem('nuika_products', JSON.stringify(Object.values(toSave)));
+  // No localStorage mirror: base64 product photos blow the 5MB quota and the
+  // throw would abort saveProductEdit before the modal ever closes.
+  db.ref(`${ROOT}/products`).set(toSave).catch(fbError);
 }
 
 // ─── LANGUAGE TOGGLE ───────────────────────────────
@@ -3849,6 +4029,7 @@ function toggleLang() {
   document.getElementById('lang-btn').textContent = isEn ? 'עב' : 'EN';
   renderOrderSummary();
   updateCountdown();
+  updateProgressBar();
 }
 
 // ─── ADMIN TAB SWITCHING ───────────────────────────
@@ -3966,7 +4147,8 @@ function getNextTuesdayDeadline() {
 }
 
 function clearDeadline() {
-  db.ref(`${ROOT}/settings/deadline`).remove();
+  db.ref(`${ROOT}/settings/deadline`).remove().catch(fbError);
+  delete _settingsCache.deadline;   // preview reads the cache synchronously
   const dateEl = document.getElementById('admin-deadline-date');
   const timeEl = document.getElementById('admin-deadline-time');
   if (dateEl) dateEl.value = '';
@@ -4001,7 +4183,9 @@ function loadDeadlineIntoAdmin() {
   if (saved) {
     const d = new Date(saved);
     if (!isNaN(d.getTime())) {
-      dateEl.value = d.toISOString().slice(0,10);
+      // toISOString() is UTC; at +03:00 a 01:00 deadline rendered as the
+      // previous day while the time field stayed local.
+      dateEl.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
       timeEl.value = d.toTimeString().slice(0,5);
     }
   }
@@ -4013,9 +4197,14 @@ function loadDeadlineIntoAdmin() {
 function saveDeadlineFromAdmin() {
   const dateEl = document.getElementById('admin-deadline-date');
   const timeEl = document.getElementById('admin-deadline-time');
-  if (!dateEl || !dateEl.value) return;
+  if (!dateEl) return;
+  // Setting only the time used to bail out with no write and no feedback.
+  if (!dateEl.value) {
+    const d = getNextTuesdayDeadline();
+    dateEl.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
   const iso = dateEl.value + 'T' + (timeEl.value || '17:00') + ':00';
-  db.ref(`${ROOT}/settings/deadline`).set(iso);
+  db.ref(`${ROOT}/settings/deadline`).set(iso).catch(fbError);
   _settingsCache.deadline = iso; // update local cache immediately
   updateDeadlinePreview();
   updateCountdown();
@@ -4028,7 +4217,7 @@ function exportOrdersCSV() {
   if (orders.length === 0) { alert('אין הזמנות לייצוא'); return; }
 
   const BOM = '﻿';
-  const headers = ['תאריך','שם','טלפון','פריטים','סה"כ','אופן קבלה','כתובת','הערות','סטטוס'];
+  const headers = ['תאריך','שם','טלפון','פריטים','סה"כ','אופן קבלה','כתובת','אופן תשלום','הערות','סטטוס'];
   const statusMap = { new:'חדשה', confirmed:'אושרה', ready:'מוכנה', done:'נמסרה' };
 
   const rows = orders.map(o => [
@@ -4039,6 +4228,7 @@ function exportOrdersCSV() {
     o.total || 0,
     o.delivery === 'delivery' ? 'משלוח' : 'איסוף עצמי',
     o.address || '',
+    o.paymentMethod ? (PAYMENT_LABELS_HE[o.paymentMethod] || o.paymentMethod) : '',
     o.notes || '',
     statusMap[o.status] || o.status || ''
   ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
@@ -4068,7 +4258,9 @@ function renderCustomers() {
   // Aggregate by phone
   const map = {};
   allOrders.forEach(o => {
-    const phone = (o.phone || '').replace(/\D/g,'');
+    // Normalise to international form, else the same person shows up twice
+    // depending on how they typed their number.
+    const phone = (o.phone || '').replace(/\D/g,'').replace(/^0/,'972');
     if (!phone) return;
     if (!map[phone]) {
       map[phone] = { name: o.name, phone: o.phone || phone, count: 0, total: 0, items: {}, lastDate: 0 };
@@ -4095,8 +4287,8 @@ function renderCustomers() {
     <div class="order-card" style="margin-bottom:10px;">
       <div class="order-card-header">
         <div style="flex:1;min-width:0;">
-          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#2C1810;font-size:0.95rem;">${c.name || 'לקוח'}</div>
-          <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.78rem;color:#9B8B75;" dir="ltr">${c.phone}</div>
+          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#2C1810;font-size:0.95rem;">${esc(c.name || 'לקוח')}</div>
+          <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.78rem;color:#9B8B75;" dir="ltr">${esc(c.phone)}</div>
         </div>
         <div style="text-align:center;padding:4px 10px;background:#EDF6FF;border-radius:8px;flex-shrink:0;">
           <div style="font-family:'Noto Serif Hebrew',serif;font-size:1.1rem;font-weight:700;color:#1A6DB5;">${c.count}</div>
@@ -4277,32 +4469,44 @@ const DEFAULT_RECIPES = [
 ];
 
 // ─── LIVE STATE ──────────────────────────────────────────
-let PANTRY = [];
-let RECIPES = [];
-let WEEKLY_PLAN = {}; // { recipeId: quantity }
-let _currentKitchenTab = 'pantry';
-let _editingRecipeId = null;
-let _editingPantryId = null;
+// var, not let: the Firebase kitchen listener is registered far above this
+// point and would hit the temporal dead zone if it fired early.
+var PANTRY = [];
+var RECIPES = [];
+var WEEKLY_PLAN = {}; // { recipeId: quantity }
+var _currentKitchenTab = 'pantry';
+var _editingRecipeId = null;
+var _editingPantryId = null;
 
 // ─── LOAD / SAVE ─────────────────────────────────────────
-function loadKitchenData() {
-  // Data is kept in sync by the Firebase kitchen listener.
-  // Use defaults only if Firebase hasn't responded yet (first frame).
-  if (!PANTRY.length)  PANTRY  = DEFAULT_PANTRY.map(p => ({ ...p }));
-  if (!RECIPES.length) RECIPES = DEFAULT_RECIPES.map(r => ({ ...r }));
+// Refuse to write before Firebase has answered. Otherwise an offline or slow
+// load leaves the arrays empty, and the first save wipes the real data.
+function kitchenReady() {
+  if (_kitchenLoaded) return true;
+  alert('הנתונים עדיין נטענים — רגע אחד ונסי שוב.');
+  return false;
 }
 function savePantry() {
+  if (!kitchenReady()) return;
   const obj = {};
   PANTRY.forEach(p => { obj[p.id] = { ...p }; });
-  db.ref(`${ROOT}/kitchen/pantry`).set(obj);
+  db.ref(`${ROOT}/kitchen/pantry`).set(obj).catch(fbError);
 }
 function saveRecipes() {
+  if (!kitchenReady()) return;
   const obj = {};
   RECIPES.forEach(r => { obj[r.id] = { ...r }; });
-  db.ref(`${ROOT}/kitchen/recipes`).set(obj);
+  db.ref(`${ROOT}/kitchen/recipes`).set(obj).catch(fbError);
+}
+// Per-key write: a whole-node set() from one device would delete quantities
+// another device added in the same round-trip.
+function savePlanQty(recipeId, qty) {
+  if (!_kitchenLoaded) return;
+  db.ref(`${ROOT}/kitchen/weeklyPlan/${recipeId}`).set(qty > 0 ? qty : null).catch(fbError);
 }
 function saveWeeklyPlan() {
-  db.ref(`${ROOT}/kitchen/weeklyPlan`).set(WEEKLY_PLAN || {});
+  if (!kitchenReady()) return;
+  db.ref(`${ROOT}/kitchen/weeklyPlan`).set(WEEKLY_PLAN || {}).catch(fbError);
 }
 
 // ─── TAB SWITCHING ───────────────────────────────────────
@@ -4323,7 +4527,8 @@ function switchKitchenTab(tab) {
 // Returns cost in ₪ for a single ingredient row (weightG basis)
 function calcIngCost(weightG, pantryId) {
   const p = PANTRY.find(p => p.id === pantryId);
-  if (!p || !p.pricePerKg) return null;
+  // typeof, not truthiness: a genuine 0 price should cost 0, not "unknown".
+  if (!p || typeof p.pricePerKg !== 'number') return null;
   const wKg = weightG / 1000;
   return wKg * p.pricePerKg * (1 + (p.waste || 0)) * (1 + (p.vat || 0.17));
 }
@@ -4447,7 +4652,7 @@ function renderPlan() {
       <input class="plan-qty-input" type="number" min="0" value="${qty || ''}" placeholder="0"
         oninput="setPlanQty('${r.id}', this.value)" />
       <div id="plan-row-cost-${r.id}" style="text-align:left;min-width:54px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.78rem;">
-        ${qty > 0 ? `<div style="color:#3A7A50;font-weight:700;">₪${lineRevenue}</div><div style="color:#B45032;font-size:0.68rem;">-₪${lineCost.toFixed(0)}</div>` : ''}
+        ${qty > 0 ? `<div style="color:#3A7A50;font-weight:700;">₪${lineRevenue.toFixed(0)}</div><div style="color:#B45032;font-size:0.68rem;">-₪${lineCost.toFixed(0)}</div>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -4472,7 +4677,11 @@ function setPlanQty(recipeId, val) {
   const qty = parseInt(val) || 0;
   if (qty <= 0) delete WEEKLY_PLAN[recipeId];
   else WEEKLY_PLAN[recipeId] = qty;
-  saveWeeklyPlan();
+  savePlanQty(recipeId, qty);
+
+  // The shopping list below is now stale for these quantities
+  const shopOut = document.getElementById('shopping-list-output');
+  if (shopOut) shopOut.style.display = 'none';
 
   // Update the row's live cost display
   const r = RECIPES.find(r => r.id === recipeId);
@@ -4482,7 +4691,7 @@ function setPlanQty(recipeId, val) {
     const lineRevenue = qty * r.sellingPrice;
     const lineCost    = qty * cost.costPerUnit;
     rowCostEl.innerHTML = qty > 0
-      ? `<div style="color:#3A7A50;font-weight:700;">₪${lineRevenue}</div><div style="color:#B45032;font-size:0.68rem;">-₪${lineCost.toFixed(0)}</div>`
+      ? `<div style="color:#3A7A50;font-weight:700;">₪${lineRevenue.toFixed(0)}</div><div style="color:#B45032;font-size:0.68rem;">-₪${lineCost.toFixed(0)}</div>`
       : '';
   }
 
@@ -4609,7 +4818,11 @@ function printShoppingList() {
   const content = document.getElementById('shopping-list-body')?.innerHTML || '';
   const w = window.open('', '_blank');
   w.document.write(`<html dir="rtl"><head><title>רשימת קניות — נואיקה</title>
-    <style>body{font-family:Arial,sans-serif;direction:rtl;padding:20px;max-width:400px;margin:0 auto;}
+    <style>
+    /* Only ever visible inside @media print; without this the generated
+       sheet stays rendered on the live page after the dialog closes. */
+    #print-area { display: none; }
+body{font-family:Arial,sans-serif;direction:rtl;padding:20px;max-width:400px;margin:0 auto;}
     h2{color:#6B2E1E;} .shop-cat-header{font-weight:bold;margin-top:14px;color:#8B7260;font-size:0.8rem;text-transform:uppercase;}
     .shop-item{display:flex;gap:10px;padding:5px 0;border-bottom:1px solid #eee;align-items:center;}
     .si-name{flex:1;} .si-amount{font-weight:bold;color:#6B2E1E;} .si-cost{color:#999;font-size:0.75rem;}
@@ -4621,7 +4834,7 @@ function printShoppingList() {
 
 // ─── RECIPE EDITOR ───────────────────────────────────────
 function openRecipeEditor(recipeId) {
-  loadKitchenData(); // Refresh data
+  if (!kitchenReady()) return;
   _editingRecipeId = recipeId;
   const modal = document.getElementById('recipe-editor-modal');
   const titleEl = document.getElementById('re-title');
@@ -4693,11 +4906,11 @@ function addIngredientRow(ing) {
   tr.innerHTML = `
     <td style="min-width:120px;">
       <input list="${dlId}" type="text" placeholder="שם מרכיב" class="ing-name"
-        value="${ing ? ing.name : ''}"
+        value="${ing ? esc(ing.name) : ''}"
         style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#2C1810;background:#F5EFE3;border:1.5px solid #E5D9C5;border-radius:6px;padding:5px 7px;width:100%;"
         oninput="onIngNameInput(this, '${rowId}')" />
-      <input type="hidden" class="ing-pantry-id" value="${ing ? (ing.pantryId||'') : ''}" />
-      <datalist id="${dlId}">${PANTRY.map(p=>`<option value="${p.name}" data-id="${p.id}">`).join('')}</datalist>
+      <input type="hidden" class="ing-pantry-id" value="${ing ? esc(ing.pantryId||'') : ''}" />
+      <datalist id="${dlId}">${PANTRY.map(p=>`<option value="${esc(p.name)}" data-id="${p.id}">`).join('')}</datalist>
     </td>
     <td style="min-width:70px;">
       <input type="number" min="0" step="any" placeholder="0" class="ing-weight"
@@ -4723,12 +4936,16 @@ function addIngredientRow(ing) {
 
 function onIngNameInput(input, rowId) {
   const name = input.value.trim();
-  const pantryItem = PANTRY.find(p => p.name === name);
+  // Matching had to be exact, so fixing a typo silently unlinked the
+  // ingredient and the recipe quietly got cheaper. Most seeded names don't
+  // equal their pantry entry verbatim either.
+  const norm = t => String(t || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const pantryItem = PANTRY.find(p => norm(p.name) === norm(name));
   const row = document.getElementById(rowId);
   if (row && pantryItem) {
     row.querySelector('.ing-pantry-id').value = pantryItem.id;
-  } else if (row) {
-    row.querySelector('.ing-pantry-id').value = '';
+  } else if (row && !name) {
+    row.querySelector('.ing-pantry-id').value = '';   // only clear when emptied
   }
   recalcEditorCosts();
 }
@@ -4807,7 +5024,7 @@ function updateScaleCalc() {
       parts.push(`${name}: ${display}`);
     }
   });
-  resultEl.innerHTML = parts.slice(0, 5).join(' · ') + (parts.length > 5 ? ` + ${parts.length-5} עוד` : '');
+  resultEl.innerHTML = parts.join(' · ') + (parts.length > 5 ? ` + ${parts.length-5} עוד` : '');
 }
 
 function saveRecipe() {
@@ -4836,7 +5053,7 @@ function saveRecipe() {
         name: ingName,
         pantryId,
         weightG,
-        bakerPct: 0
+        bakerPct: (r && r.ingredients && r.ingredients[i] ? r.ingredients[i].bakerPct : 0) || 0
       });
     }
   });
@@ -4948,7 +5165,7 @@ function deletePantryItem() {
 
 // ─── KITCHEN INIT (called from openAdminPanel) ──────────
 function initKitchen() {
-  loadKitchenData();
+  // Data arrives via the Firebase kitchen listener; nothing to load here.
 }
 </script>
 </body>
