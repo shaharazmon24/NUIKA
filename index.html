@@ -1601,7 +1601,6 @@
         alt="לוגו נואיקה"
         class="h-14 w-auto object-contain"
         style="mix-blend-mode: multiply;"
-        onclick="secretAdminTap()"
       />
     </div>
     <!-- Nav -->
@@ -2568,6 +2567,16 @@
       <span style="color:#C4B89A;font-size:0.6rem;">●</span>
       <a href="https://www.instagram.com/nuika_bread" target="_blank" rel="noopener" style="font-family:'Noto Sans Hebrew',sans-serif;color:#8B7260;font-size:0.85rem;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#BD4D30'" onmouseout="this.style.color='#8B7260'">nuika_bread@</a>
     </div>
+
+    <!-- iOS 16.4+ reads the manifest and always launches at start_url, so a
+         home-screen bookmark to ?admin opens the shop instead. This link is
+         the way in from an installed iPhone app. It is safe to show: it only
+         opens a sign-in, and the database rules are what protect the data. -->
+    <button onclick="openAdminLogin()"
+      style="margin-top:1.6rem;background:none;border:none;font-family:'Noto Sans Hebrew',sans-serif;color:#B3A489;font-size:0.75rem;cursor:pointer;padding:6px 10px;"
+      onmouseover="this.style.color='#8B7260'" onmouseout="this.style.color='#B3A489'">
+      כניסת מנהלת
+    </button>
   </div>
 </footer>
 
@@ -3655,27 +3664,19 @@ function openAdminLogin() {
   if (new URLSearchParams(window.location.search).has('admin')) openAdminLogin();
 })();
 
-// iOS ignores the manifest's shortcuts entirely, so an iPhone home-screen app
-// has no way to reach ?admin — long-pressing the icon only offers Apple's own
-// menu. Five taps on the logo opens the sign-in from inside the app instead.
-let _logoTaps = 0, _logoTimer = null;
-function secretAdminTap() {
-  _logoTaps++;
-  clearTimeout(_logoTimer);
-  _logoTimer = setTimeout(() => { _logoTaps = 0; }, 3000);
-  if (_logoTaps >= 5) {
-    _logoTaps = 0;
-    haptic(40);
-    openAdminLogin();
-  }
-}
-
 // Once she has signed in, the session persists, so surface a real button
 // rather than making her tap the logo every time.
 function updateAdminEntryButton() {
   const btn = document.getElementById('admin-entry-btn');
-  if (btn) btn.style.display = IS_ADMIN ? 'flex' : 'none';
+  if (!btn) return;
+  // Show it for a device that has signed in before, so it is present the
+  // instant the app opens rather than after the auth round-trip.
+  const knownAdminDevice = localStorage.getItem('nuika_admin_device') === '1';
+  btn.style.display = (IS_ADMIN || knownAdminDevice) ? 'flex' : 'none';
 }
+
+// Run at load: on Noy's phone the button is there before Firebase answers.
+updateAdminEntryButton();
 
 function checkAdminPassword() {
   const emailEl = document.getElementById('admin-email-input');
@@ -3699,6 +3700,7 @@ function checkAdminPassword() {
     .then(snap => {
       if (snap.val() !== true) throw { code: 'not-admin' };
       IS_ADMIN = true;
+      try { localStorage.setItem('nuika_admin_device', '1'); } catch (e) {}
       updateAdminEntryButton();
       attachAdminListeners();
       closeAdminLogin();
@@ -3753,6 +3755,7 @@ function sendAdminPasswordReset() {
 
 function adminSignOut() {
   IS_ADMIN = false;
+  try { localStorage.removeItem('nuika_admin_device'); } catch (e) {}
   firebase.auth().signOut().catch(() => {});
   location.href = location.pathname;
 }
