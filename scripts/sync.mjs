@@ -8,8 +8,12 @@
 import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { ensureHooks } from './ensure-hooks.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+// Install the safety hooks if this machine has never had them.
+ensureHooks();
 const git = (a, quiet) => execSync(`git ${a}`, {
   cwd: ROOT, encoding: 'utf8', stdio: quiet ? 'pipe' : ['pipe', 'pipe', 'pipe']
 }).trim();

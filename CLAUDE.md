@@ -15,16 +15,21 @@ as a normal commit. It has already happened once and silently deleted the entire
 Firebase layer plus a batch of bug fixes. The site kept loading, so nothing
 looked wrong until a customer hit it.
 
-Correct workflow, every time:
+Two people share this one file from two machines. Use these two commands and
+nothing else — they install the safety hooks on first use, refuse to push
+broken code, and refuse to push while behind the other machine:
 
 ```bash
-git pull            # take everyone else's work first
-# ...make changes...
-node scripts/validate.mjs
-git add -A && git commit -m "..." && git push
+node scripts/sync.mjs                  # before you start
+node scripts/ship.mjs "what changed"   # when you are done
 ```
 
-If `git pull` reports a conflict, resolve it. Do not overwrite.
+If the user asks in Hebrew to update or to publish ("תעדכני", "תשלחי"), run
+these. Do not hand them raw git commands; plain `git push` skips the checks
+that exist because work has already been lost once.
+
+If a pull reports a conflict, resolve it properly. Never resolve by taking one
+whole side of `index.html` — both people's work is real.
 
 ---
 
