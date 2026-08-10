@@ -1592,17 +1592,24 @@
 <!-- ============ HEADER ============ -->
 <header class="sticky top-0 z-40 border-b" style="background:rgba(247,242,232,0.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-color:#E5D9C5;">
   <div class="max-w-5xl mx-auto px-4 py-2.5 flex items-center justify-between">
-    <!-- Logo -->
+    <!-- Logo. Five taps opens the admin sign-in: iOS has no manifest
+         shortcuts, so there is no other way into the panel from an installed
+         app on an iPhone. -->
     <div class="flex items-center">
       <img
         src="logo.png.png"
         alt="לוגו נואיקה"
         class="h-14 w-auto object-contain"
         style="mix-blend-mode: multiply;"
+        onclick="secretAdminTap()"
       />
     </div>
     <!-- Nav -->
     <div class="flex items-center gap-3">
+      <button id="admin-entry-btn" onclick="openAdminLogin()" style="display:none;align-items:center;gap:5px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.78rem;font-weight:600;color:#6B3A2A;background:#F5EFE3;border:1.5px solid #D5C9B5;border-radius:100px;padding:5px 12px;cursor:pointer;" aria-label="לוח ניהול">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        ניהול
+      </button>
       <button id="install-pwa-btn" onclick="installPWA()" aria-label="התקן כאפליקציה">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v13M8 11l4 4 4-4M20 17v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2"/></svg>
         <span lang-content="he">התקן</span>
@@ -2670,11 +2677,11 @@ firebase.auth().onAuthStateChanged(user => {
     return;
   }
   // An anonymous user is never an admin, so skip the lookup for customers.
-  if (user.isAnonymous) { IS_ADMIN = false; _markAuthReady(); return; }
+  if (user.isAnonymous) { IS_ADMIN = false; updateAdminEntryButton(); _markAuthReady(); return; }
   db.ref(`${ROOT}/admins/${user.uid}`).once('value')
     .then(snap => { IS_ADMIN = snap.val() === true; })
     .catch(() => { IS_ADMIN = false; })
-    .then(() => { _markAuthReady(); attachAdminListeners(); });
+    .then(() => { _markAuthReady(); attachAdminListeners(); updateAdminEntryButton(); });
 });
 
 // Every Firebase write used to be fire-and-forget: a failure was completely
@@ -3636,15 +3643,39 @@ function backToMenu() {
 const ADMIN_EMAIL = 'noynaamad@gmail.com';
 
 // פתיחת לוח הניהול: index.html?admin
+function openAdminLogin() {
+  document.getElementById('admin-login-overlay').classList.add('open');
+  // Prefill Noy's address; Shahar can type his own over it.
+  const emailEl = document.getElementById('admin-email-input');
+  if (emailEl && !emailEl.value) emailEl.value = ADMIN_EMAIL;
+  document.body.style.overflow = 'hidden';
+}
+
 (function checkAdminAccess() {
-  if (new URLSearchParams(window.location.search).has('admin')) {
-    document.getElementById('admin-login-overlay').classList.add('open');
-    // Prefill Noy's address; Shahar can type his own over it.
-    const emailEl = document.getElementById('admin-email-input');
-    if (emailEl && !emailEl.value) emailEl.value = ADMIN_EMAIL;
-    document.body.style.overflow = 'hidden';
-  }
+  if (new URLSearchParams(window.location.search).has('admin')) openAdminLogin();
 })();
+
+// iOS ignores the manifest's shortcuts entirely, so an iPhone home-screen app
+// has no way to reach ?admin — long-pressing the icon only offers Apple's own
+// menu. Five taps on the logo opens the sign-in from inside the app instead.
+let _logoTaps = 0, _logoTimer = null;
+function secretAdminTap() {
+  _logoTaps++;
+  clearTimeout(_logoTimer);
+  _logoTimer = setTimeout(() => { _logoTaps = 0; }, 3000);
+  if (_logoTaps >= 5) {
+    _logoTaps = 0;
+    haptic(40);
+    openAdminLogin();
+  }
+}
+
+// Once she has signed in, the session persists, so surface a real button
+// rather than making her tap the logo every time.
+function updateAdminEntryButton() {
+  const btn = document.getElementById('admin-entry-btn');
+  if (btn) btn.style.display = IS_ADMIN ? 'flex' : 'none';
+}
 
 function checkAdminPassword() {
   const emailEl = document.getElementById('admin-email-input');
@@ -3668,6 +3699,7 @@ function checkAdminPassword() {
     .then(snap => {
       if (snap.val() !== true) throw { code: 'not-admin' };
       IS_ADMIN = true;
+      updateAdminEntryButton();
       attachAdminListeners();
       closeAdminLogin();
       openAdminPanel();
