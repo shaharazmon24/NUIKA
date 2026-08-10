@@ -14,6 +14,7 @@
   <meta name="apple-mobile-web-app-title" content="נואיקה" />
   <!-- Square icon: iOS squashes a non-square source into the home-screen tile -->
   <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
 
   <!-- OG / WhatsApp sharing -->
   <meta property="og:type"        content="website" />
@@ -2725,7 +2726,7 @@ db.ref(`${ROOT}/_seeded`).once('value').then(seedSnap => {
     if (!cur.products) {
       const prod = {};
       SEED_PRODUCTS.forEach(p => {
-        prod[p.id] = { id: p.id, nameHe: p.nameHe, nameEn: p.nameEn, descHe: p.descHe, descEn: p.descEn, price: p.price, illustration: p.illustration || null, soldOut: p.soldOut || false, maxStock: p.maxStock || null, tag: p.tag || null };
+        prod[p.id] = { id: p.id, nameHe: p.nameHe, nameEn: p.nameEn, descHe: p.descHe, descEn: p.descEn, price: p.price, illustration: p.illustration || null, soldOut: p.soldOut || false, inMenu: p.inMenu !== false, maxStock: p.maxStock || null, tag: p.tag || null };
       });
       updates.products = prod;
     }
@@ -3063,7 +3064,7 @@ const OWNER_EMAIL    = 'shaharazmon24@gmail.com';
 function pruneCart() {
   Object.keys(cart).forEach(id => {
     const p = PRODUCTS.find(p => p.id === +id);
-    if (!p || p.soldOut) { delete cart[+id]; return; }
+    if (!p || p.soldOut || p.inMenu === false) { delete cart[+id]; return; }
     const rem = getStockRemaining(+id);
     if (rem === null) return;
     if (rem <= 0) delete cart[+id];
@@ -3157,7 +3158,7 @@ function repeatLastOrder() {
   // Fill with last order (respect stock limits)
   last.forEach(({ id, qty }) => {
     const p = PRODUCTS.find(p => p.id === id);
-    if (!p || p.soldOut) return;
+    if (!p || p.soldOut || p.inMenu === false) return;
     const rem = getStockRemaining(id);
     const safeQty = rem !== null ? Math.min(qty, rem) : qty;
     if (safeQty > 0) cart[id] = safeQty;
@@ -3182,9 +3183,15 @@ function repeatLastOrder() {
 }
 
 // ─── RENDER PRODUCTS ───────────────────────────────
+// Dishes Noy has parked in the bank stay in PRODUCTS so she keeps the recipe,
+// photo and price — they are simply not offered this week.
+function menuProducts() {
+  return PRODUCTS.filter(p => p.inMenu !== false);
+}
+
 function renderProducts() {
   const grid = document.getElementById('products-grid');
-  grid.innerHTML = PRODUCTS.map(p => {
+  grid.innerHTML = menuProducts().map(p => {
     const remaining = getStockRemaining(p.id);
     const isAutoSoldOut = remaining !== null && remaining <= 0;
     const effectiveSoldOut = p.soldOut || isAutoSoldOut;
@@ -3740,9 +3747,29 @@ function openAdminPanel() {
 
 function renderAdminProducts() {
   const list = document.getElementById('admin-products-list');
-  list.innerHTML = PRODUCTS.map(p => `
-    <div class="admin-card">
-      <img src="${p.illustration || ''}" alt="${p.nameHe}"
+  const onMenu = PRODUCTS.filter(p => p.inMenu !== false);
+  const parked = PRODUCTS.filter(p => p.inMenu === false);
+
+  const heading = (text, note) => `
+    <div style="margin:18px 0 8px;">
+      <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#6B2E1E;font-size:0.95rem;">${text}</div>
+      <div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.75rem;">${note}</div>
+    </div>`;
+
+  list.innerHTML =
+    heading('בתפריט השבוע', 'המנות שהלקוחות רואים עכשיו')
+    + (onMenu.length ? onMenu.map(productRow).join('')
+       : `<div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.82rem;padding:10px 0;">אין מנות בתפריט — הלקוחות רואים חנות ריקה</div>`)
+    + heading('בנק המנות', 'שמורות אצלך, לא מוצגות ללקוחות')
+    + (parked.length ? parked.map(productRow).join('')
+       : `<div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.82rem;padding:10px 0;">ריק כרגע</div>`);
+}
+
+function productRow(p) {
+  const parked = p.inMenu === false;
+  return `
+    <div class="admin-card" style="${parked ? 'opacity:0.6;' : ''}">
+      <img src="${esc(p.illustration || '')}" alt="${esc(p.nameHe)}"
         onerror="this.style.display='none'"
         style="width:56px;height:56px;object-fit:cover;border-radius:8px;flex-shrink:0;" />
       <div style="flex:1;min-width:0;">
@@ -3755,19 +3782,45 @@ function renderAdminProducts() {
         aria-label="ערוך ${p.nameHe}">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       </button>
-      <!-- Toggle -->
+      <!-- Move between this week's menu and the bank -->
+      <button onclick="toggleInMenu(${+p.id || 0}, this)"
+        title="${parked ? 'הוסיפי לתפריט השבוע' : 'הורידי לבנק המנות'}"
+        style="background:${parked ? '#EDF6E8' : '#F0E9D8'};border:1.5px solid ${parked ? '#A8C89A' : '#D5C9B5'};border-radius:8px;padding:6px 9px;cursor:pointer;flex-shrink:0;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#6B2E1E;white-space:nowrap;">
+        ${parked ? '→ לתפריט' : '↓ לבנק'}
+      </button>
+
+      <!-- Sold out for this week -->
       <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;">
-        <label class="admin-toggle" aria-label="זמינות ${p.nameHe}">
-          <input type="checkbox" id="admin-toggle-${p.id}" ${p.soldOut ? '' : 'checked'}
-            onchange="liveToggleSoldOut(${p.id}, this)" />
+        <label class="admin-toggle" aria-label="זמינות ${esc(p.nameHe)}">
+          <input type="checkbox" id="admin-toggle-${+p.id || 0}" ${p.soldOut ? '' : 'checked'}
+            ${parked ? 'disabled' : ''}
+            onchange="liveToggleSoldOut(${+p.id || 0}, this)" />
           <span class="admin-toggle-slider"></span>
         </label>
-        <span id="admin-status-${p.id}" style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.7rem;color:${p.soldOut ? '#B45032' : '#7A9A50'};">
+        <span id="admin-status-${+p.id || 0}" style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.7rem;color:${p.soldOut ? '#B45032' : '#7A9A50'};">
           ${p.soldOut ? 'אזל' : 'זמין'}
         </span>
       </div>
     </div>
-  `).join('');
+  `;
+}
+
+// Moving a dish in or out of the menu is a per-key write, so it cannot clobber
+// anything the other device changed in the same moment.
+function toggleInMenu(id, btn) {
+  const p = PRODUCTS.find(p => p.id === id);
+  if (!p) return;
+  const nowParked = p.inMenu !== false;   // currently on the menu -> park it
+  if (nowParked && menuProducts().length === 1
+      && !confirm('זו המנה האחרונה בתפריט. הלקוחות יראו חנות ריקה. להוריד בכל זאת?')) return;
+
+  p.inMenu = !nowParked;
+  db.ref(`${ROOT}/products/${id}/inMenu`).set(p.inMenu).catch(fbError);
+  renderAdminProducts();
+  renderProducts();
+  pruneCart();
+  updateCartBar();
+  updateOrdersOpenBanner();
 }
 
 function liveToggleSoldOut(id, checkbox) {
@@ -4295,6 +4348,8 @@ function previewImage(input) {
 }
 
 function saveProductEdit() {
+  // A dish added from the panel goes onto the menu unless it is explicitly
+  // parked afterwards.
   const nameHe  = document.getElementById('edit-name-he').value.trim();
   const nameEn  = document.getElementById('edit-name-en').value.trim();
   const descHe  = document.getElementById('edit-desc-he').value.trim();
@@ -4380,6 +4435,7 @@ function saveAllProducts() {
       descHe: p.descHe, descEn: p.descEn,
       price: p.price, illustration: p.illustration || null,
       soldOut: p.soldOut || false,
+      inMenu: p.inMenu !== false,
       maxStock: p.maxStock || null,
       tag: p.tag || null
     };

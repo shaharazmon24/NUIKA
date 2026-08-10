@@ -66,6 +66,8 @@ if (want('features')) {
     ['rel="manifest"',          'the manifest is linked, or the app stops being installable'],
     ['serviceWorker.register',  'the service worker is registered'],
     ['pruneCart',               'sold-out items are cleared from the cart rather than becoming unremovable'],
+    ['menuProducts',            'dishes parked in the bank stay hidden from customers'],
+    ['toggleInMenu',            'dishes can be moved between the menu and the bank'],
   ];
   for (const [needle, why] of required) {
     if (html.includes(needle)) pass(why);
