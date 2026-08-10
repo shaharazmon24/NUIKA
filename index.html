@@ -2569,11 +2569,13 @@
     </div>
 
     <!-- iOS 16.4+ reads the manifest and always launches at start_url, so a
-         home-screen bookmark to ?admin opens the shop instead. This link is
-         the way in from an installed iPhone app. It is safe to show: it only
-         opens a sign-in, and the database rules are what protect the data. -->
-    <button onclick="openAdminLogin()"
-      style="margin-top:1.6rem;background:none;border:none;font-family:'Noto Sans Hebrew',sans-serif;color:#B3A489;font-size:0.75rem;cursor:pointer;padding:6px 10px;"
+         home-screen bookmark to ?admin opens the shop instead. This is the way
+         in from an installed iPhone app.
+         Hidden by default and revealed only for the installed app or a device
+         that has signed in before — a customer browsing in a normal tab never
+         sees it. Obscurity is not the protection here; the database rules are. -->
+    <button id="admin-footer-btn" onclick="openAdminLogin()"
+      style="display:none;margin-top:1.6rem;background:none;border:none;font-family:'Noto Sans Hebrew',sans-serif;color:#B3A489;font-size:0.75rem;cursor:pointer;padding:6px 10px;"
       onmouseover="this.style.color='#8B7260'" onmouseout="this.style.color='#B3A489'">
       כניסת מנהלת
     </button>
@@ -3667,12 +3669,25 @@ function openAdminLogin() {
 // Once she has signed in, the session persists, so surface a real button
 // rather than making her tap the logo every time.
 function updateAdminEntryButton() {
-  const btn = document.getElementById('admin-entry-btn');
-  if (!btn) return;
-  // Show it for a device that has signed in before, so it is present the
-  // instant the app opens rather than after the auth round-trip.
-  const knownAdminDevice = localStorage.getItem('nuika_admin_device') === '1';
-  btn.style.display = (IS_ADMIN || knownAdminDevice) ? 'flex' : 'none';
+  // A device that has signed in before, so the button is there the instant
+  // the app opens rather than after the auth round-trip.
+  let knownAdminDevice = false;
+  try { knownAdminDevice = localStorage.getItem('nuika_admin_device') === '1'; } catch (e) {}
+
+  // Launched from the home screen rather than a browser tab. Customers browse
+  // in a tab, so this keeps the footer clean for them while still giving Noy a
+  // way in from the installed app, where iOS refuses to honour a ?admin URL.
+  let installedApp = false;
+  try {
+    installedApp = window.matchMedia('(display-mode: standalone)').matches
+                || window.navigator.standalone === true;
+  } catch (e) {}
+
+  const header = document.getElementById('admin-entry-btn');
+  if (header) header.style.display = (IS_ADMIN || knownAdminDevice) ? 'flex' : 'none';
+
+  const footer = document.getElementById('admin-footer-btn');
+  if (footer) footer.style.display = (IS_ADMIN || knownAdminDevice || installedApp) ? 'inline-block' : 'none';
 }
 
 // Run at load: on Noy's phone the button is there before Firebase answers.
