@@ -1,11 +1,12 @@
 // Bump this version on every deploy that must reach existing users.
-const CACHE = 'nuika-v5';
+const CACHE = 'nuika-v6';
 
 // Relative paths, so the same worker is correct whether the site is served
 // from the domain root (nuika.co.il) or a subdirectory.
 const ASSETS = [
   './',
   './index.html',
+  './admin.html',
   './logo.png.png',
   './icon-192.png',
   './icon-512.png',

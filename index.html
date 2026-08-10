@@ -2568,17 +2568,6 @@
       <a href="https://www.instagram.com/nuika_bread" target="_blank" rel="noopener" style="font-family:'Noto Sans Hebrew',sans-serif;color:#8B7260;font-size:0.85rem;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#BD4D30'" onmouseout="this.style.color='#8B7260'">nuika_bread@</a>
     </div>
 
-    <!-- iOS 16.4+ reads the manifest and always launches at start_url, so a
-         home-screen bookmark to ?admin opens the shop instead. This is the way
-         in from an installed iPhone app.
-         Hidden by default and revealed only for the installed app or a device
-         that has signed in before — a customer browsing in a normal tab never
-         sees it. Obscurity is not the protection here; the database rules are. -->
-    <button id="admin-footer-btn" onclick="openAdminLogin()"
-      style="display:none;margin-top:1.6rem;background:none;border:none;font-family:'Noto Sans Hebrew',sans-serif;color:#B3A489;font-size:0.75rem;cursor:pointer;padding:6px 10px;"
-      onmouseover="this.style.color='#8B7260'" onmouseout="this.style.color='#B3A489'">
-      כניסת מנהלת
-    </button>
   </div>
 </footer>
 
@@ -3674,20 +3663,11 @@ function updateAdminEntryButton() {
   let knownAdminDevice = false;
   try { knownAdminDevice = localStorage.getItem('nuika_admin_device') === '1'; } catch (e) {}
 
-  // Launched from the home screen rather than a browser tab. Customers browse
-  // in a tab, so this keeps the footer clean for them while still giving Noy a
-  // way in from the installed app, where iOS refuses to honour a ?admin URL.
-  let installedApp = false;
-  try {
-    installedApp = window.matchMedia('(display-mode: standalone)').matches
-                || window.navigator.standalone === true;
-  } catch (e) {}
-
+  // Nothing admin-related is ever rendered for a customer: this needs either a
+  // live admin session or a device that has held one. Noy reaches the sign-in
+  // through admin.html, which is a separate home-screen icon.
   const header = document.getElementById('admin-entry-btn');
   if (header) header.style.display = (IS_ADMIN || knownAdminDevice) ? 'flex' : 'none';
-
-  const footer = document.getElementById('admin-footer-btn');
-  if (footer) footer.style.display = (IS_ADMIN || knownAdminDevice || installedApp) ? 'inline-block' : 'none';
 }
 
 // Run at load: on Noy's phone the button is there before Firebase answers.
