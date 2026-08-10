@@ -2566,6 +2566,18 @@
 
 <!-- ============ SCRIPT ============ -->
 <script>
+// ─── FORCE HTTPS ────────────────────────────────────
+// Cloudflare's "Always Use HTTPS" is the proper fix and is not switched on
+// yet, so plain http:// still serves the order form in clear text. This is a
+// stopgap: the first HTML response is still unencrypted, but everything after
+// it — including the customer's name, phone and the order itself — is not.
+// Runs before anything else so the redirect happens as early as possible.
+// localhost is exempt so local development keeps working.
+if (location.protocol === 'http:'
+    && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) {
+  location.replace('https://' + location.host + location.pathname + location.search + location.hash);
+}
+
 // ─── PWA SERVICE WORKER ─────────────────────────────
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
