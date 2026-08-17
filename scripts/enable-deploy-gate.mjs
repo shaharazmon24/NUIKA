@@ -60,8 +60,29 @@ say('  ✓  gh מותקן');
 // ── 2. gh authenticated ─────────────────────────────────────
 // This is the one step that needs a human: authentication cannot be delegated.
 if (!trySh('gh auth status')) {
+  // gh auth login draws a keyboard-driven prompt. A window that is not a real
+  // terminal — the app's embedded runner, a CI log, anything piped — accepts no
+  // keystrokes, so the prompt hangs forever with no way to answer it. Detect
+  // that here instead of launching something unusable.
+  if (!process.stdin.isTTY) {
+    say('');
+    say('  ⚠  צריך להתחבר לגיטהאב, וזה דורש חלון טרמינל אמיתי.');
+    say('     החלון הנוכחי לא מעביר הקשות מקלדת, אז ה-prompt ייתקע.');
+    say('');
+    say('  פתח טרמינל אמיתי:');
+    say('     GitHub Desktop → Repository → Open in Command Prompt');
+    say('     או: תפריט התחל → Windows Terminal');
+    say('');
+    say('  ושם הרץ:');
+    say('     cd C:\\Projects\\NUIKA');
+    say('     node scripts/enable-deploy-gate.mjs');
+    say('');
+    process.exit(1);
+  }
+
   say('');
-  say('  נדרשת התחברות לגיטהאב. נפתח דפדפן — תאשר שם, וזה יחזור לכאן לבד.');
+  say('  נדרשת התחברות לגיטהאב. ייפתח דפדפן — תאשר שם, וזה יחזור לכאן לבד.');
+  say('  אם תישאל "Authenticate Git with your GitHub credentials?" — תלחץ Y ואז Enter.');
   say('');
   const r = spawnSync('gh', ['auth', 'login', '--web', '--git-protocol', 'https'], {
     cwd: ROOT, stdio: 'inherit', shell: process.platform === 'win32'
