@@ -1,0 +1,62 @@
+name: Deploy site
+
+# The gate between a commit and the live shop.
+#
+# GitHub Pages used to publish whatever landed on main, so a whole-file upload
+# through the web UI went straight to customers — twice. It took the entire
+# Firebase layer down with it, and the site kept loading, so nothing looked
+# wrong until someone tried to place an order.
+#
+# Now a commit only becomes the live site if scripts/validate.mjs passes. A
+# broken commit still lands in git — nothing is lost, and it can be fixed with
+# a normal commit — but nuika.co.il keeps serving the last good version.
+#
+# This deliberately does NOT use branch protection. Protection on main would
+# reject the direct pushes that scripts/ship.mjs makes, and both machines
+# depend on that workflow.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deploys race. Do not cancel one in flight: a half-finished
+# deploy that gets cancelled can leave the shop serving a partial upload.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # The gate. Every step below is skipped if this fails, so the live site
+      # stays exactly as it was.
+      - name: Validate — nothing ships if this fails
+        run: node scripts/validate.mjs
+
+      - uses: actions/configure-pages@v5
+
+      # Uploads the repo root, which is what the branch deployment served.
+      # CNAME travels with it, so the custom domain is unaffected — deleting
+      # or dropping that file unsets the domain and takes the shop offline.
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
