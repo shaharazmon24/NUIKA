@@ -1,5 +1,5 @@
 // Bump this version on every deploy that must reach existing users.
-const CACHE = 'nuika-v6';
+const CACHE = 'nuika-v7';
 
 // Relative paths, so the same worker is correct whether the site is served
 // from the domain root (nuika.co.il) or a subdirectory.
