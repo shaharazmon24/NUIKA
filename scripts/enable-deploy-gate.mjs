@@ -30,8 +30,13 @@ const BACKUP = join(ROOT, '.pages-config-backup.json');
 const say  = m => console.log(m);
 const line = () => say('─'.repeat(56));
 
+// execSync returns null — not a string — when stdio is 'inherit', because the
+// output went straight to the terminal instead of being captured. Calling
+// .trim() on that threw a TypeError, which the caller's catch reported as
+// "the push failed" moments after the push had in fact succeeded.
 function sh(cmd, opts = {}) {
-  return execSync(cmd, { cwd: ROOT, encoding: 'utf8', ...opts }).trim();
+  const out = execSync(cmd, { cwd: ROOT, encoding: 'utf8', ...opts });
+  return out == null ? '' : String(out).trim();
 }
 
 // Returns null instead of throwing, for probes where failure is a valid answer.
