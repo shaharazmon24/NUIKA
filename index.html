@@ -12,9 +12,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="נואיקה" />
-  <!-- Square icon: iOS squashes a non-square source into the home-screen tile -->
-  <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+  <link rel="apple-touch-icon" href="logo.png.png" />
 
   <!-- OG / WhatsApp sharing -->
   <meta property="og:type"        content="website" />
@@ -52,10 +50,6 @@
     }
   </script>
   <style>
-    /* Only ever visible inside @media print; without this the generated
-       sheet stays rendered on the live page after the dialog closes. */
-    #print-area { display: none; }
-
     * { box-sizing: border-box; }
     body { background-color: #F7EEE0; }
 
@@ -168,6 +162,21 @@
     }
     #edit-product-modal.open { display: flex; }
     @media (min-width: 640px) { #edit-product-modal { align-items: center; } }
+    #manual-order-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 600;
+      background: rgba(44,24,16,0.6);
+      backdrop-filter: blur(4px);
+      align-items: flex-end;
+      justify-content: center;
+    }
+    #manual-order-modal.open { display: flex; }
+    @media (min-width: 640px) { #manual-order-modal { align-items: center; } }
+    .mo-item-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 0; border-bottom:1px solid #EFE1C7; }
+    .mo-item-row:last-child { border-bottom:none; }
+    .mo-qty-input { width:56px; text-align:center; }
     .edit-modal-box {
       background: #FDFAF4;
       border-radius: 24px 24px 0 0;
@@ -495,12 +504,10 @@
       z-index: 300;
       background: #F0E9D8;
       align-items: center;
-      justify-content: flex-start;
+      justify-content: center;
       flex-direction: column;
       text-align: center;
       padding: 24px;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
     }
     #thankyou-overlay.open {
       display: flex;
@@ -1522,10 +1529,6 @@
     }
 
   </style>
-  <!-- Firebase Realtime Database (compat SDK) -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 </head>
 <body class="font-sans text-ink">
 
@@ -1565,7 +1568,7 @@
     <div class="land-countdown mb-8">
       <div class="countdown-box" id="landing-countdown">
         <span class="countdown-dot" id="countdown-dot"></span>
-        <span id="countdown-text">טוען...</span>
+        <span id="countdown-text" lang-content="he">טוען...</span>
       </div>
     </div>
 
@@ -1592,9 +1595,7 @@
 <!-- ============ HEADER ============ -->
 <header class="sticky top-0 z-40 border-b" style="background:rgba(247,242,232,0.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-color:#E5D9C5;">
   <div class="max-w-5xl mx-auto px-4 py-2.5 flex items-center justify-between">
-    <!-- Logo. Five taps opens the admin sign-in: iOS has no manifest
-         shortcuts, so there is no other way into the panel from an installed
-         app on an iPhone. -->
+    <!-- Logo -->
     <div class="flex items-center">
       <img
         src="logo.png.png"
@@ -1605,10 +1606,6 @@
     </div>
     <!-- Nav -->
     <div class="flex items-center gap-3">
-      <button id="admin-entry-btn" onclick="openAdminLogin()" style="display:none;align-items:center;gap:5px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.78rem;font-weight:600;color:#6B3A2A;background:#F5EFE3;border:1.5px solid #D5C9B5;border-radius:100px;padding:5px 12px;cursor:pointer;" aria-label="לוח ניהול">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        ניהול
-      </button>
       <button id="install-pwa-btn" onclick="installPWA()" aria-label="התקן כאפליקציה">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v13M8 11l4 4 4-4M20 17v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2"/></svg>
         <span lang-content="he">התקן</span>
@@ -1685,7 +1682,7 @@
       <div id="cart-progress-wrap" style="display:none;">
         <div id="cart-progress-bar"></div>
       </div>
-      <div id="cart-progress-label"></div>
+      <div id="cart-progress-label" lang-content="he"></div>
 
       <!-- Main row -->
       <div class="flex items-center justify-between gap-4" style="margin-top:4px;">
@@ -1780,12 +1777,12 @@
       <div>
         <label class="block font-sans font-semibold text-ink mb-2 text-sm" for="cust-name" lang-content="he">שם מלא</label>
         <label class="block font-sans font-semibold text-ink mb-2 text-sm" for="cust-name" lang-content="en">Full Name</label>
-        <input class="field" id="cust-name" maxlength="80" type="text" placeholder="שם" />
+        <input class="field" id="cust-name" type="text" placeholder="שם" />
       </div>
       <div>
         <label class="block font-sans font-semibold text-ink mb-2 text-sm" for="cust-phone" lang-content="he">טלפון</label>
         <label class="block font-sans font-semibold text-ink mb-2 text-sm" for="cust-phone" lang-content="en">Phone</label>
-        <input class="field" id="cust-phone" maxlength="25" type="tel" placeholder="05X-XXXXXXX" dir="ltr" />
+        <input class="field" id="cust-phone" type="tel" placeholder="05X-XXXXXXX" dir="ltr" />
       </div>
     </div>
 
@@ -1793,7 +1790,7 @@
     <div class="mb-6">
       <label class="block font-sans font-semibold text-ink mb-2 text-sm" for="notes" lang-content="he">הערות (אופציונלי)</label>
       <label class="block font-sans font-semibold text-ink mb-2 text-sm" for="notes" lang-content="en">Notes (optional)</label>
-      <textarea class="field resize-none" id="notes" maxlength="500" rows="2" placeholder="אלרגיות, בקשות מיוחדות..."></textarea>
+      <textarea class="field resize-none" id="notes" rows="2" placeholder="אלרגיות, בקשות מיוחדות..."></textarea>
     </div>
 
     <!-- Total -->
@@ -1871,21 +1868,10 @@
     <h2 style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.4rem;font-weight:700;margin-bottom:4px;">כניסת מנהלת</h2>
     <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.85rem;margin-bottom:20px;">הזיני את הסיסמה שלך</p>
     <input
-      id="admin-email-input"
-      type="email"
-      placeholder="אימייל"
-      class="field"
-      autocomplete="username"
-      style="text-align:center;margin-bottom:10px;"
-      onkeydown="if(event.key==='Enter')document.getElementById('admin-password-input').focus()"
-      dir="ltr"
-    />
-    <input
       id="admin-password-input"
       type="password"
       placeholder="סיסמה"
       class="field"
-      autocomplete="current-password"
       style="text-align:center;letter-spacing:0.2em;margin-bottom:12px;"
       onkeydown="if(event.key==='Enter')checkAdminPassword()"
       dir="ltr"
@@ -1895,7 +1881,6 @@
       <button onclick="checkAdminPassword()" class="admin-save-btn" style="flex:1;">כניסה</button>
       <button onclick="closeAdminLogin()" style="flex:1;background:transparent;border:2px solid #6B2E1E;color:#6B2E1E;font-family:'Noto Serif Hebrew',serif;font-weight:700;font-size:1rem;padding:13px 16px;border-radius:100px;cursor:pointer;">ביטול</button>
     </div>
-    <button onclick="sendAdminPasswordReset()" style="margin-top:14px;background:none;border:none;color:#9B8B75;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;text-decoration:underline;cursor:pointer;">שכחתי סיסמה — שלחו לי קישור לאיפוס</button>
   </div>
 </div>
 
@@ -1908,7 +1893,6 @@
       <div style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.25rem;font-weight:700;line-height:1.1;">לוח ניהול</div>
       <div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.75rem;">נואיקה — לחם בוטיק</div>
     </div>
-    <button onclick="adminSignOut()" title="התנתקי מהחשבון" style="background:transparent;border:none;color:#9B8B75;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;cursor:pointer;padding:6px 10px;flex-shrink:0;">התנתקי</button>
     <button onclick="closeAdminPanel()" style="background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;" aria-label="סגור">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
@@ -2026,7 +2010,11 @@
         <h2 style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.2rem;font-weight:700;margin:0 0 2px;">ניהול הזמנות</h2>
         <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.75rem;margin:0;">ארכיון אוטומטי לאחר 7 ימים</p>
       </div>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button onclick="openManualOrderModal()" style="display:flex;align-items:center;gap:5px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.76rem;font-weight:600;background:#6B2E1E;border:1.5px solid #6B2E1E;color:#F7EEE0;padding:7px 12px;border-radius:100px;cursor:pointer;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          הזמנה ידנית
+        </button>
         <button onclick="exportOrdersCSV()" style="display:flex;align-items:center;gap:5px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.76rem;font-weight:600;background:#EEF8EE;border:1.5px solid #B0D9B0;color:#2A7A2A;padding:7px 12px;border-radius:100px;cursor:pointer;">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           CSV
@@ -2557,6 +2545,51 @@
   </div>
 </div>
 
+<!-- ============ MANUAL ORDER MODAL ============ -->
+<div id="manual-order-modal" onclick="handleManualOrderBackdrop(event)">
+  <div class="edit-modal-box">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <h3 style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.25rem;font-weight:700;margin:0;">הזמנה ידנית</h3>
+      <button onclick="closeManualOrderModal()" style="background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;margin-bottom:16px;">להוספת הזמנה שקיבלת בטלפון/בוואטסאפ/בעל פה — היא תופיע ברשימת ההזמנות בדיוק כמו הזמנה מהאתר.</p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+      <div>
+        <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.85rem;display:block;margin-bottom:6px;">שם הלקוח</label>
+        <input id="mo-name" type="text" class="field" placeholder="שם" />
+      </div>
+      <div>
+        <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.85rem;display:block;margin-bottom:6px;">טלפון</label>
+        <input id="mo-phone" type="tel" class="field" placeholder="05X-XXXXXXX" dir="ltr" />
+      </div>
+    </div>
+
+    <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.85rem;display:block;margin-bottom:6px;">פריטים</label>
+    <div id="mo-items-list" style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:12px;padding:6px 12px;margin-bottom:14px;"></div>
+
+    <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.85rem;display:block;margin-bottom:6px;">אופן תשלום</label>
+    <select id="mo-payment" class="field" style="margin-bottom:14px;">
+      <option value="cash">מזומן</option>
+      <option value="bit">Bit</option>
+      <option value="paybox">PayBox</option>
+    </select>
+
+    <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.85rem;display:block;margin-bottom:6px;">הערות (אופציונלי)</label>
+    <textarea id="mo-notes" class="field" rows="2" style="margin-bottom:14px;"></textarea>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;background:#F0E9D8;border-radius:12px;padding:10px 14px;margin-bottom:16px;">
+      <span style="font-family:'Noto Sans Hebrew',sans-serif;color:#6B2E1E;font-size:0.85rem;">סה"כ</span>
+      <span id="mo-total" style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#6B2E1E;font-size:1.1rem;">₪0</span>
+    </div>
+
+    <button onclick="saveManualOrder()" class="admin-save-btn" style="width:100%;">שמירת הזמנה ✓</button>
+  </div>
+</div>
+
 <!-- ============ FOOTER ============ -->
 <footer style="background:#EFE1C7;border-top:1px solid #D5C9B5;margin-top:0;padding-bottom:8rem;">
   <div class="max-w-5xl mx-auto px-4 text-center" style="padding-top:2.5rem;padding-bottom:2rem;">
@@ -2567,321 +2600,17 @@
       <span style="color:#C4B89A;font-size:0.6rem;">●</span>
       <a href="https://www.instagram.com/nuika_bread" target="_blank" rel="noopener" style="font-family:'Noto Sans Hebrew',sans-serif;color:#8B7260;font-size:0.85rem;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#BD4D30'" onmouseout="this.style.color='#8B7260'">nuika_bread@</a>
     </div>
-
   </div>
 </footer>
 
 <!-- ============ SCRIPT ============ -->
 <script>
-// ─── FORCE HTTPS ────────────────────────────────────
-// Cloudflare's "Always Use HTTPS" is the proper fix and is not switched on
-// yet, so plain http:// still serves the order form in clear text. This is a
-// stopgap: the first HTML response is still unencrypted, but everything after
-// it — including the customer's name, phone and the order itself — is not.
-// Runs before anything else so the redirect happens as early as possible.
-// localhost is exempt so local development keeps working.
-if (location.protocol === 'http:'
-    && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) {
-  location.replace('https://' + location.host + location.pathname + location.search + location.hash);
-}
-
 // ─── PWA SERVICE WORKER ─────────────────────────────
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').then(reg => {
-      // Pull a fresh copy of sw.js on every load so updates are never missed
-      reg.update().catch(() => {});
-    }).catch(() => {});
-
-    // When a new service worker takes control, reload once so the user
-    // immediately gets the new code instead of a stale cached page.
-    // On a first visit there is no controller, so clients.claim() fires
-    // controllerchange and would reload the page out from under the visitor.
-    const _hadController = !!navigator.serviceWorker.controller;
-    let _reloading = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!_hadController || _reloading) return;
-      // Reloading while the cart is full or the order form is open would
-      // wipe the customer's order with no explanation.
-      const modal = document.getElementById('order-modal');
-      if (modal && modal.classList.contains('open')) return;
-      if (typeof cart === 'undefined' || Object.keys(cart).length) return;
-      _reloading = true;
-      window.location.reload();
-    });
+    navigator.serviceWorker.register('sw.js').catch(() => {});
   });
 }
-
-// ─── FIREBASE ─────────────────────────────────────────
-if (typeof firebase === 'undefined' || typeof firebase.auth !== 'function') {
-  document.addEventListener('DOMContentLoaded', () => {
-    const b = document.createElement('div');
-    b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#B45032;color:#F7F2E8;padding:10px 16px;text-align:center;font-family:sans-serif;font-size:0.9rem;';
-    b.textContent = 'אין חיבור — נסי לרענן את הדף';
-    document.body.prepend(b);
-  });
-  throw new Error('Firebase SDK failed to load');
-}
-
-firebase.initializeApp({
-  apiKey: "AIzaSyBH1KnxvJVBuMCkQ4vRjoBT0kfIn5ZEtqQ",
-  authDomain: "nuika-5371f.firebaseapp.com",
-  databaseURL: "https://nuika-5371f-default-rtdb.firebaseio.com",
-  projectId: "nuika-5371f",
-  storageBucket: "nuika-5371f.firebasestorage.app",
-  messagingSenderId: "652173710332",
-  appId: "1:652173710332:web:ab1d01485446fb2075d879"
-});
-const db = firebase.database();
-const ROOT = 'nuika';
-
-// ─── AUTH ─────────────────────────────────────────────────────────────
-// Customers sign in anonymously: the database rules require an identity to
-// write an order, which stops a stranger with the public config from wiping
-// or harvesting the shop. Noy signs in with a real account, and her uid is
-// listed under nuika/admins, which is what the rules check for write access
-// to products, settings and the kitchen.
-let IS_ADMIN = false;
-let _authReady = false;
-let _authRetries = 0;
-const _authWaiters = [];
-
-function whenAuthReady(fn) {
-  if (_authReady) fn();
-  else _authWaiters.push(fn);
-}
-
-function _markAuthReady() {
-  if (_authReady) return;
-  _authReady = true;
-  _authWaiters.splice(0).forEach(fn => { try { fn(); } catch (e) { console.error(e); } });
-}
-
-firebase.auth().onAuthStateChanged(user => {
-  if (!user) {
-    IS_ADMIN = false;
-    // Anonymous sign-in can fail if the provider is disabled in the console.
-    // The shop must still render, so never block on it.
-    firebase.auth().signInAnonymously().catch(err => {
-      console.warn('anonymous sign-in unavailable:', err && err.code);
-      _markAuthReady();
-      // Retry with backoff. Without this, a tab that was open while the
-      // console setting was flipped — or a browser that blocks the SDK's
-      // storage — stays unauthenticated for its whole life, and every order
-      // it places is rejected while the customer is told it was sent.
-      if (_authRetries < 5) {
-        _authRetries++;
-        setTimeout(() => firebase.auth().signInAnonymously().catch(() => {}), _authRetries * 4000);
-      }
-    });
-    return;
-  }
-  // An anonymous user is never an admin, so skip the lookup for customers.
-  if (user.isAnonymous) { IS_ADMIN = false; updateAdminEntryButton(); _markAuthReady(); return; }
-  db.ref(`${ROOT}/admins/${user.uid}`).once('value')
-    .then(snap => { IS_ADMIN = snap.val() === true; })
-    .catch(() => { IS_ADMIN = false; })
-    .then(() => { _markAuthReady(); attachAdminListeners(); updateAdminEntryButton(); });
-});
-
-// Every Firebase write used to be fire-and-forget: a failure was completely
-// silent and the UI still reported success. Route them all through this.
-// Customer-supplied text (name, notes, address) is rendered into the admin
-// panel with innerHTML. Unescaped, a crafted note runs arbitrary JS in Noy's
-// session, where the authenticated db handle is in scope.
-function esc(v) {
-  return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[c]));
-}
-
-function fbError(err) {
-  console.error('Firebase write failed:', err);
-  alert('השמירה נכשלה — בדקי חיבור לאינטרנט ונסי שוב.');
-}
-
-// True once each tree has answered at least once. Until then the local arrays
-// are empty because nothing has loaded — NOT because the data is gone — so
-// saving would overwrite real data with defaults.
-let _productsLoaded = false;
-let _cartRestored  = false;
-let _kitchenLoaded  = false;
-
-// Local caches — populated by Firebase listeners
-let ORDER_LOG = [];
-let _settingsCache = {};
-
-// One-time seeding, guarded by a transaction so two devices loading at once
-// cannot both seed. A listener must NEVER seed: an empty tree there means
-// "Noy deleted everything", and re-seeding would resurrect deleted data.
-// Filled in just below the PRODUCTS declaration. It cannot be read here:
-// PRODUCTS is a const declared further down, so touching it at this point
-// aborts the whole script with a temporal-dead-zone error.
-var SEED_PRODUCTS = [];
-
-db.ref(`${ROOT}/_seeded`).once('value').then(seedSnap => {
-  if (seedSnap.val()) return;                    // seeded once, never again
-  // Read each subtree separately. Reading the whole `nuika` node would be
-  // denied once the rules are locked down, because orders and kitchen are
-  // admin-only and a parent read has to satisfy the strictest child.
-  return Promise.all([
-    db.ref(`${ROOT}/products`).once('value').then(s => s.val()).catch(() => 'denied'),
-    db.ref(`${ROOT}/kitchen/pantry`).once('value').then(s => s.val()).catch(() => 'denied'),
-    db.ref(`${ROOT}/kitchen/recipes`).once('value').then(s => s.val()).catch(() => 'denied')
-  ]).then(([products, pantry, recipes]) => {
-    // 'denied' means the tree exists but this session may not read it, which is
-    // the normal case for a customer. Never seed on a denial.
-    // 'denied' means the read failed or is not permitted — never a reason to
-    // seed. Only a genuine null means the tree is absent.
-    if (products === 'denied') return;
-    const cur = {
-      products,
-      kitchen: (pantry === 'denied' || recipes === 'denied') ? { pantry: true, recipes: true } : { pantry, recipes }
-    };
-    const updates = { _seeded: { at: Date.now() } };
-
-    // Only fill subtrees that genuinely do not exist. Writing defaults
-    // unconditionally would race the listeners and could overwrite live data.
-    if (!cur.products) {
-      const prod = {};
-      SEED_PRODUCTS.forEach(p => {
-        prod[p.id] = { id: p.id, nameHe: p.nameHe, nameEn: p.nameEn, descHe: p.descHe, descEn: p.descEn, price: p.price, illustration: p.illustration || null, soldOut: p.soldOut || false, inMenu: p.inMenu !== false, maxStock: p.maxStock || null, tag: p.tag || null };
-      });
-      updates.products = prod;
-    }
-    if (!cur.kitchen || !cur.kitchen.pantry) {
-      const pantryObj = {};
-      DEFAULT_PANTRY.forEach(p => { pantryObj[p.id] = { ...p }; });
-      updates['kitchen/pantry'] = pantryObj;
-    }
-    if (!cur.kitchen || !cur.kitchen.recipes) {
-      const recipesObj = {};
-      DEFAULT_RECIPES.forEach(r => { recipesObj[r.id] = { ...r }; });
-      updates['kitchen/recipes'] = recipesObj;
-    }
-    return db.ref(ROOT).update(updates);
-  });
-}).catch(err => console.error('seed check failed:', err));
-
-// Products listener — runs whenever products change in Firebase
-db.ref(`${ROOT}/products`).on('value', snap => {
-  const data = snap.val();
-  _productsLoaded = true;
-  PRODUCTS.length = 0;
-  if (data) Object.values(data).sort((a, b) => a.id - b.id).forEach(p => PRODUCTS.push({ ...p, svg: null }));
-
-  pruneCart();
-
-  // Only latch once real products have arrived; latching on an empty fire
-  // discarded the saved cart permanently.
-  if (!_cartRestored && PRODUCTS.length) { restoreCart(); _cartRestored = true; }
-  renderProducts();
-  // Re-apply cart visual state — renderProducts rebuilds the grid from scratch
-  Object.keys(cart).forEach(id => updateCard(+id));
-  updateCartBar();
-  updateOrdersOpenBanner(); // re-apply disabled state to the new cards
-
-  const panel = document.getElementById('admin-panel');
-  if (panel && panel.classList.contains('open')) renderAdminProducts();
-});
-
-// Settings listener — ordersOpen, bitLink, deadline
-db.ref(`${ROOT}/settings`).on('value', snap => {
-  _settingsCache = snap.val() || {};
-  // The stock tally is keyed by cycle, and the cycle comes from the deadline.
-  // Re-check the subscription whenever the deadline can have moved.
-  watchStock();
-  updateOrdersOpenBanner();
-  const bitLinkEl = document.getElementById('bit-link');
-  if (bitLinkEl && _settingsCache.bitLink) bitLinkEl.href = _settingsCache.bitLink;
-  updateCountdown();
-});
-
-// Orders listener — populates ORDER_LOG, refreshes admin panel
-// Attached only once the session is confirmed as Noy's. Previously every
-// visitor subscribed to nuika/orders and downloaded every customer's name,
-// phone and address into their own browser.
-let _ordersAttached = false;
-function attachAdminListeners() {
-  if (!IS_ADMIN || _ordersAttached) return;
-  _ordersAttached = true;
-  db.ref(`${ROOT}/orders`).on('value', ordersSnapshot, err => {
-    // A denial here means the session is not really an admin. Without this the
-    // panel rendered empty with no error and would not re-attach on retry.
-    _ordersAttached = false;
-    console.error('orders read denied:', err && err.code);
-    alert('אין הרשאה לקרוא הזמנות — נסי להתחבר מחדש.');
-  });
-  attachKitchenListener();
-}
-
-function ordersSnapshot(snap) {
-  ORDER_LOG = [];
-  if (snap.val()) snap.forEach(child => ORDER_LOG.push(child.val()));
-  ORDER_LOG.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-  // Stock counts are derived from orders, so the grid has to redraw too —
-  // otherwise "נותרו N" stays frozen at whatever it was on first paint.
-  if (_productsLoaded) {
-    pruneCart();
-    renderProducts();
-    Object.keys(cart).forEach(id => updateCard(+id));
-    updateCartBar();
-    updateOrdersOpenBanner();
-  }
-  const panel = document.getElementById('admin-panel');
-  if (panel && panel.classList.contains('open')) renderOrderManagement();
-  updateOrdersTabBadge();
-  // Only once real orders are in hand — reconciling against an empty cache
-  // would zero the public tally and resell everything already sold.
-  reconcileStock();
-}
-
-// Kitchen listener — pantry, recipes, weekly plan (admin only, syncs across devices)
-// Recipes and supplier prices are Noy's business data. Customers have no
-// reason to hold them, and the rules will refuse the read anyway.
-function attachKitchenListener() {
-  if (!IS_ADMIN) return;
-  db.ref(`${ROOT}/kitchen`).on('value', kitchenSnapshot, err => {
-    // Otherwise _kitchenLoaded stays false and every kitchen save alerts
-    // "still loading" forever, with no clue why.
-    console.error('kitchen read denied:', err && err.code);
-    alert('אין הרשאה לקרוא את נתוני המטבח — נסי להתחבר מחדש.');
-  });
-}
-
-function kitchenSnapshot(snap) {
-  const data = snap.val() || {};
-  _kitchenLoaded = true;
-  // Sort by category then name: ids are strings ('pi1'), so a-b yields NaN
-  const byName = (a, b) => (a.cat || '').localeCompare(b.cat || '', 'he')
-                        || (a.name || '').localeCompare(b.name || '', 'he');
-  PANTRY      = data.pantry  ? Object.values(data.pantry).sort(byName) : [];
-  RECIPES     = data.recipes ? Object.values(data.recipes) : [];
-  WEEKLY_PLAN = data.weeklyPlan || {};
-
-  // Don't rebuild the panel while she is typing in it — innerHTML would
-  // destroy the focused input mid-keystroke.
-  const panel = document.getElementById('admin-panel');
-  const typing = document.activeElement
-    && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
-  if (panel && panel.classList.contains('open')) {
-    if (typing) {
-      // Repainting now would destroy the focused field. Repaint on blur
-      // instead — skipping it entirely left the table stale indefinitely.
-      document.addEventListener('focusout', function flush() {
-        document.removeEventListener('focusout', flush);
-        const p2 = document.getElementById('admin-panel');
-        if (p2 && p2.classList.contains('open')) switchKitchenTab(_currentKitchenTab || 'pantry');
-      }, { once: true });
-    } else {
-      switchKitchenTab(_currentKitchenTab || 'pantry');
-    }
-  }
-}
-
-// Public read, so no need to wait for sign-in. Called again whenever the
-// deadline changes, because the cycle key is derived from it.
-watchStock();
 
 // ─── LANDING ────────────────────────────────────────
 function enterSite() {
@@ -2912,24 +2641,27 @@ window.addEventListener('appinstalled', () => {
 
 function installPWA() {
   if (!_deferredInstallPrompt) return;
-  const isEn = document.body.classList.contains('lang-en');
-
-  // Chrome builds the installed app from a Google template whose target API
-  // level currently trails Android 16/17, so Play Protect shows a scary
-  // "built for an older version of Android" warning for every PWA, not just
-  // this one. It is dismissible — but unexplained it reads as a virus alert
-  // and costs orders. Warn first, in plain language.
-  const proceed = confirm(isEn
-    ? 'Android may show a security warning during install. It is safe — tap "More details", then "Install anyway".\n\nContinue?'
-    : 'ייתכן שאנדרואיד יציג אזהרת אבטחה בהתקנה. זה תקין — יש ללחוץ על "פרטים נוספים" ואז "התקן בכל זאת".\n\nלהמשיך?');
-  if (!proceed) return;
-
   _deferredInstallPrompt.prompt();
   _deferredInstallPrompt.userChoice.then(() => {
     _deferredInstallPrompt = null;
     const btn = document.getElementById('install-pwa-btn');
     if (btn) btn.style.display = 'none';
   });
+}
+
+function getNextTuesdayDeadline() {
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun,1=Mon,2=Tue,...
+  // Days until next Tuesday (day=2)
+  let daysUntil = (2 - day + 7) % 7;
+  // If it's Tuesday and still before 17:00 — same day
+  if (day === 2 && now.getHours() < 17) daysUntil = 0;
+  // If it's Tuesday after 17:00 — next week
+  else if (day === 2 && now.getHours() >= 17) daysUntil = 7;
+  const deadline = new Date(now);
+  deadline.setDate(now.getDate() + daysUntil);
+  deadline.setHours(17, 0, 0, 0);
+  return deadline;
 }
 
 function updateCountdown() {
@@ -3065,9 +2797,6 @@ const PRODUCTS = [
   },
 ];
 
-// Snapshot the build-time defaults before any listener can replace them.
-SEED_PRODUCTS = PRODUCTS.map(p => ({ ...p }));
-
 // ─── STATE ─────────────────────────────────────────
 const cart = {}; // { productId: quantity }
 let paymentMethod = 'cash';
@@ -3078,76 +2807,12 @@ const OWNER_EMAIL    = 'shaharazmon24@gmail.com';
 
 // ─── STOCK REMAINING ──────────────────────────────
 // Returns null if no limit set, otherwise units left after active orders.
-// A sold-out card has pointer-events:none, so anything left in the cart for it
-// can never be removed by tapping. Clamp or drop it instead.
-function pruneCart() {
-  Object.keys(cart).forEach(id => {
-    const p = PRODUCTS.find(p => p.id === +id);
-    if (!p || p.soldOut || p.inMenu === false) { delete cart[+id]; return; }
-    const rem = getStockRemaining(+id);
-    if (rem === null) return;
-    if (rem <= 0) delete cart[+id];
-    else if (cart[+id] > rem) cart[+id] = rem;
-  });
-}
-
-// Start of the current ordering cycle, used to key the public stock counter
-// so it resets by itself every week.
-function currentCycle() {
-  const WEEK = 7 * 24 * 60 * 60 * 1000;
-  let end = (getNextTuesdayDeadline() || new Date()).getTime();
-  while (end < Date.now()) end += WEEK;
-  return { start: end - WEEK, end };
-}
-
-// Public per-product tally for the current cycle. Customers read this instead
-// of the order log, which holds names, phone numbers and addresses.
-// var, not let: watchStock() is called near the top of the script, above
-// this point, so a let binding would be in the temporal dead zone and would
-// abort the whole file.
-var STOCK_USED = {};
-var _stockRef = null;
-
-function watchStock() {
-  const key = String(currentCycle().start);
-  const path = `${ROOT}/stockUsed/${key}`;
-  if (_stockRef && _stockRef.path === path) return;
-  if (_stockRef) _stockRef.ref.off('value', _stockRef.cb);
-  const ref = db.ref(path);
-  const cb = snap => {
-    STOCK_USED = snap.val() || {};
-    if (_productsLoaded) {
-      pruneCart();
-      renderProducts();
-      Object.keys(cart).forEach(id => updateCard(+id));
-      updateCartBar();
-      updateOrdersOpenBanner();
-    }
-  };
-  ref.on('value', cb);
-  _stockRef = { path, ref, cb };
-}
-
 function getStockRemaining(productId) {
   const p = PRODUCTS.find(p => p.id === productId);
   if (!p || !p.maxStock) return null;
-
-  // Customers cannot read the order log, so they use the public tally.
-  if (!IS_ADMIN) {
-    return Math.max(0, p.maxStock - (+STOCK_USED[productId] || 0));
-  }
-
+  const orders = JSON.parse(localStorage.getItem('nuika_order_log') || '[]');
   let sold = 0;
-  // Filtering on status !== 'done' meant that ticking orders off as delivered
-  // handed their units back to the shop mid-week and let it oversell.
-  const WEEK = 7 * 24 * 60 * 60 * 1000;
-  let cycleEnd = (getNextTuesdayDeadline() || new Date()).getTime();
-  // A custom deadline left in the past would freeze the window open forever.
-  while (cycleEnd < Date.now()) cycleEnd += WEEK;
-  const cycleStart = cycleEnd - WEEK;
-  ORDER_LOG.filter(o => !o.archived
-    && (o.timestamp || 0) >= cycleStart
-    && (o.timestamp || 0) < cycleEnd).forEach(o => {
+  orders.filter(o => !o.archived && o.status !== 'done').forEach(o => {
     (o.itemsArr || []).forEach(item => {
       if ((item.id && item.id === productId) || item.name === p.nameHe) sold += item.qty;
     });
@@ -3168,16 +2833,14 @@ function checkRepeatOrder() {
 }
 
 function repeatLastOrder() {
-  if (!ordersAreOpen()) { warnClosed(); return; }
   const last = JSON.parse(localStorage.getItem('nuika_last_order') || '[]');
   if (!last.length) return;
-  if (getCartCount() > 0 && !confirm('זה יחליף את מה שכבר בעגלה. להמשיך?')) return;
   // Clear current cart
   Object.keys(cart).forEach(id => { delete cart[+id]; updateCard(+id); });
   // Fill with last order (respect stock limits)
   last.forEach(({ id, qty }) => {
     const p = PRODUCTS.find(p => p.id === id);
-    if (!p || p.soldOut || p.inMenu === false) return;
+    if (!p || p.soldOut) return;
     const rem = getStockRemaining(id);
     const safeQty = rem !== null ? Math.min(qty, rem) : qty;
     if (safeQty > 0) cart[id] = safeQty;
@@ -3185,14 +2848,7 @@ function repeatLastOrder() {
   });
   updateCartBar();
   haptic(40);
-  // Every item may have been skipped as sold out — say so instead of
-  // silently doing nothing.
-  if (getCartCount() === 0) {
-    alert(document.body.classList.contains('lang-en')
-      ? "Last week's items aren't available right now."
-      : 'הפריטים מהשבוע שעבר לא זמינים כרגע.');
-    return;
-  }
+  // Hide banner
   const banner = document.getElementById('repeat-order-banner');
   if (banner) banner.style.display = 'none';
   // Scroll to products
@@ -3202,15 +2858,9 @@ function repeatLastOrder() {
 }
 
 // ─── RENDER PRODUCTS ───────────────────────────────
-// Dishes Noy has parked in the bank stay in PRODUCTS so she keeps the recipe,
-// photo and price — they are simply not offered this week.
-function menuProducts() {
-  return PRODUCTS.filter(p => p.inMenu !== false);
-}
-
 function renderProducts() {
   const grid = document.getElementById('products-grid');
-  grid.innerHTML = menuProducts().map(p => {
+  grid.innerHTML = PRODUCTS.map(p => {
     const remaining = getStockRemaining(p.id);
     const isAutoSoldOut = remaining !== null && remaining <= 0;
     const effectiveSoldOut = p.soldOut || isAutoSoldOut;
@@ -3230,7 +2880,7 @@ function renderProducts() {
       onclick="${effectiveSoldOut ? '' : `toggleProduct(${p.id})`}"
       tabindex="${effectiveSoldOut ? '-1' : '0'}"
       role="button"
-      aria-label="${esc(p.nameHe)} — ${p.price} ₪${effectiveSoldOut ? ' — אזל המלאי' : ''}"
+      aria-label="${p.nameHe} — ${p.price} ₪${effectiveSoldOut ? ' — אזל המלאי' : ''}"
       aria-disabled="${effectiveSoldOut}"
       onkeydown="if(!${effectiveSoldOut}&&(event.key==='Enter'||event.key===' '))toggleProduct(${p.id})"
       style="position:relative;"
@@ -3247,8 +2897,8 @@ function renderProducts() {
       <!-- Illustration -->
       <div class="illus-wrap">
         ${p.illustration
-          ? `<img src="${esc(p.illustration)}" alt="${esc(p.nameHe)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;" />`
-          : (p.svg || '')}
+          ? `<img src="${p.illustration}" alt="${p.nameHe}" loading="lazy" style="width:100%;height:100%;object-fit:cover;" />`
+          : p.svg}
       </div>
 
       <!-- Info -->
@@ -3321,9 +2971,6 @@ function updateCard(id) {
   const controls= document.getElementById(`qty-controls-${id}`);
   const display = document.getElementById(`qty-display-${id}`);
 
-  // Card may be gone (product deleted in admin while in someone's cart)
-  if (!card || !badge || !icon || !controls) return;
-
   if (qty > 0) {
     card.classList.add('in-cart');
     badge.textContent = qty;
@@ -3343,7 +2990,6 @@ function updateCard(id) {
 
 function animateCard(id) {
   const card = document.getElementById(`card-${id}`);
-  if (!card) return;
   card.classList.remove('pulse');
   requestAnimationFrame(() => card.classList.add('pulse'));
 }
@@ -3360,23 +3006,7 @@ function getCartCount() {
   return Object.values(cart).reduce((s, q) => s + q, 0);
 }
 
-// Persist the cart so a reload (or the service worker taking control) does
-// not silently discard an order in progress.
-function persistCart() {
-  try { localStorage.setItem('nuika_cart', JSON.stringify(cart)); } catch (e) {}
-}
-function restoreCart() {
-  try {
-    const saved = JSON.parse(localStorage.getItem('nuika_cart') || '{}');
-    Object.entries(saved).forEach(([id, qty]) => {
-      const p = PRODUCTS.find(p => p.id === +id);
-      if (p && !p.soldOut && qty > 0) cart[+id] = qty;
-    });
-  } catch (e) {}
-}
-
 function updateCartBar() {
-  persistCart();
   const total = getCartTotal();
   const count = getCartCount();
   const bar = document.getElementById('cart-bar');
@@ -3400,7 +3030,6 @@ function updateCartBar() {
 // ─── ORDER MODAL ───────────────────────────────────
 function openOrderModal() {
   if (getCartCount() < MIN_ORDER_ITEMS) return;
-  if (!ordersAreOpen()) { warnClosed(); return; }
   const modal = document.getElementById('order-modal');
   modal.classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -3454,42 +3083,18 @@ function togglePayment(radio) {
   radio.closest('label').querySelector('.payment-option').classList.add('border-earth');
 }
 
-// Orders were only blocked by pointer-events on the product cards, so the
-// cart bar and the repeat-order banner both walked straight past a closed shop.
-function ordersAreOpen() {
-  if (_settingsCache.ordersOpen === false) return false;
-  const dl = getNextTuesdayDeadline();
-  return !dl || dl.getTime() > Date.now();
-}
-function warnClosed() {
-  const isEn = document.body.classList.contains('lang-en');
-  alert(isEn ? 'Orders are closed right now.' : 'ההזמנות סגורות כרגע.');
-}
-
 // ─── SUBMIT ORDER ──────────────────────────────────
 const PAYMENT_LABELS_HE = { cash: 'מזומן', bit: 'Bit', paybox: 'PayBox' };
 const PAYMENT_LABELS_EN = { cash: 'Cash', bit: 'Bit', paybox: 'PayBox' };
 
-let _submitting = false;
-
 function submitOrder() {
-  if (_submitting) return;              // double-tap would create two orders
   const name  = document.getElementById('cust-name').value.trim();
   const phone = document.getElementById('cust-phone').value.trim();
   const notes = document.getElementById('notes').value.trim();
   const isEn  = document.body.classList.contains('lang-en');
 
-  if (!ordersAreOpen()) { warnClosed(); return; }
-
   if (!name || !phone) {
     alert(isEn ? 'Please fill in name and phone.' : 'נא למלא שם וטלפון.');
-    return;
-  }
-  // Anything non-numeric used to pass, producing a wa.me link addressed to
-  // nobody and an order Noy could not call back.
-  const digits = phone.replace(/\D/g, '');
-  if (!/^(0\d{8,9}|972\d{8,9})$/.test(digits)) {
-    alert(isEn ? 'Please enter a valid phone number.' : 'נא להזין מספר טלפון תקין.');
     return;
   }
   saveCustomerDetails(name, phone);
@@ -3500,29 +3105,12 @@ function submitOrder() {
       : `מינימום הזמנה ${MIN_ORDER_ITEMS} פריטים. יש לך כרגע ${itemsCount}.`);
     return;
   }
-  // Stock was only checked when items went into the cart. Re-check now: the
-  // cart may have sat open while someone else bought the last units.
-  for (const [id, qty] of Object.entries(cart)) {
-    const p = PRODUCTS.find(p => p.id === +id);
-    if (!p) { delete cart[+id]; continue; }
-    const rem = getStockRemaining(+id);
-    if (rem !== null && qty > rem) {
-      alert(isEn
-        ? `Only ${rem} left of ${p.nameEn}. Please adjust your order.`
-        : `נותרו רק ${rem} יחידות מ${p.nameHe}. נא לעדכן את ההזמנה.`);
-      renderProducts();
-      Object.keys(cart).forEach(i => updateCard(+i));
-      renderOrderSummary();
-      return;
-    }
-  }
 
   // Build message
   const lines = Object.entries(cart).map(([id, qty]) => {
     const p = PRODUCTS.find(p => p.id === +id);
-    if (!p) return null;
-    return `• ${isEn ? p.nameEn : p.nameHe} x${qty} = ₪${p.price * qty}`;
-  }).filter(Boolean);
+    return `• ${p.nameHe} x${qty} = ₪${p.price * qty}`;
+  });
   const grandTotal = getCartTotal();
   const paymentLabel = PAYMENT_LABELS_HE[paymentMethod] || paymentMethod;
 
@@ -3541,12 +3129,19 @@ function submitOrder() {
 
   const encoded = encodeURIComponent(msg);
 
-  _submitting = true;
-
-  // Opened synchronously so it stays inside the user gesture. A second
-  // window.open on a timer was silently popup-blocked on iOS, and the page
-  // still claimed a confirmation had been sent.
+  // Send to owner
   window.open(`https://wa.me/${OWNER_WHATSAPP}?text=${encoded}`, '_blank');
+  // Send confirmation to customer (after short delay so both open)
+  setTimeout(() => {
+    const customerPhone = phone.replace(/\D/g, '');
+    const customerIntl = customerPhone.startsWith('0')
+      ? '972' + customerPhone.slice(1)
+      : customerPhone;
+    const confirmMsg = encodeURIComponent(
+      `שלום ${name}! 🌾\nקיבלנו את ההזמנה שלך מנואיקה ✔️\n\n${lines.join('\n')}\n\nסה"כ: ₪${grandTotal}\nאיסוף מ-${PICKUP_ADDRESS}\nתשלום: ${paymentLabel} 🍞`
+    );
+    window.open(`https://wa.me/${customerIntl}?text=${confirmMsg}`, '_blank');
+  }, 600);
 
   // Build structured items array for baking summary
   const itemsArr = Object.entries(cart).map(([id, qty]) => {
@@ -3559,34 +3154,23 @@ function submitOrder() {
     Object.entries(cart).map(([id, qty]) => ({ id: +id, qty }))
   ));
 
-  // The write used to be fire-and-forget: on a flaky connection the customer
-  // saw a thank-you page for an order that never reached Noy.
-  Promise.race([
-    saveOrderToLog({
-      name, phone,
-      items: lines.join(' | '),
-      itemsArr,
-      total: grandTotal,
-      delivery: 'pickup',
-      address: PICKUP_ADDRESS,
-      paymentMethod,
-      notes
-    }),
-    // Firebase set() does not settle until the server acknowledges. Offline,
-    // that is never — which used to leave the customer on a dead modal with
-    // no thank-you page and no way to pay.
-    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000))
-  ]).then(() => {
-    closeOrderModal();
-    showThankYou({ name, lines, grandTotal, phone });
-  }).catch(err => {
-    console.error('order write failed:', err);
-    alert(isEn
-      ? 'Your order was sent on WhatsApp but could not be saved. Please make sure Noy received it.'
-      : 'ההזמנה נשלחה בוואטסאפ אך לא נשמרה במערכת. נא לוודא מול נוי שהיא התקבלה.');
-    closeOrderModal();
-    showThankYou({ name, lines, grandTotal, phone });
-  }).then(() => { _submitting = false; });
+  // Save to order log
+  saveOrderToLog({
+    name, phone,
+    items: lines.join(' | '),
+    itemsArr,
+    total: grandTotal,
+    delivery: 'pickup',
+    address: PICKUP_ADDRESS,
+    paymentMethod,
+    notes
+  });
+
+  // Close order modal
+  closeOrderModal();
+
+  // Show thank-you page
+  showThankYou({ name, lines, grandTotal, phone });
 }
 
 function showThankYou({ name, lines, grandTotal, phone }) {
@@ -3597,7 +3181,7 @@ function showThankYou({ name, lines, grandTotal, phone }) {
   // Build summary HTML
   box.innerHTML = `
     <div class="font-sans text-bark text-sm font-semibold mb-3" style="color:#6B2E1E;">
-      ${isHe ? `הזמנה של ${esc(name)}` : `Order for ${esc(name)}`}
+      ${isHe ? `הזמנה של ${name}` : `Order for ${name}`}
     </div>
     ${lines.map(l => `<div class="font-sans text-ink text-sm py-1 border-b border-parchment">${l}</div>`).join('')}
     <div class="flex justify-between items-center pt-3 mt-1">
@@ -3606,9 +3190,9 @@ function showThankYou({ name, lines, grandTotal, phone }) {
     </div>
   `;
 
-  // PayBox link — from Firebase so it reaches every customer, not just this device
+  // PayBox link — only shown if the baker set one
   const payboxLinkEl = document.getElementById('paybox-link');
-  const savedPaybox = _settingsCache.payboxLink || '';
+  const savedPaybox = localStorage.getItem('nuika_paybox_link');
   if (payboxLinkEl) {
     if (savedPaybox) {
       payboxLinkEl.href = savedPaybox;
@@ -3635,124 +3219,27 @@ function backToMenu() {
 }
 
 // ─── ADMIN PANEL ───────────────────────────────────
-// Noy's Firebase Auth account. The password is NOT stored here — it lives in
-// Firebase and is checked by their servers.
-// Prefills the sign-in field only. No password lives in this file: Firebase
-// checks it on their servers, and the database rules — not this page — are
-// what actually protect the data.
-const ADMIN_EMAIL = 'noynaamad@gmail.com';
+const ADMIN_PASSWORD = 'nuika2026'; // ← שני את הסיסמה כאן
 
-// פתיחת לוח הניהול: index.html?admin
-function openAdminLogin() {
-  document.getElementById('admin-login-overlay').classList.add('open');
-  // Prefill Noy's address; Shahar can type his own over it.
-  const emailEl = document.getElementById('admin-email-input');
-  if (emailEl && !emailEl.value) emailEl.value = ADMIN_EMAIL;
-  document.body.style.overflow = 'hidden';
-}
-
+// פתיחת לוח הניהול: הקלידי את הסיסמה ב-URL — index.html?admin
 (function checkAdminAccess() {
-  if (new URLSearchParams(window.location.search).has('admin')) openAdminLogin();
+  if (window.location.search.includes('admin')) {
+    document.getElementById('admin-login-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
 })();
 
-// Once she has signed in, the session persists, so surface a real button
-// rather than making her tap the logo every time.
-function updateAdminEntryButton() {
-  // A device that has signed in before, so the button is there the instant
-  // the app opens rather than after the auth round-trip.
-  let knownAdminDevice = false;
-  try { knownAdminDevice = localStorage.getItem('nuika_admin_device') === '1'; } catch (e) {}
-
-  // Nothing admin-related is ever rendered for a customer: this needs either a
-  // live admin session or a device that has held one. Noy reaches the sign-in
-  // through admin.html, which is a separate home-screen icon.
-  const header = document.getElementById('admin-entry-btn');
-  if (header) header.style.display = (IS_ADMIN || knownAdminDevice) ? 'flex' : 'none';
-}
-
-// Run at load: on Noy's phone the button is there before Firebase answers.
-updateAdminEntryButton();
-
 function checkAdminPassword() {
-  const emailEl = document.getElementById('admin-email-input');
-  const input   = document.getElementById('admin-password-input');
-  const errEl   = document.getElementById('admin-pw-error');
-  const email   = (emailEl && emailEl.value.trim()) || ADMIN_EMAIL;
-  const pass    = input.value;
-
-  if (!pass) { errEl.textContent = 'נא להזין סיסמה'; return; }
-  errEl.style.color = '#B45032';   // reset from the reset-link success colour
-  errEl.textContent = 'מתחברת...';
-
-  // A real account, so the database rules can tell Noy apart from a stranger.
-  // The old check compared against a constant sitting in the page source.
-  firebase.auth().signInWithEmailAndPassword(email, pass)
-    .then(cred => db.ref(`${ROOT}/admins/${cred.user.uid}`).once('value')
-      // The rules let only an admin read this node, so a denial here means
-      // "signed in, but not an admin" — not a bad password. Without this the
-      // generic failure message sends people resetting a correct password.
-      .catch(() => ({ val: () => false })))
-    .then(snap => {
-      if (snap.val() !== true) throw { code: 'not-admin' };
-      IS_ADMIN = true;
-      try { localStorage.setItem('nuika_admin_device', '1'); } catch (e) {}
-      updateAdminEntryButton();
-      attachAdminListeners();
-      closeAdminLogin();
-      openAdminPanel();
-    })
-    .catch(err => {
-      const code = (err && err.code) || '';
-      // Firebase deliberately returns the same code for a wrong password, a
-      // missing account and a mistyped address, so the message must not claim
-      // it was the password.
-      errEl.textContent =
-        code === 'not-admin'                  ? 'החשבון קיים אך אינו רשום כמנהל'
-      : code === 'auth/invalid-credential'    ? 'האימייל או הסיסמה שגויים — בדקי שהאימייל למעלה הוא זה שיצרת בו את החשבון'
-      : code === 'auth/wrong-password'        ? 'סיסמה שגויה, נסי שוב'
-      : code === 'auth/user-not-found'        ? 'לא קיים חשבון עם האימייל הזה'
-      : code === 'auth/invalid-email'         ? 'כתובת האימייל אינה תקינה'
-      : code === 'auth/too-many-requests'     ? 'יותר מדי נסיונות — נסי בעוד כמה דקות'
-      : code === 'auth/network-request-failed'? 'אין חיבור לאינטרנט'
-      : 'ההתחברות נכשלה' + (code ? ' (' + code + ')' : '');
-      console.error('admin sign-in failed:', code, err);
-      input.value = '';
-      input.focus();
-    });
-}
-
-// A password typed into the console with the keyboard in Hebrew is stored as
-// Hebrew characters and can never be retyped in English. A reset link avoids
-// that class of problem entirely, and Noy can use it on her own.
-function sendAdminPasswordReset() {
-  const emailEl = document.getElementById('admin-email-input');
-  const errEl   = document.getElementById('admin-pw-error');
-  const email   = (emailEl && emailEl.value.trim()) || ADMIN_EMAIL;
-
-  if (!email) { errEl.textContent = 'נא להזין אימייל'; return; }
-  errEl.textContent = 'שולחת...';
-
-  firebase.auth().sendPasswordResetEmail(email)
-    .then(() => {
-      errEl.style.color = '#4C7A4E';
-      errEl.textContent = 'נשלח אימייל עם קישור לאיפוס — בדקי גם בספאם';
-    })
-    .catch(err => {
-      errEl.style.color = '#B45032';
-      const code = (err && err.code) || '';
-      errEl.textContent =
-        code === 'auth/user-not-found'  ? 'לא קיים חשבון עם האימייל הזה'
-      : code === 'auth/invalid-email'   ? 'כתובת האימייל אינה תקינה'
-      : 'שליחת האיפוס נכשלה' + (code ? ' (' + code + ')' : '');
-      console.error('password reset failed:', code, err);
-    });
-}
-
-function adminSignOut() {
-  IS_ADMIN = false;
-  try { localStorage.removeItem('nuika_admin_device'); } catch (e) {}
-  firebase.auth().signOut().catch(() => {});
-  location.href = location.pathname;
+  const input = document.getElementById('admin-password-input').value;
+  const errEl = document.getElementById('admin-pw-error');
+  if (input === ADMIN_PASSWORD) {
+    closeAdminLogin();
+    openAdminPanel();
+  } else {
+    errEl.textContent = 'סיסמה שגויה, נסי שוב';
+    document.getElementById('admin-password-input').value = '';
+    document.getElementById('admin-password-input').focus();
+  }
 }
 
 function closeAdminLogin() {
@@ -3765,11 +3252,13 @@ function closeAdminLogin() {
 }
 
 function openAdminPanel() {
-  document.getElementById('admin-bit-link').value    = _settingsCache.bitLink    || '';
-  document.getElementById('admin-paybox-link').value = _settingsCache.payboxLink || '';
+  const savedBit = localStorage.getItem('nuika_bit_link') || '';
+  document.getElementById('admin-bit-link').value = savedBit;
+  const savedPaybox = localStorage.getItem('nuika_paybox_link') || '';
+  document.getElementById('admin-paybox-link').value = savedPaybox;
 
   // Orders toggle state
-  const isOpen = _settingsCache.ordersOpen !== false;
+  const isOpen = localStorage.getItem('nuika_orders_open') !== '0';
   const tog = document.getElementById('orders-toggle');
   if (tog) {
     tog.checked = isOpen;
@@ -3789,29 +3278,9 @@ function openAdminPanel() {
 
 function renderAdminProducts() {
   const list = document.getElementById('admin-products-list');
-  const onMenu = PRODUCTS.filter(p => p.inMenu !== false);
-  const parked = PRODUCTS.filter(p => p.inMenu === false);
-
-  const heading = (text, note) => `
-    <div style="margin:18px 0 8px;">
-      <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#6B2E1E;font-size:0.95rem;">${text}</div>
-      <div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.75rem;">${note}</div>
-    </div>`;
-
-  list.innerHTML =
-    heading('בתפריט השבוע', 'המנות שהלקוחות רואים עכשיו')
-    + (onMenu.length ? onMenu.map(productRow).join('')
-       : `<div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.82rem;padding:10px 0;">אין מנות בתפריט — הלקוחות רואים חנות ריקה</div>`)
-    + heading('בנק המנות', 'שמורות אצלך, לא מוצגות ללקוחות')
-    + (parked.length ? parked.map(productRow).join('')
-       : `<div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.82rem;padding:10px 0;">ריק כרגע</div>`);
-}
-
-function productRow(p) {
-  const parked = p.inMenu === false;
-  return `
-    <div class="admin-card" style="${parked ? 'opacity:0.6;' : ''}">
-      <img src="${esc(p.illustration || '')}" alt="${esc(p.nameHe)}"
+  list.innerHTML = PRODUCTS.map(p => `
+    <div class="admin-card">
+      <img src="${p.illustration || ''}" alt="${p.nameHe}"
         onerror="this.style.display='none'"
         style="width:56px;height:56px;object-fit:cover;border-radius:8px;flex-shrink:0;" />
       <div style="flex:1;min-width:0;">
@@ -3824,45 +3293,19 @@ function productRow(p) {
         aria-label="ערוך ${p.nameHe}">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       </button>
-      <!-- Move between this week's menu and the bank -->
-      <button onclick="toggleInMenu(${+p.id || 0}, this)"
-        title="${parked ? 'הוסיפי לתפריט השבוע' : 'הורידי לבנק המנות'}"
-        style="background:${parked ? '#EDF6E8' : '#F0E9D8'};border:1.5px solid ${parked ? '#A8C89A' : '#D5C9B5'};border-radius:8px;padding:6px 9px;cursor:pointer;flex-shrink:0;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#6B2E1E;white-space:nowrap;">
-        ${parked ? '→ לתפריט' : '↓ לבנק'}
-      </button>
-
-      <!-- Sold out for this week -->
+      <!-- Toggle -->
       <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;">
-        <label class="admin-toggle" aria-label="זמינות ${esc(p.nameHe)}">
-          <input type="checkbox" id="admin-toggle-${+p.id || 0}" ${p.soldOut ? '' : 'checked'}
-            ${parked ? 'disabled' : ''}
-            onchange="liveToggleSoldOut(${+p.id || 0}, this)" />
+        <label class="admin-toggle" aria-label="זמינות ${p.nameHe}">
+          <input type="checkbox" id="admin-toggle-${p.id}" ${p.soldOut ? '' : 'checked'}
+            onchange="liveToggleSoldOut(${p.id}, this)" />
           <span class="admin-toggle-slider"></span>
         </label>
-        <span id="admin-status-${+p.id || 0}" style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.7rem;color:${p.soldOut ? '#B45032' : '#7A9A50'};">
+        <span id="admin-status-${p.id}" style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.7rem;color:${p.soldOut ? '#B45032' : '#7A9A50'};">
           ${p.soldOut ? 'אזל' : 'זמין'}
         </span>
       </div>
     </div>
-  `;
-}
-
-// Moving a dish in or out of the menu is a per-key write, so it cannot clobber
-// anything the other device changed in the same moment.
-function toggleInMenu(id, btn) {
-  const p = PRODUCTS.find(p => p.id === id);
-  if (!p) return;
-  const nowParked = p.inMenu !== false;   // currently on the menu -> park it
-  if (nowParked && menuProducts().length === 1
-      && !confirm('זו המנה האחרונה בתפריט. הלקוחות יראו חנות ריקה. להוריד בכל זאת?')) return;
-
-  p.inMenu = !nowParked;
-  db.ref(`${ROOT}/products/${id}/inMenu`).set(p.inMenu).catch(fbError);
-  renderAdminProducts();
-  renderProducts();
-  pruneCart();
-  updateCartBar();
-  updateOrdersOpenBanner();
+  `).join('');
 }
 
 function liveToggleSoldOut(id, checkbox) {
@@ -3870,28 +3313,24 @@ function liveToggleSoldOut(id, checkbox) {
   if (!p) return;
   p.soldOut = !checkbox.checked;
   const statusEl = document.getElementById(`admin-status-${id}`);
-  if (statusEl) {
-    statusEl.textContent = p.soldOut ? 'אזל' : 'זמין';
-    statusEl.style.color = p.soldOut ? '#B45032' : '#7A9A50';
-  }
-  // Write per-key so this cannot clobber a concurrent edit on another device.
-  db.ref(`${ROOT}/products/${id}/soldOut`).set(p.soldOut).catch(fbError);
+  statusEl.textContent = p.soldOut ? 'אזל' : 'זמין';
+  statusEl.style.color = p.soldOut ? '#B45032' : '#7A9A50';
 }
 
 function saveAdminSettings() {
-  // Save Bit link to Firebase
+  // Save Bit link
   const bitVal = document.getElementById('admin-bit-link').value.trim();
-  // Always write, so clearing the field actually clears the link
-  db.ref(`${ROOT}/settings/bitLink`).set(bitVal || null).catch(fbError);
-  _settingsCache.bitLink = bitVal || '';
-
+  if (bitVal) localStorage.setItem('nuika_bit_link', bitVal);
   const payboxVal = document.getElementById('admin-paybox-link').value.trim();
-  db.ref(`${ROOT}/settings/payboxLink`).set(payboxVal || null).catch(fbError);
-  _settingsCache.payboxLink = payboxVal || '';
+  if (payboxVal) localStorage.setItem('nuika_paybox_link', payboxVal);
+  else localStorage.removeItem('nuika_paybox_link');
 
-  // Persist sold-out flags — the toggles only mutate PRODUCTS in memory
-  saveAllProducts();
+  // Save soldOut states
+  const soldOutMap = {};
+  PRODUCTS.forEach(p => { soldOutMap[p.id] = p.soldOut; });
+  localStorage.setItem('nuika_soldout', JSON.stringify(soldOutMap));
 
+  // Re-render products with new states
   renderProducts();
   updateCartBar();
 
@@ -3913,13 +3352,39 @@ function closeAdminPanel() {
 updateOrdersOpenBanner();
 
 // Load saved settings on page load
-// Products and settings both arrive via the Firebase listeners above.
+(function loadSavedSettings() {
+  // Bit link
+  const savedBit = localStorage.getItem('nuika_bit_link');
+  if (savedBit) {
+    const bitLinkEl = document.getElementById('bit-link');
+    if (bitLinkEl) bitLinkEl.href = savedBit;
+  }
+
+  // Full products (if saved via admin)
+  const savedProducts = localStorage.getItem('nuika_products');
+  if (savedProducts) {
+    try {
+      const saved = JSON.parse(savedProducts);
+      // Replace PRODUCTS array in place
+      PRODUCTS.length = 0;
+      saved.forEach(p => PRODUCTS.push({ ...p, svg: null }));
+    } catch(e) {}
+  } else {
+    // Fallback: load only soldOut states
+    const savedSoldOut = localStorage.getItem('nuika_soldout');
+    if (savedSoldOut) {
+      const map = JSON.parse(savedSoldOut);
+      PRODUCTS.forEach(p => {
+        if (map[p.id] !== undefined) p.soldOut = map[p.id];
+      });
+    }
+  }
+})();
 
 // ─── ORDERS ON/OFF ─────────────────────────────────
 function toggleOrdersStatus(checkbox) {
   const isOpen = checkbox.checked;
-  db.ref(`${ROOT}/settings/ordersOpen`).set(isOpen).catch(fbError);
-  _settingsCache.ordersOpen = isOpen;   // banner reads the cache synchronously
+  localStorage.setItem('nuika_orders_open', isOpen ? '1' : '0');
   const statusText = document.getElementById('orders-status-text');
   statusText.textContent = isOpen
     ? 'פתוחה — לקוחות יכולים להזמין'
@@ -3929,7 +3394,7 @@ function toggleOrdersStatus(checkbox) {
 }
 
 function updateOrdersOpenBanner() {
-  const isOpen = _settingsCache.ordersOpen !== false;
+  const isOpen = localStorage.getItem('nuika_orders_open') !== '0';
   let banner = document.getElementById('orders-closed-banner');
   if (!isOpen) {
     if (!banner) {
@@ -3962,6 +3427,7 @@ function updateOrdersOpenBanner() {
 let currentFilter = 'all';
 
 function saveOrderToLog(orderData) {
+  const log = JSON.parse(localStorage.getItem('nuika_order_log') || '[]');
   const entry = {
     ...orderData,
     id: Date.now(),
@@ -3970,82 +3436,38 @@ function saveOrderToLog(orderData) {
     status: 'new',
     archived: false
   };
-  // Save the order first. Incrementing the public tally before the write meant
-  // a rejected order still decremented stock, and nothing rolled it back.
-  return db.ref(`${ROOT}/orders/${entry.id}`).set(entry).then(() => {
-    const key = String(currentCycle().start);
-    (entry.itemsArr || []).forEach(item => {
-      if (!item || item.id == null) return;   // id 0 is a valid product id
-      db.ref(`${ROOT}/stockUsed/${key}/${item.id}`)
-        .transaction(v => (v || 0) + (item.qty || 0))
-        .catch(() => {});
-    });
-  });
-}
-
-// The public tally can drift — a customer can close the tab mid-write, and a
-// determined one could inflate it. Noy's session holds the real orders, so
-// recompute from them whenever she opens the panel.
-function reconcileStock() {
-  if (!IS_ADMIN) return;
-  const { start, end } = currentCycle();
-  // Nothing to reconcile against yet — writing now would zero the tally.
-  if (!ORDER_LOG.length) return;
-
-  const counts = {};
-  ORDER_LOG.filter(o => !o.archived && (o.timestamp || 0) >= start && (o.timestamp || 0) < end)
-    .forEach(o => (o.itemsArr || []).forEach(i => {
-      if (!i) return;
-      // Older orders carry no id, so fall back to the name the way the
-      // admin-side stock count does. Otherwise reconciling deletes those units.
-      let pid = i.id;
-      if (pid == null) {
-        const match = PRODUCTS.find(p => p.nameHe === i.name);
-        if (!match) return;
-        pid = match.id;
-      }
-      counts[pid] = (counts[pid] || 0) + (i.qty || 0);
-    }));
-  // Per product and inside a transaction. A read-then-write, or a set() at the
-  // parent, would clobber any customer increment still in flight.
-  const base = db.ref(`${ROOT}/stockUsed/${String(start)}`);
-  base.once('value').then(snap => {
-    const ids = new Set([...Object.keys(snap.val() || {}), ...Object.keys(counts)]);
-    ids.forEach(id => {
-      const want = counts[id] || 0;
-      base.child(id).transaction(cur => (cur === want ? undefined : want)).catch(() => {});
-    });
-  }).catch(() => {});
+  log.unshift(entry);
+  if (log.length > 200) log.pop();
+  localStorage.setItem('nuika_order_log', JSON.stringify(log));
 }
 
 function getOrders() {
+  const log = JSON.parse(localStorage.getItem('nuika_order_log') || '[]');
   const now = Date.now();
   const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
-  ORDER_LOG.forEach(o => {
-    // Keyed on o.timestamp, an old order vanished the instant it was ticked
-    // off as delivered — taking its revenue off the dashboard with it.
-    if (!o.archived && o.status === 'done' && (now - (o.doneAt || o.timestamp)) > SEVEN_DAYS) {
-      o.archived = true;
-      db.ref(`${ROOT}/orders/${o.id}/archived`).set(true).catch(fbError);
+  // Auto-archive orders older than 7 days
+  let changed = false;
+  log.forEach(o => {
+    if (!o.archived && o.status === 'done' && (now - o.timestamp) > SEVEN_DAYS) {
+      o.archived = true; changed = true;
     }
   });
-  return ORDER_LOG;
+  if (changed) localStorage.setItem('nuika_order_log', JSON.stringify(log));
+  return log;
 }
 
 function updateOrderStatus(id, status) {
-  const update = { status };
-  if (status === 'done') update.doneAt = Date.now();
-  db.ref(`${ROOT}/orders/${id}`).update(update).catch(fbError);
-  // Update local cache immediately for snappy UI
-  const o = ORDER_LOG.find(o => o.id === id);
+  const log = getOrders();
+  const o = log.find(o => o.id === id);
   if (o) { o.status = status; if (status === 'done') o.doneAt = Date.now(); }
+  localStorage.setItem('nuika_order_log', JSON.stringify(log));
   renderOrderManagement();
 }
 
 function deleteOrder(id) {
   if (!confirm('למחוק הזמנה זו?')) return;
-  db.ref(`${ROOT}/orders/${id}`).remove().catch(fbError);
-  ORDER_LOG = ORDER_LOG.filter(o => o.id !== id);
+  const log = getOrders().filter(o => o.id !== id);
+  localStorage.setItem('nuika_order_log', JSON.stringify(log));
   renderOrderManagement();
 }
 
@@ -4106,8 +3528,8 @@ function renderBakingSummary() {
   }
   el.innerHTML = entries.sort((a,b) => b[1]-a[1]).map(([name, qty]) => `
     <div class="baking-row">
-      <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.88rem;color:#2C1810;font-weight:600;">${esc(name)}</div>
-      <div style="font-family:'Noto Serif Hebrew',serif;font-size:1.1rem;font-weight:700;color:#6B2E1E;">${+qty || 0} <span style="font-size:0.75rem;font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-weight:400;">יח'</span></div>
+      <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.88rem;color:#2C1810;font-weight:600;">${name}</div>
+      <div style="font-family:'Noto Serif Hebrew',serif;font-size:1.1rem;font-weight:700;color:#6B2E1E;">${qty} <span style="font-size:0.75rem;font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-weight:400;">יח'</span></div>
     </div>
   `).join('');
 }
@@ -4133,11 +3555,11 @@ function renderOrderList() {
   const nextLabel  = { new:'אשרי', confirmed:'מוכנה', ready:'נמסרה' };
 
   el.innerHTML = orders.map(o => `
-    <div class="order-card" id="ocard-${+o.id || 0}">
+    <div class="order-card" id="ocard-${o.id}">
       <div class="order-card-header">
         <div>
-          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#2C1810;font-size:0.95rem;">${esc(o.name)}</div>
-          <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#9B8B75;">${esc(o.date)}</div>
+          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#2C1810;font-size:0.95rem;">${o.name}</div>
+          <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#9B8B75;">${o.date}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span class="status-badge ${statusClasses[o.status]||'status-new'}">${statusLabels[o.status]||'חדשה'}</span>
@@ -4146,24 +3568,24 @@ function renderOrderList() {
       </div>
 
       <div class="order-items-row">
-        ${esc(o.items || '').replace(/\|/g, '<br>')}
+        ${(o.items || '').replace(/\|/g, '<br>')}
         <div style="margin-top:4px;color:#8B7260;">
-          ${o.delivery === 'delivery' ? `📦 משלוח — ${esc(o.address||'')}` : '🏠 איסוף עצמי'}
-          ${o.paymentMethod ? ` · 💳 ${esc(PAYMENT_LABELS_HE[o.paymentMethod] || o.paymentMethod)}` : ''}
-          ${o.notes ? ` · הערה: ${esc(o.notes)}` : ''}
+          ${o.delivery === 'delivery' ? `📦 משלוח — ${o.address||''}` : '🏠 איסוף עצמי'}
+          ${o.paymentMethod ? ` · 💳 ${PAYMENT_LABELS_HE[o.paymentMethod] || o.paymentMethod}` : ''}
+          ${o.notes ? ` · הערה: ${o.notes}` : ''}
         </div>
       </div>
 
       <div class="order-actions">
-        <a href="https://wa.me/${(o.phone||'').replace(/\D/g,'').replace(/^0/,'972')}" target="_blank" class="btn-wa">
+        <a href="https://wa.me/972${(o.phone||'').replace(/\D/g,'').replace(/^0/,'')}" target="_blank" class="btn-wa">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.096.547 4.142 1.588 5.945L0 24l6.305-1.654A11.882 11.882 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.013-1.375l-.36-.213-3.732.979.997-3.636-.235-.373A9.818 9.818 0 1112 21.818z"/></svg>
-          ${esc(o.phone)}
+          ${o.phone}
         </a>
         ${nextStatus[o.status] ? `
-        <button onclick="updateOrderStatus(${+o.id || 0},'${nextStatus[o.status]}')" class="btn-status">
+        <button onclick="updateOrderStatus(${o.id},'${nextStatus[o.status]}')" class="btn-status">
           ${nextLabel[o.status]} ←
         </button>` : ''}
-        <button onclick="deleteOrder(${+o.id || 0})" class="btn-delete-order" aria-label="מחק הזמנה">
+        <button onclick="deleteOrder(${o.id})" class="btn-delete-order" aria-label="מחק הזמנה">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
         </button>
       </div>
@@ -4186,10 +3608,10 @@ function toggleArchive() {
       : archived.map(o => `
           <div style="background:#FDFAF4;border:1px solid #E5D9C5;border-radius:10px;padding:10px 12px;margin-bottom:8px;">
             <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
-              <span style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#8B7260;font-size:0.88rem;">${esc(o.name)}</span>
+              <span style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#8B7260;font-size:0.88rem;">${o.name}</span>
               <span style="font-family:'Noto Serif Hebrew',serif;color:#8B7260;font-size:0.88rem;">₪${o.total}</span>
             </div>
-            <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#9B8B75;">${esc(o.date)} · ${o.delivery==='delivery'?'משלוח':'איסוף'}</div>
+            <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#9B8B75;">${o.date} · ${o.delivery==='delivery'?'משלוח':'איסוף'}</div>
           </div>`).join('');
     el.style.display = 'block';
   } else {
@@ -4227,7 +3649,7 @@ function printBakingList() {
         </tr>
         ${entries.map(([n,q]) => `
           <tr style="border-bottom:1px solid #EFE1C7;">
-            <td style="padding:8px 0;font-size:1rem;">${esc(n)}</td>
+            <td style="padding:8px 0;font-size:1rem;">${n}</td>
             <td style="padding:8px 0;font-size:1.1rem;font-weight:700;color:#6B2E1E;text-align:left;">${q}</td>
           </tr>`).join('')}
       </table>
@@ -4244,8 +3666,7 @@ function printBakingList() {
 function renderOrderLog() { renderOrderManagement(); }
 function clearOrderLog() {
   if (!confirm('למחוק את כל ההזמנות?')) return;
-  db.ref(`${ROOT}/orders`).remove().catch(fbError);
-  ORDER_LOG = [];
+  localStorage.removeItem('nuika_order_log');
   renderOrderManagement();
 }
 
@@ -4350,48 +3771,17 @@ function previewImage(input) {
   const file = input.files[0];
   const reader = new FileReader();
   reader.onload = function(e) {
-    // A phone photo is 3-5 MB. Stored raw it goes into the products node as
-    // base64, is re-downloaded by every visitor on every load, and can blow
-    // the write limit outright. Shrink it here, before it is ever saved.
-    const img = new Image();
-    img.onload = function() {
-      const MAX = 900;
-      const scale = Math.min(1, MAX / img.naturalWidth);
-      const w = Math.round(img.naturalWidth * scale);
-      const h = Math.round(img.naturalHeight * scale);
-
-      const c = document.createElement('canvas');
-      c.width = w; c.height = h;
-      const ctx = c.getContext('2d');
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(img, 0, 0, w, h);
-
-      pendingImageDataUrl = c.toDataURL('image/jpeg', 0.82);
-
-      const preview = document.getElementById('edit-img-preview');
-      const placeholder = document.getElementById('edit-img-placeholder');
-      preview.src = pendingImageDataUrl;
-      preview.style.display = 'block';
-      placeholder.style.display = 'none';
-    };
-    // If the browser cannot decode it, fall back to the original rather than
-    // silently losing the photo.
-    img.onerror = function() {
-      pendingImageDataUrl = e.target.result;
-      const preview = document.getElementById('edit-img-preview');
-      const placeholder = document.getElementById('edit-img-placeholder');
-      preview.src = pendingImageDataUrl;
-      preview.style.display = 'block';
-      placeholder.style.display = 'none';
-    };
-    img.src = e.target.result;
+    pendingImageDataUrl = e.target.result;
+    const preview = document.getElementById('edit-img-preview');
+    const placeholder = document.getElementById('edit-img-placeholder');
+    preview.src = pendingImageDataUrl;
+    preview.style.display = 'block';
+    placeholder.style.display = 'none';
   };
   reader.readAsDataURL(file);
 }
 
 function saveProductEdit() {
-  // A dish added from the panel goes onto the menu unless it is explicitly
-  // parked afterwards.
   const nameHe  = document.getElementById('edit-name-he').value.trim();
   const nameEn  = document.getElementById('edit-name-en').value.trim();
   const descHe  = document.getElementById('edit-desc-he').value.trim();
@@ -4466,25 +3856,100 @@ function handleEditBackdrop(e) {
   if (e.target === document.getElementById('edit-product-modal')) closeEditModal();
 }
 
-function saveAllProducts() {
-  // Before the listener answers, PRODUCTS still holds the build-time defaults.
-  // Writing then replaces the real menu with them for every customer.
-  if (!_productsLoaded) { alert('הנתונים עדיין נטענים — רגע אחד ונסי שוב.'); return; }
-  const toSave = {};
+// ─── MANUAL ORDER ───────────────────────────────────
+function openManualOrderModal() {
+  document.getElementById('mo-name').value = '';
+  document.getElementById('mo-phone').value = '';
+  document.getElementById('mo-notes').value = '';
+  document.getElementById('mo-payment').value = 'cash';
+
+  const list = document.getElementById('mo-items-list');
+  list.innerHTML = PRODUCTS.map(p => `
+    <div class="mo-item-row">
+      <div>
+        <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.85rem;color:#2C1810;font-weight:600;">${p.nameHe}</div>
+        <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#9B8B75;">₪${p.price}</div>
+      </div>
+      <input type="number" min="0" step="1" value="0" class="field mo-qty-input" id="mo-qty-${p.id}" onchange="updateManualOrderTotal()" oninput="updateManualOrderTotal()" />
+    </div>
+  `).join('');
+
+  updateManualOrderTotal();
+  document.getElementById('manual-order-modal').classList.add('open');
+}
+
+function closeManualOrderModal() {
+  document.getElementById('manual-order-modal').classList.remove('open');
+}
+
+function handleManualOrderBackdrop(e) {
+  if (e.target === document.getElementById('manual-order-modal')) closeManualOrderModal();
+}
+
+function updateManualOrderTotal() {
+  const total = PRODUCTS.reduce((s, p) => {
+    const el = document.getElementById('mo-qty-' + p.id);
+    const qty = el ? (parseInt(el.value) || 0) : 0;
+    return s + qty * p.price;
+  }, 0);
+  document.getElementById('mo-total').textContent = `₪${total}`;
+}
+
+function saveManualOrder() {
+  const name  = document.getElementById('mo-name').value.trim();
+  const phone = document.getElementById('mo-phone').value.trim();
+  const notes = document.getElementById('mo-notes').value.trim();
+  const paymentMethod = document.getElementById('mo-payment').value;
+
+  if (!name || !phone) {
+    alert('נא למלא שם וטלפון.');
+    return;
+  }
+
+  const itemsArr = [];
+  const lines = [];
+  let total = 0;
   PRODUCTS.forEach(p => {
-    toSave[p.id] = {
-      id: p.id, nameHe: p.nameHe, nameEn: p.nameEn,
-      descHe: p.descHe, descEn: p.descEn,
-      price: p.price, illustration: p.illustration || null,
-      soldOut: p.soldOut || false,
-      inMenu: p.inMenu !== false,
-      maxStock: p.maxStock || null,
-      tag: p.tag || null
-    };
+    const el = document.getElementById('mo-qty-' + p.id);
+    const qty = el ? (parseInt(el.value) || 0) : 0;
+    if (qty > 0) {
+      itemsArr.push({ id: p.id, name: p.nameHe, qty, price: p.price });
+      lines.push(`• ${p.nameHe} x${qty} = ₪${p.price * qty}`);
+      total += p.price * qty;
+    }
   });
-  // No localStorage mirror: base64 product photos blow the 5MB quota and the
-  // throw would abort saveProductEdit before the modal ever closes.
-  db.ref(`${ROOT}/products`).set(toSave).catch(fbError);
+  if (!itemsArr.length) {
+    alert('נא לבחור לפחות פריט אחד.');
+    return;
+  }
+
+  saveOrderToLog({
+    name, phone,
+    items: lines.join(' | '),
+    itemsArr,
+    total,
+    delivery: 'pickup',
+    address: PICKUP_ADDRESS,
+    paymentMethod,
+    notes
+  });
+
+  closeManualOrderModal();
+  renderOrderManagement();
+  updateOrdersTabBadge();
+}
+
+function saveAllProducts() {
+  // Save full products array (without SVGs which are large) to localStorage
+  const toSave = PRODUCTS.map(p => ({
+    id: p.id, nameHe: p.nameHe, nameEn: p.nameEn,
+    descHe: p.descHe, descEn: p.descEn,
+    price: p.price, illustration: p.illustration,
+    soldOut: p.soldOut,
+    maxStock: p.maxStock || null,
+    tag: p.tag || null
+  }));
+  localStorage.setItem('nuika_products', JSON.stringify(toSave));
 }
 
 // ─── LANGUAGE TOGGLE ───────────────────────────────
@@ -4495,7 +3960,6 @@ function toggleLang() {
   document.getElementById('lang-btn').textContent = isEn ? 'עב' : 'EN';
   renderOrderSummary();
   updateCountdown();
-  updateProgressBar();
 }
 
 // ─── ADMIN TAB SWITCHING ───────────────────────────
@@ -4591,7 +4055,7 @@ renderProducts();
 
 // ─── DEADLINE MANAGEMENT ───────────────────────────
 function getCustomDeadline() {
-  const saved = _settingsCache.deadline;
+  const saved = localStorage.getItem('nuika_deadline');
   if (!saved) return null;
   const d = new Date(saved);
   return isNaN(d.getTime()) ? null : d;
@@ -4613,8 +4077,7 @@ function getNextTuesdayDeadline() {
 }
 
 function clearDeadline() {
-  db.ref(`${ROOT}/settings/deadline`).remove().catch(fbError);
-  delete _settingsCache.deadline;   // preview reads the cache synchronously
+  localStorage.removeItem('nuika_deadline');
   const dateEl = document.getElementById('admin-deadline-date');
   const timeEl = document.getElementById('admin-deadline-time');
   if (dateEl) dateEl.value = '';
@@ -4642,16 +4105,14 @@ function updateDeadlinePreview() {
 }
 
 function loadDeadlineIntoAdmin() {
-  const saved = _settingsCache.deadline || null;
+  const saved = localStorage.getItem('nuika_deadline');
   const dateEl = document.getElementById('admin-deadline-date');
   const timeEl = document.getElementById('admin-deadline-time');
   if (!dateEl) return;
   if (saved) {
     const d = new Date(saved);
     if (!isNaN(d.getTime())) {
-      // toISOString() is UTC; at +03:00 a 01:00 deadline rendered as the
-      // previous day while the time field stayed local.
-      dateEl.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      dateEl.value = d.toISOString().slice(0,10);
       timeEl.value = d.toTimeString().slice(0,5);
     }
   }
@@ -4663,17 +4124,9 @@ function loadDeadlineIntoAdmin() {
 function saveDeadlineFromAdmin() {
   const dateEl = document.getElementById('admin-deadline-date');
   const timeEl = document.getElementById('admin-deadline-time');
-  if (!dateEl) return;
-  // Clearing the date means "back to the automatic deadline", not "invent one".
-  if (!dateEl.value) {
-    if (!timeEl || !timeEl.value || timeEl.value === '17:00') { clearDeadline(); return; }
-    // Only a deliberate time change with no date picks up the automatic date.
-    const d = getNextTuesdayDeadline();
-    dateEl.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  }
+  if (!dateEl || !dateEl.value) return;
   const iso = dateEl.value + 'T' + (timeEl.value || '17:00') + ':00';
-  db.ref(`${ROOT}/settings/deadline`).set(iso).catch(fbError);
-  _settingsCache.deadline = iso; // update local cache immediately
+  localStorage.setItem('nuika_deadline', iso);
   updateDeadlinePreview();
   updateCountdown();
 }
@@ -4681,7 +4134,7 @@ function saveDeadlineFromAdmin() {
 
 // ─── CSV EXPORT ────────────────────────────────────
 function exportOrdersCSV() {
-  const orders = ORDER_LOG;
+  const orders = JSON.parse(localStorage.getItem('nuika_order_log') || '[]');
   if (orders.length === 0) { alert('אין הזמנות לייצוא'); return; }
 
   const BOM = '﻿';
@@ -4717,7 +4170,7 @@ function renderCustomers() {
   const el = document.getElementById('customers-list');
   if (!el) return;
 
-  const allOrders = ORDER_LOG;
+  const allOrders = JSON.parse(localStorage.getItem('nuika_order_log') || '[]');
   if (allOrders.length === 0) {
     el.innerHTML = `<div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.85rem;text-align:center;padding:24px 0;">אין נתוני לקוחות עדיין</div>`;
     return;
@@ -4726,9 +4179,7 @@ function renderCustomers() {
   // Aggregate by phone
   const map = {};
   allOrders.forEach(o => {
-    // Normalise to international form, else the same person shows up twice
-    // depending on how they typed their number.
-    const phone = (o.phone || '').replace(/\D/g,'').replace(/^0/,'972');
+    const phone = (o.phone || '').replace(/\D/g,'');
     if (!phone) return;
     if (!map[phone]) {
       map[phone] = { name: o.name, phone: o.phone || phone, count: 0, total: 0, items: {}, lastDate: 0 };
@@ -4755,8 +4206,8 @@ function renderCustomers() {
     <div class="order-card" style="margin-bottom:10px;">
       <div class="order-card-header">
         <div style="flex:1;min-width:0;">
-          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#2C1810;font-size:0.95rem;">${esc(c.name || 'לקוח')}</div>
-          <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.78rem;color:#9B8B75;" dir="ltr">${esc(c.phone)}</div>
+          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#2C1810;font-size:0.95rem;">${c.name || 'לקוח'}</div>
+          <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.78rem;color:#9B8B75;" dir="ltr">${c.phone}</div>
         </div>
         <div style="text-align:center;padding:4px 10px;background:#EDF6FF;border-radius:8px;flex-shrink:0;">
           <div style="font-family:'Noto Serif Hebrew',serif;font-size:1.1rem;font-weight:700;color:#1A6DB5;">${c.count}</div>
@@ -4767,7 +4218,7 @@ function renderCustomers() {
           <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.68rem;color:#5A8A5A;">סה"כ</div>
         </div>
       </div>
-      ${topItem ? `<div class="order-items-row">הכי מזמין: ${esc(topItem[0])} (${+topItem[1] || 0} יח')</div>` : ''}
+      ${topItem ? `<div class="order-items-row">הכי מזמין: ${topItem[0]} (${topItem[1]} יח')</div>` : ''}
       <div class="order-actions">
         <button class="btn-wa" onclick="window.open('https://wa.me/${intl}','_blank')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
@@ -4937,45 +4388,28 @@ const DEFAULT_RECIPES = [
 ];
 
 // ─── LIVE STATE ──────────────────────────────────────────
-// var, not let: the Firebase kitchen listener is registered far above this
-// point and would hit the temporal dead zone if it fired early.
-var PANTRY = [];
-var RECIPES = [];
-var WEEKLY_PLAN = {}; // { recipeId: quantity }
-var _currentKitchenTab = 'pantry';
-var _editingRecipeId = null;
-var _editingPantryId = null;
+let PANTRY = [];
+let RECIPES = [];
+let WEEKLY_PLAN = {}; // { recipeId: quantity }
+let _currentKitchenTab = 'pantry';
+let _editingRecipeId = null;
+let _editingPantryId = null;
 
 // ─── LOAD / SAVE ─────────────────────────────────────────
-// Refuse to write before Firebase has answered. Otherwise an offline or slow
-// load leaves the arrays empty, and the first save wipes the real data.
-function kitchenReady() {
-  if (_kitchenLoaded) return true;
-  alert('הנתונים עדיין נטענים — רגע אחד ונסי שוב.');
-  return false;
+function loadKitchenData() {
+  try {
+    PANTRY  = JSON.parse(localStorage.getItem('nuika_pantry'))  || DEFAULT_PANTRY.map(p=>({...p}));
+    RECIPES = JSON.parse(localStorage.getItem('nuika_recipes')) || DEFAULT_RECIPES.map(r=>({...r}));
+    WEEKLY_PLAN = JSON.parse(localStorage.getItem('nuika_weekly_plan')) || {};
+  } catch(e) {
+    PANTRY = DEFAULT_PANTRY.map(p=>({...p}));
+    RECIPES = DEFAULT_RECIPES.map(r=>({...r}));
+    WEEKLY_PLAN = {};
+  }
 }
-function savePantry() {
-  if (!kitchenReady()) return;
-  const obj = {};
-  PANTRY.forEach(p => { obj[p.id] = { ...p }; });
-  db.ref(`${ROOT}/kitchen/pantry`).set(obj).catch(fbError);
-}
-function saveRecipes() {
-  if (!kitchenReady()) return;
-  const obj = {};
-  RECIPES.forEach(r => { obj[r.id] = { ...r }; });
-  db.ref(`${ROOT}/kitchen/recipes`).set(obj).catch(fbError);
-}
-// Per-key write: a whole-node set() from one device would delete quantities
-// another device added in the same round-trip.
-function savePlanQty(recipeId, qty) {
-  if (!kitchenReady()) return;
-  db.ref(`${ROOT}/kitchen/weeklyPlan/${recipeId}`).set(qty > 0 ? qty : null).catch(fbError);
-}
-function saveWeeklyPlan() {
-  if (!kitchenReady()) return;
-  db.ref(`${ROOT}/kitchen/weeklyPlan`).set(WEEKLY_PLAN || {}).catch(fbError);
-}
+function savePantry()      { localStorage.setItem('nuika_pantry', JSON.stringify(PANTRY)); }
+function saveRecipes()     { localStorage.setItem('nuika_recipes', JSON.stringify(RECIPES)); }
+function saveWeeklyPlan()  { localStorage.setItem('nuika_weekly_plan', JSON.stringify(WEEKLY_PLAN)); }
 
 // ─── TAB SWITCHING ───────────────────────────────────────
 function switchKitchenTab(tab) {
@@ -4995,8 +4429,7 @@ function switchKitchenTab(tab) {
 // Returns cost in ₪ for a single ingredient row (weightG basis)
 function calcIngCost(weightG, pantryId) {
   const p = PANTRY.find(p => p.id === pantryId);
-  // typeof, not truthiness: a genuine 0 price should cost 0, not "unknown".
-  if (!p || typeof p.pricePerKg !== 'number') return null;
+  if (!p || !p.pricePerKg) return null;
   const wKg = weightG / 1000;
   return wKg * p.pricePerKg * (1 + (p.waste || 0)) * (1 + (p.vat || 0.17));
 }
@@ -5120,7 +4553,7 @@ function renderPlan() {
       <input class="plan-qty-input" type="number" min="0" value="${qty || ''}" placeholder="0"
         oninput="setPlanQty('${r.id}', this.value)" />
       <div id="plan-row-cost-${r.id}" style="text-align:left;min-width:54px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.78rem;">
-        ${qty > 0 ? `<div style="color:#3A7A50;font-weight:700;">₪${lineRevenue.toFixed(0)}</div><div style="color:#B45032;font-size:0.68rem;">-₪${lineCost.toFixed(0)}</div>` : ''}
+        ${qty > 0 ? `<div style="color:#3A7A50;font-weight:700;">₪${lineRevenue}</div><div style="color:#B45032;font-size:0.68rem;">-₪${lineCost.toFixed(0)}</div>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -5145,11 +4578,7 @@ function setPlanQty(recipeId, val) {
   const qty = parseInt(val) || 0;
   if (qty <= 0) delete WEEKLY_PLAN[recipeId];
   else WEEKLY_PLAN[recipeId] = qty;
-  savePlanQty(recipeId, qty);
-
-  // The shopping list below is now stale for these quantities
-  const shopOut = document.getElementById('shopping-list-output');
-  if (shopOut) shopOut.style.display = 'none';
+  saveWeeklyPlan();
 
   // Update the row's live cost display
   const r = RECIPES.find(r => r.id === recipeId);
@@ -5159,7 +4588,7 @@ function setPlanQty(recipeId, val) {
     const lineRevenue = qty * r.sellingPrice;
     const lineCost    = qty * cost.costPerUnit;
     rowCostEl.innerHTML = qty > 0
-      ? `<div style="color:#3A7A50;font-weight:700;">₪${lineRevenue.toFixed(0)}</div><div style="color:#B45032;font-size:0.68rem;">-₪${lineCost.toFixed(0)}</div>`
+      ? `<div style="color:#3A7A50;font-weight:700;">₪${lineRevenue}</div><div style="color:#B45032;font-size:0.68rem;">-₪${lineCost.toFixed(0)}</div>`
       : '';
   }
 
@@ -5286,8 +4715,7 @@ function printShoppingList() {
   const content = document.getElementById('shopping-list-body')?.innerHTML || '';
   const w = window.open('', '_blank');
   w.document.write(`<html dir="rtl"><head><title>רשימת קניות — נואיקה</title>
-    <style>
-    body{font-family:Arial,sans-serif;direction:rtl;padding:20px;max-width:400px;margin:0 auto;}
+    <style>body{font-family:Arial,sans-serif;direction:rtl;padding:20px;max-width:400px;margin:0 auto;}
     h2{color:#6B2E1E;} .shop-cat-header{font-weight:bold;margin-top:14px;color:#8B7260;font-size:0.8rem;text-transform:uppercase;}
     .shop-item{display:flex;gap:10px;padding:5px 0;border-bottom:1px solid #eee;align-items:center;}
     .si-name{flex:1;} .si-amount{font-weight:bold;color:#6B2E1E;} .si-cost{color:#999;font-size:0.75rem;}
@@ -5299,7 +4727,7 @@ function printShoppingList() {
 
 // ─── RECIPE EDITOR ───────────────────────────────────────
 function openRecipeEditor(recipeId) {
-  if (!kitchenReady()) return;
+  loadKitchenData(); // Refresh data
   _editingRecipeId = recipeId;
   const modal = document.getElementById('recipe-editor-modal');
   const titleEl = document.getElementById('re-title');
@@ -5371,11 +4799,11 @@ function addIngredientRow(ing) {
   tr.innerHTML = `
     <td style="min-width:120px;">
       <input list="${dlId}" type="text" placeholder="שם מרכיב" class="ing-name"
-        value="${ing ? esc(ing.name) : ''}"
+        value="${ing ? ing.name : ''}"
         style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#2C1810;background:#F5EFE3;border:1.5px solid #E5D9C5;border-radius:6px;padding:5px 7px;width:100%;"
         oninput="onIngNameInput(this, '${rowId}')" />
-      <input type="hidden" class="ing-pantry-id" value="${ing ? esc(ing.pantryId||'') : ''}" />
-      <datalist id="${dlId}">${PANTRY.map(p=>`<option value="${esc(p.name)}" data-id="${p.id}">`).join('')}</datalist>
+      <input type="hidden" class="ing-pantry-id" value="${ing ? (ing.pantryId||'') : ''}" />
+      <datalist id="${dlId}">${PANTRY.map(p=>`<option value="${p.name}" data-id="${p.id}">`).join('')}</datalist>
     </td>
     <td style="min-width:70px;">
       <input type="number" min="0" step="any" placeholder="0" class="ing-weight"
@@ -5401,17 +4829,11 @@ function addIngredientRow(ing) {
 
 function onIngNameInput(input, rowId) {
   const name = input.value.trim();
-  // Matching had to be exact, so fixing a typo silently unlinked the
-  // ingredient and the recipe quietly got cheaper. Most seeded names don't
-  // equal their pantry entry verbatim either.
-  const norm = t => String(t || '').trim().toLowerCase().replace(/\s+/g, ' ');
-  const pantryItem = PANTRY.find(p => norm(p.name) === norm(name));
+  const pantryItem = PANTRY.find(p => p.name === name);
   const row = document.getElementById(rowId);
   if (row && pantryItem) {
     row.querySelector('.ing-pantry-id').value = pantryItem.id;
   } else if (row) {
-    // No match: unlink. A stale link silently prices this row against a
-    // completely different ingredient.
     row.querySelector('.ing-pantry-id').value = '';
   }
   recalcEditorCosts();
@@ -5491,7 +4913,7 @@ function updateScaleCalc() {
       parts.push(`${name}: ${display}`);
     }
   });
-  resultEl.innerHTML = esc(parts.join(' · '));
+  resultEl.innerHTML = parts.slice(0, 5).join(' · ') + (parts.length > 5 ? ` + ${parts.length-5} עוד` : '');
 }
 
 function saveRecipe() {
@@ -5510,20 +4932,17 @@ function saveRecipe() {
   // Collect ingredients
   const tbody = document.getElementById('re-ing-tbody');
   const ingredients = [];
-  // Carry each row's existing baker's % across the save instead of zeroing it.
-  const _prevRecipe = _editingRecipeId ? RECIPES.find(x => x.id === _editingRecipeId) : null;
-  tbody.querySelectorAll('tr').forEach((tr, rowIndex) => {
+  tbody.querySelectorAll('tr').forEach(tr => {
     const ingName  = tr.querySelector('.ing-name')?.value.trim();
     const weightG  = parseFloat(tr.querySelector('.ing-weight')?.value) || 0;
     const pantryId = tr.querySelector('.ing-pantry-id')?.value || '';
     if (ingName && weightG > 0) {
-      const prevIng = _prevRecipe && _prevRecipe.ingredients ? _prevRecipe.ingredients[rowIndex] : null;
       ingredients.push({
         id: 'ri_' + Date.now() + '_' + Math.random().toString(36).slice(2),
         name: ingName,
         pantryId,
         weightG,
-        bakerPct: (prevIng && prevIng.bakerPct) || 0
+        bakerPct: 0
       });
     }
   });
@@ -5635,7 +5054,7 @@ function deletePantryItem() {
 
 // ─── KITCHEN INIT (called from openAdminPanel) ──────────
 function initKitchen() {
-  // Data arrives via the Firebase kitchen listener; nothing to load here.
+  loadKitchenData();
 }
 </script>
 </body>
