@@ -4,6 +4,13 @@ Boutique bread shop, run by **Noy**. Live at https://nuika.co.il
 (also reachable via shaharazmon24.github.io/NUIKA, which redirects there)
 This is a real business. Orders placed here are real orders.
 
+> **If you are working with Noy rather than Shahar, read
+> [`הוראות-לקלוד.md`](הוראות-לקלוד.md) in full before touching anything.** It is
+> the same rules as this file plus the context she needs you to have: what the
+> admin panel already does without code, how to recognise the upload that has
+> twice deleted the Firebase layer, and how to talk to someone who does not
+> know git.
+
 ---
 
 ## The one rule that matters most
