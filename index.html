@@ -10,7 +10,7 @@
        machines, and "which version am I looking at?" had no answer before this
        existed. `node scripts/status.mjs` compares this value across your
        machine, GitHub, and the live site. -->
-  <meta name="nuika-version" content="2026-08-18T06:16:03.592Z|e5a3795" />
+  <meta name="nuika-version" content="2026-08-18T19:29:48.240Z|7b365cb" />
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
@@ -2598,12 +2598,12 @@
   <div class="edit-modal-box">
 
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-      <h3 style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.25rem;font-weight:700;margin:0;">הזמנה ידנית</h3>
+      <h3 style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.25rem;font-weight:700;margin:0;" id="mo-modal-title">הזמנה ידנית</h3>
       <button onclick="closeManualOrderModal()" aria-label="סגירה" style="background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
-    <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;margin-bottom:16px;">להוספת הזמנה שקיבלת בטלפון/בוואטסאפ/בעל פה — היא תופיע ברשימת ההזמנות בדיוק כמו הזמנה מהאתר.</p>
+    <p id="mo-modal-hint" style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;margin-bottom:16px;">להוספת הזמנה שקיבלת בטלפון/בוואטסאפ/בעל פה — היא תופיע ברשימת ההזמנות בדיוק כמו הזמנה מהאתר.</p>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
       <div>
@@ -4111,62 +4111,172 @@ function updateOrdersOpenBanner() {
 let currentFilter = 'all';
 
 function saveOrderToLog(orderData) {
+  // The timestamp doubles as the database key. Two orders taken in the same
+  // millisecond would land on one key and the second would silently replace
+  // the first, so step past anything already in hand.
+  let id = Date.now();
+  while (ORDER_LOG.some(o => o && o.id === id)) id++;
   const entry = {
     ...orderData,
-    id: Date.now(),
+    id,
     date: new Date().toLocaleString('he-IL'),
-    timestamp: Date.now(),
+    timestamp: id,
     status: 'new',
     archived: false
   };
+  const ref = db.ref(`${ROOT}/orders/${entry.id}`);
   // Save the order first. Incrementing the public tally before the write meant
   // a rejected order still decremented stock, and nothing rolled it back.
-  return db.ref(`${ROOT}/orders/${entry.id}`).set(entry).then(() => {
-    const key = String(currentCycle().start);
-    (entry.itemsArr || []).forEach(item => {
-      if (!item || item.id == null) return;   // id 0 is a valid product id
-      db.ref(`${ROOT}/stockUsed/${key}/${item.id}`)
-        .transaction(v => (v || 0) + (item.qty || 0))
-        .catch(() => {});
+  return ref.set(entry)
+    // Then read it straight back. A write that resolves but leaves nothing
+    // behind closed the form and looked exactly like a success. Only an admin
+    // may read an order, so a customer keeps the plain write-and-trust path.
+    .then(() => (IS_ADMIN ? ref.once('value') : null))
+    .then(snap => {
+      if (snap && !snap.exists()) throw new Error('order-not-persisted');
+      const saved = (snap && snap.val()) || entry;
+      // Put it on screen from here rather than waiting for the orders
+      // listener, which is not attached at all if the session lost its admin
+      // claim. The next snapshot replaces this copy with the server's.
+      if (!ORDER_LOG.some(o => o && o.id === saved.id)) {
+        ORDER_LOG.push(saved);
+        ORDER_LOG.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      }
+      const key = String(currentCycle().start);
+      (saved.itemsArr || []).forEach(item => {
+        if (!item || item.id == null) return;   // id 0 is a valid product id
+        db.ref(`${ROOT}/stockUsed/${key}/${item.id}`)
+          .transaction(v => (v || 0) + (item.qty || 0))
+          .catch(() => {});
+      });
+      return saved;
     });
-  });
+}
+
+// Saving used to be confirmed only by the form closing, which is also what a
+// silent loss looked like. Put the order under her eyes instead.
+function flashOrderCard(id) {
+  const card = document.getElementById('ocard-' + (+id || 0));
+  if (!card) return;
+  card.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  const before = card.style.boxShadow;
+  card.style.transition = 'box-shadow 0.35s';
+  card.style.boxShadow = '0 0 0 3px #7A9A50';
+  setTimeout(() => { card.style.boxShadow = before; }, 1600);
 }
 
 // ─── MANUAL ORDER ───────────────────────────────────
 // An order Noy took by phone, on WhatsApp or across the counter. It goes
 // through saveOrderToLog like any other, so it lands in the same Firebase
 // node, counts against the same stock tally, and appears in the same list.
-function openManualOrderModal() {
+function openManualOrderModal() { moOpen(null); }
+
+// MO_EDIT_ID holds the order being edited, or null while a new one is taken.
+let MO_EDIT_ID = null;
+// The rows the modal actually drew. The tally reads this instead of
+// menuProducts(), so a line whose dish has since left the menu still counts
+// rather than disappearing on the next save.
+let MO_ROWS = [];
+
+// Older orders were written before items carried a product id, and the
+// database rules demand one on every line. Fall back to the name, the way the
+// stock reconciler does.
+function moResolveId(item) {
+  if (!item) return null;
+  if (item.id != null) return item.id;
+  const match = PRODUCTS.find(p => p.nameHe === item.name);
+  return match ? match.id : null;
+}
+
+function moBuildRows(order) {
+  // The same set the shop offers. Dishes parked in the bank are not on sale
+  // this week, so they do not belong on a phone order either. Sold-out items
+  // stay listed — Noy is the one who decided to accept the order.
+  const rows = menuProducts().map(p => ({
+    id: p.id, name: p.nameHe, price: Number(p.price) || 0,
+    soldOut: !!p.soldOut, offMenu: false
+  }));
+  // Lines already on the order keep the price they were sold at, and a dish
+  // since parked or renamed is still listed. Either omission would quietly
+  // rewrite what the customer agreed to pay.
+  ((order && order.itemsArr) || []).forEach(it => {
+    const pid = moResolveId(it);
+    if (pid == null) return;
+    const price = Number(it.price);
+    const row = rows.find(r => r.id === pid);
+    if (row) { if (!isNaN(price)) row.price = price; }
+    else rows.push({ id: pid, name: it.name, price: isNaN(price) ? 0 : price, soldOut: false, offMenu: true });
+  });
+  return rows;
+}
+
+function moRenderRows(qtyById) {
+  document.getElementById('mo-items-list').innerHTML = MO_ROWS.map(r => {
+    const current = PRODUCTS.find(p => p.id === r.id);
+    const listed  = current ? (Number(current.price) || 0) : null;
+    // Flag a price that moved since the order was taken, so a total that does
+    // not match today's menu is explained rather than surprising.
+    const note = (listed !== null && listed !== r.price)
+      ? ` <span style="color:#B45032;">· במחירון היום ₪${listed}</span>` : '';
+    return `
+    <div class="mo-item-row">
+      <div>
+        <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.85rem;color:#2C1810;font-weight:600;">${esc(r.name)}${r.soldOut ? ' <span style="color:#B45032;font-weight:400;">(אזל)</span>' : ''}${r.offMenu ? ' <span style="color:#9B8B75;font-weight:400;">(לא בתפריט)</span>' : ''}</div>
+        <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#9B8B75;">₪${r.price}${note}</div>
+      </div>
+      <input type="number" min="0" step="1" value="${+qtyById[r.id] || 0}" class="field mo-qty-input" id="mo-qty-${r.id}" oninput="updateManualOrderTotal()" />
+    </div>`;
+  }).join('');
+}
+
+function moOpen(order) {
   // PRODUCTS is empty until Firebase answers. Building the list now would
   // offer nothing to pick, and a saved order would carry no items.
   if (!_productsLoaded) { alert('הנתונים עדיין נטענים — רגע אחד ונסי שוב.'); return; }
 
-  document.getElementById('mo-name').value    = '';
-  document.getElementById('mo-phone').value   = '';
-  document.getElementById('mo-notes').value   = '';
-  document.getElementById('mo-payment').value = 'cash';
+  MO_EDIT_ID = order ? order.id : null;
+  MO_ROWS    = moBuildRows(order);
+
+  const qtyById = {};
+  ((order && order.itemsArr) || []).forEach(it => {
+    const pid = moResolveId(it);
+    if (pid != null) qtyById[pid] = (qtyById[pid] || 0) + (it.qty || 0);
+  });
+
+  document.getElementById('mo-name').value    = order ? (order.name  || '') : '';
+  document.getElementById('mo-phone').value   = order ? (order.phone || '') : '';
+  document.getElementById('mo-notes').value   = order ? (order.notes || '') : '';
+  document.getElementById('mo-payment').value = (order && order.paymentMethod) || 'cash';
   document.getElementById('mo-error').textContent = '';
 
-  // The same set the shop offers. Dishes parked in the bank are not on sale
-  // this week, so they do not belong on a phone order either. Sold-out items
-  // stay listed — Noy is the one who decided to accept the order.
-  const list = document.getElementById('mo-items-list');
-  list.innerHTML = menuProducts().map(p => `
-    <div class="mo-item-row">
-      <div>
-        <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.85rem;color:#2C1810;font-weight:600;">${esc(p.nameHe)}${p.soldOut ? ' <span style="color:#B45032;font-weight:400;">(אזל)</span>' : ''}</div>
-        <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#9B8B75;">₪${Number(p.price) || 0}</div>
-      </div>
-      <input type="number" min="0" step="1" value="0" class="field mo-qty-input" id="mo-qty-${p.id}" oninput="updateManualOrderTotal()" />
-    </div>
-  `).join('');
+  document.getElementById('mo-modal-title').textContent = order ? 'עריכת הזמנה' : 'הזמנה ידנית';
+  document.getElementById('mo-modal-hint').textContent  = order
+    ? 'אפשר לשנות כמויות, להוסיף מוצרים או לאפס אותם כדי להוריד, ולעדכן שם, טלפון, אופן תשלום והערות. השינוי נשמר על אותה הזמנה, והסטטוס והתאריך שלה נשמרים.'
+    : 'להוספת הזמנה שקיבלת בטלפון/בוואטסאפ/בעל פה — היא תופיע ברשימת ההזמנות בדיוק כמו הזמנה מהאתר.';
+  document.getElementById('mo-save-btn').textContent = order ? 'שמירת השינויים ✓' : 'שמירת הזמנה ✓';
 
+  moRenderRows(qtyById);
   updateManualOrderTotal();
   document.getElementById('manual-order-modal').classList.add('open');
 }
 
+function openEditOrderModal(id) {
+  const order = ORDER_LOG.find(o => o.id === id);
+  if (!order) { alert('ההזמנה לא נמצאה — רענני את הדף ונסי שוב.'); return; }
+  // A line the rules would reject cannot be written back, and saving the rest
+  // would drop it without saying so.
+  const unknown = (order.itemsArr || []).filter(it => moResolveId(it) == null);
+  if (unknown.length) {
+    alert('בהזמנה הזו יש פריט שאי אפשר לזהות מול התפריט (' + unknown.map(i => (i && i.name) || '—').join(', ') + '), ולכן אי אפשר לערוך אותה בבטחה. עדיף להזין אותה מחדש כהזמנה ידנית ואז למחוק את הישנה.');
+    return;
+  }
+  moOpen(order);
+}
+
 function closeManualOrderModal() {
   document.getElementById('manual-order-modal').classList.remove('open');
+  // Leaving the id set would aim the next new order at the order just edited.
+  MO_EDIT_ID = null;
 }
 
 function handleManualOrderBackdrop(e) {
@@ -4180,14 +4290,13 @@ function manualOrderTally() {
   const itemsArr = [];
   const lines = [];
   let total = 0;
-  menuProducts().forEach(p => {
-    const el = document.getElementById('mo-qty-' + p.id);
+  MO_ROWS.forEach(r => {
+    const el = document.getElementById('mo-qty-' + r.id);
     const qty = el ? (parseInt(el.value, 10) || 0) : 0;
     if (qty <= 0) return;
-    const price = Number(p.price) || 0;
-    itemsArr.push({ id: p.id, name: p.nameHe, qty, price });
-    lines.push(`• ${p.nameHe} x${qty} = ₪${price * qty}`);
-    total += price * qty;
+    itemsArr.push({ id: r.id, name: r.name, qty, price: r.price });
+    lines.push(`• ${r.name} x${qty} = ₪${r.price * qty}`);
+    total += r.price * qty;
   });
   return { itemsArr, lines, total };
 }
@@ -4203,12 +4312,19 @@ function saveManualOrder() {
   const phone = document.getElementById('mo-phone').value.trim();
   const notes = document.getElementById('mo-notes').value.trim();
   const paymentMethod = document.getElementById('mo-payment').value;
+  // Captured before closeManualOrderModal() clears it.
+  const editId = MO_EDIT_ID;
 
   errEl.textContent = '';
   if (!name || !phone) { errEl.textContent = 'נא למלא שם וטלפון.'; return; }
 
   const { itemsArr, lines, total } = manualOrderTally();
-  if (!itemsArr.length) { errEl.textContent = 'נא לבחור לפחות פריט אחד.'; return; }
+  if (!itemsArr.length) {
+    errEl.textContent = editId != null
+      ? 'הזמנה חייבת לכלול לפחות פריט אחד. לביטול ההזמנה יש למחוק אותה מהרשימה.'
+      : 'נא לבחור לפחות פריט אחד.';
+    return;
+  }
 
   // The rules reject a total outside this range, and a rejected write would
   // otherwise look like a lost order.
@@ -4216,6 +4332,38 @@ function saveManualOrder() {
 
   btn.disabled = true;
   errEl.textContent = 'שומרת...';
+
+  // Never close on failure — closing would report success for an order that
+  // was never written.
+  const fail = err => {
+    btn.disabled = false;
+    errEl.textContent = (err && err.message === 'order-not-persisted')
+      ? 'ההזמנה לא נשמרה. כל מה שמילאת נשאר כאן — נסי לשמור שוב.'
+      : 'השמירה נכשלה — בדקי חיבור לאינטרנט ונסי שוב.';
+    fbError(err);
+  };
+
+  if (editId != null) {
+    const fields = { name, phone, items: lines.join(' | '), itemsArr, total, paymentMethod, notes };
+    // update(), not set(): status, timestamp, date, archived and doneAt are the
+    // order's own history, and an edit must not erase them.
+    db.ref(`${ROOT}/orders/${editId}`).update(fields).then(() => {
+      // Keep the in-memory copy in step so the list redraws with the new
+      // numbers instead of waiting for Firebase to echo back.
+      const local = ORDER_LOG.find(o => o.id === editId);
+      if (local) Object.assign(local, fields);
+      btn.disabled = false;
+      closeManualOrderModal();
+      renderOrderManagement();
+      updateOrdersTabBadge();
+      flashOrderCard(editId);
+      // The public stock tally is derived from the orders, so a changed
+      // quantity has to be recounted or the shop keeps selling against the
+      // old number.
+      reconcileStock();
+    }).catch(fail);
+    return;
+  }
 
   saveOrderToLog({
     name, phone,
@@ -4227,19 +4375,14 @@ function saveManualOrder() {
     paymentMethod,
     notes
   })
-    .then(() => {
+    .then(saved => {
       btn.disabled = false;
       closeManualOrderModal();
       renderOrderManagement();
       updateOrdersTabBadge();
+      flashOrderCard(saved && saved.id);
     })
-    .catch(err => {
-      // Never close on failure — closing would report success for an order
-      // that was never written.
-      btn.disabled = false;
-      errEl.textContent = 'השמירה נכשלה — בדקי חיבור לאינטרנט ונסי שוב.';
-      fbError(err);
-    });
+    .catch(fail);
 }
 
 // The public tally can drift — a customer can close the tab mid-write, and a
@@ -4422,6 +4565,9 @@ function renderOrderList() {
         <button onclick="updateOrderStatus(${+o.id || 0},'${nextStatus[o.status]}')" class="btn-status">
           ${nextLabel[o.status]} ←
         </button>` : ''}
+        <button onclick="openEditOrderModal(${+o.id || 0})" class="btn-status" aria-label="עריכת הזמנה">
+          ✏️ עריכה
+        </button>
         <button onclick="deleteOrder(${+o.id || 0})" class="btn-delete-order" aria-label="מחק הזמנה">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
         </button>
