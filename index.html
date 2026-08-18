@@ -10,7 +10,7 @@
        machines, and "which version am I looking at?" had no answer before this
        existed. `node scripts/status.mjs` compares this value across your
        machine, GitHub, and the live site. -->
-  <meta name="nuika-version" content="2026-08-18T06:02:02.116Z|869a9cc" />
+  <meta name="nuika-version" content="2026-08-18T06:12:43.393Z|64e0df9" />
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
@@ -2941,24 +2941,60 @@ function kitchenSnapshot(snap) {
   RECIPES     = data.recipes ? Object.values(data.recipes) : [];
   WEEKLY_PLAN = data.weeklyPlan || {};
 
-  // Don't rebuild the panel while she is typing in it — innerHTML would
-  // destroy the focused input mid-keystroke.
+  // Don't rebuild the panel while she is working in it.
   const panel = document.getElementById('admin-panel');
-  const typing = document.activeElement
-    && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
-  if (panel && panel.classList.contains('open')) {
-    if (typing) {
-      // Repainting now would destroy the focused field. Repaint on blur
-      // instead — skipping it entirely left the table stale indefinitely.
-      document.addEventListener('focusout', function flush() {
-        document.removeEventListener('focusout', flush);
-        const p2 = document.getElementById('admin-panel');
-        if (p2 && p2.classList.contains('open')) switchKitchenTab(_currentKitchenTab || 'pantry');
-      }, { once: true });
-    } else {
-      switchKitchenTab(_currentKitchenTab || 'pantry');
-    }
+  if (panel && panel.classList.contains('open')) requestKitchenRepaint();
+}
+
+// Repainting the kitchen is destructive: switchKitchenTab() rewrites the
+// tab's innerHTML, so it throws away the focused field and every unsaved row.
+// This makes asking for a repaint always safe, by waiting for the panel to be
+// genuinely idle first.
+//
+// What it replaces, and why it mattered: the previous version registered a new
+// `focusout` listener per snapshot. Every keystroke that wrote to Firebase came
+// back as a snapshot, so N keystrokes queued N repaints — and `focusout` fires
+// on ANY focus change, including tabbing from the ingredient name to the grams
+// box in the same row. The whole table was then rebuilt from server data that
+// had never contained the half-typed row. That is exactly the reported
+// "החלון קופץ, לא מקליד, לא מוסיף": the panel redrew under her hands, focus
+// was lost mid-word, and the ingredient was never added. The add-ingredient
+// code itself was never at fault, which is why looking there found nothing.
+let _kitchenRepaintPending = false;
+let _kitchenRepaintTimer   = null;
+
+// An open editor keeps unsaved rows only in the DOM — saveRecipe() reads them
+// straight back out of the table — so a repaint underneath it silently
+// discards work in progress. Never repaint while one is open.
+function kitchenEditorIsOpen() {
+  return !!document.querySelector('#recipe-editor-modal.open, #pantry-edit-modal.open');
+}
+
+function requestKitchenRepaint() {
+  _kitchenRepaintPending = true;
+  clearTimeout(_kitchenRepaintTimer);
+  _kitchenRepaintTimer = setTimeout(flushKitchenRepaint, 400);
+}
+
+function flushKitchenRepaint() {
+  if (!_kitchenRepaintPending) return;
+  const panel = document.getElementById('admin-panel');
+  if (!panel || !panel.classList.contains('open')) { _kitchenRepaintPending = false; return; }
+
+  const el = document.activeElement;
+  const busy = kitchenEditorIsOpen()
+    || (el && ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) && panel.contains(el));
+
+  if (busy) {
+    // Still in use. Ask again shortly rather than stealing focus. The pending
+    // flag is a single boolean, so this can never stack up.
+    clearTimeout(_kitchenRepaintTimer);
+    _kitchenRepaintTimer = setTimeout(flushKitchenRepaint, 700);
+    return;
   }
+
+  _kitchenRepaintPending = false;
+  switchKitchenTab(_currentKitchenTab || 'pantry');
 }
 
 // Public read, so no need to wait for sign-in. Called again whenever the
@@ -5177,27 +5213,50 @@ function kitchenReady() {
   alert('הנתונים עדיין נטענים — רגע אחד ונסי שוב.');
   return false;
 }
-function savePantry() {
-  if (!kitchenReady()) return;
-  const obj = {};
-  PANTRY.forEach(p => { obj[p.id] = { ...p }; });
-  db.ref(`${ROOT}/kitchen/pantry`).set(obj).catch(fbError);
+// Per-key writes. These used to call .set() on the whole pantry / recipes node,
+// built from this device's local array — the exact pattern the comment under
+// savePlanQty forbids, four lines below.
+//
+// The dangerous case is not two simultaneous edits; it is the SDK's offline
+// queue. Noy edits a recipe on her phone in the kitchen with no signal, and a
+// whole-subtree set() is queued against her stale array. She then adds two
+// recipes on the laptop. When the phone reconnects, its queued write lands and
+// deletes both laptop recipes — no error, no conflict, and .catch(fbError)
+// never fires, because as far as Firebase is concerned the write succeeded.
+function savePantryItem_(p) {
+  if (!p || !p.id) return;
+  db.ref(`${ROOT}/kitchen/pantry/${p.id}`).set({ ...p }).catch(fbError);
 }
-function saveRecipes() {
-  if (!kitchenReady()) return;
-  const obj = {};
-  RECIPES.forEach(r => { obj[r.id] = { ...r }; });
-  db.ref(`${ROOT}/kitchen/recipes`).set(obj).catch(fbError);
+function saveRecipe_(r) {
+  if (!r || !r.id) return;
+  db.ref(`${ROOT}/kitchen/recipes/${r.id}`).set({ ...r }).catch(fbError);
 }
+// There is deliberately no savePantry() / saveRecipes() any more. Both used to
+// .set() a whole node from this device's local array; both are now unnecessary,
+// because every caller saves exactly the row it changed. If a bulk write is
+// ever genuinely needed, build a patch and use .update() — never .set() — so
+// that rows this device has not seen are left alone.
 // Per-key write: a whole-node set() from one device would delete quantities
 // another device added in the same round-trip.
+// Debounced. This is bound to oninput, so typing "12" fired two writes, each
+// of which came back as a snapshot and queued a repaint of the very field
+// being typed in. Coalescing them is what stops the plan table jumping.
+const _planQtyTimers = {};
 function savePlanQty(recipeId, qty) {
   if (!kitchenReady()) return;
-  db.ref(`${ROOT}/kitchen/weeklyPlan/${recipeId}`).set(qty > 0 ? qty : null).catch(fbError);
+  clearTimeout(_planQtyTimers[recipeId]);
+  _planQtyTimers[recipeId] = setTimeout(() => {
+    delete _planQtyTimers[recipeId];
+    db.ref(`${ROOT}/kitchen/weeklyPlan/${recipeId}`).set(qty > 0 ? qty : null).catch(fbError);
+  }, 500);
 }
 function saveWeeklyPlan() {
   if (!kitchenReady()) return;
-  db.ref(`${ROOT}/kitchen/weeklyPlan`).set(WEEKLY_PLAN || {}).catch(fbError);
+  // update(), not set(): a whole-node set() here deletes quantities the other
+  // device added — the same failure savePlanQty's comment warns about.
+  const plan = WEEKLY_PLAN || {};
+  if (!Object.keys(plan).length) return;
+  db.ref(`${ROOT}/kitchen/weeklyPlan`).update(plan).catch(fbError);
 }
 
 // ─── TAB SWITCHING ───────────────────────────────────────
@@ -5261,7 +5320,13 @@ function catEmoji(category) {
 // ─── RENDER PANTRY TABLE ─────────────────────────────────
 function renderPantry() {
   const q = (document.getElementById('pantry-search')?.value || '').trim().toLowerCase();
-  const filtered = PANTRY.filter(p => !q || p.name.includes(q) || (p.supplier||'').includes(q) || p.cat.includes(q));
+  // Defaults on every field. A row missing name, cat or pricePerKg used to
+  // throw here, and because the throw happened inside the deferred repaint it
+  // surfaced as a frozen half-drawn panel with nothing on screen to explain it.
+  const filtered = PANTRY.filter(p => !q
+    || (p.name || '').includes(q)
+    || (p.supplier || '').includes(q)
+    || (p.cat || '').includes(q));
   const tbody = document.getElementById('pantry-tbody');
   if (!tbody) return;
 
@@ -5272,8 +5337,8 @@ function renderPantry() {
   tbody.innerHTML = filtered.map(p => `
     <tr>
       <td style="font-weight:600;color:#2C1810;">${p.name}</td>
-      <td dir="ltr" style="color:#6B2E1E;font-weight:700;">₪${p.pricePerKg.toFixed(1)}</td>
-      <td><span class="k-cat-badge">${p.cat}</span></td>
+      <td dir="ltr" style="color:#6B2E1E;font-weight:700;">₪${Number(p.pricePerKg || 0).toFixed(1)}</td>
+      <td><span class="k-cat-badge">${esc(p.cat || '')}</span></td>
       <td style="color:#9B8B75;font-size:0.75rem;">${p.supplier||'—'}</td>
       <td style="white-space:nowrap;">
         <button class="k-icon-btn" onclick="openPantryEditor('${p.id}')" title="ערוך">
@@ -5574,10 +5639,21 @@ function openRecipeEditor(recipeId) {
   recalcEditorCosts();
 }
 
+// Closing an editor used to release the body scroll lock outright, even though
+// the admin panel underneath was still open. On a phone that lets the page
+// behind snap back to its old offset — a literal jump the instant a dialog
+// closes, on top of everything else that was jumping.
+function restoreScrollLock() {
+  const panel = document.getElementById('admin-panel');
+  document.body.style.overflow = (panel && panel.classList.contains('open')) ? 'hidden' : '';
+}
+
 function closeRecipeEditor() {
   document.getElementById('recipe-editor-modal').classList.remove('open');
-  document.body.style.overflow = '';
+  restoreScrollLock();
   _editingRecipeId = null;
+  // The editor blocked repaints while it was open; take any that piled up now.
+  if (_kitchenRepaintPending) requestKitchenRepaint();
 }
 
 let _ingRowCounter = 0;
@@ -5735,10 +5811,19 @@ function saveRecipe() {
   const ingredients = [];
   // Carry each row's existing baker's % across the save instead of zeroing it.
   const _prevRecipe = _editingRecipeId ? RECIPES.find(x => x.id === _editingRecipeId) : null;
+  // A row that has a name but no usable weight used to be dropped in silence,
+  // and the editor closed straight afterwards — so adding an ingredient looked
+  // like it worked and simply did not. Say so instead, and keep the editor open
+  // on the offending row.
+  const rejected = [];
   tbody.querySelectorAll('tr').forEach((tr, rowIndex) => {
     const ingName  = tr.querySelector('.ing-name')?.value.trim();
-    const weightG  = parseFloat(tr.querySelector('.ing-weight')?.value) || 0;
+    // Accept the Hebrew-keyboard decimal comma: "0,5" parsed to 0 and the row
+    // vanished with no explanation.
+    const rawW     = (tr.querySelector('.ing-weight')?.value || '').replace(',', '.');
+    const weightG  = parseFloat(rawW) || 0;
     const pantryId = tr.querySelector('.ing-pantry-id')?.value || '';
+    if (ingName && !(weightG > 0)) rejected.push(ingName);
     if (ingName && weightG > 0) {
       const prevIng = _prevRecipe && _prevRecipe.ingredients ? _prevRecipe.ingredients[rowIndex] : null;
       ingredients.push({
@@ -5751,16 +5836,28 @@ function saveRecipe() {
     }
   });
 
-  const recipe = { name, category, yieldCount, yieldWeightG, sellingPrice, prepTimeMin, bakingTimeMin, bakingTempC, notes, ingredients };
-
-  if (_editingRecipeId) {
-    const idx = RECIPES.findIndex(r => r.id === _editingRecipeId);
-    if (idx !== -1) { RECIPES[idx] = { ...RECIPES[idx], ...recipe }; }
-  } else {
-    RECIPES.push({ id: 'rec_' + Date.now(), ...recipe });
+  if (rejected.length) {
+    alert('לא נשמר — חסר משקל בגרמים ל:\n• ' + rejected.join('\n• ') +
+          '\n\nתמלאי משקל, או תמחקי את השורה עם ה-✕.');
+    return;
   }
 
-  saveRecipes();
+  const recipe = { name, category, yieldCount, yieldWeightG, sellingPrice, prepTimeMin, bakingTimeMin, bakingTempC, notes, ingredients };
+
+  // A snapshot can replace RECIPES while the editor is open. Without the else
+  // the edit was dropped in memory and then erased in Firebase by the old
+  // whole-node write — silently, on a real business's recipe.
+  let saved;
+  if (_editingRecipeId) {
+    const idx = RECIPES.findIndex(r => r.id === _editingRecipeId);
+    if (idx !== -1) { RECIPES[idx] = { ...RECIPES[idx], ...recipe }; saved = RECIPES[idx]; }
+    else            { saved = { id: _editingRecipeId, ...recipe }; RECIPES.push(saved); }
+  } else {
+    saved = { id: 'rec_' + Date.now(), ...recipe };
+    RECIPES.push(saved);
+  }
+
+  saveRecipe_(saved);
   closeRecipeEditor();
   renderRecipeGrid();
 }
@@ -5771,8 +5868,13 @@ function deleteRecipe() {
   const idx = RECIPES.findIndex(r => r.id === _editingRecipeId);
   if (idx !== -1) RECIPES.splice(idx, 1);
   delete WEEKLY_PLAN[_editingRecipeId];
-  saveRecipes();
-  saveWeeklyPlan();
+  // One atomic update naming exactly the two keys that go. This used to be two
+  // whole-subtree set() calls — the single most destructive pair of writes in
+  // the file, since each rebuilt an entire node from this device's stale array.
+  db.ref(`${ROOT}/kitchen`).update({
+    [`recipes/${_editingRecipeId}`]:    null,
+    [`weeklyPlan/${_editingRecipeId}`]: null
+  }).catch(fbError);
   closeRecipeEditor();
   renderRecipeGrid();
 }
@@ -5812,8 +5914,9 @@ function openPantryEditor(pantryId) {
 
 function closePantryEditor() {
   document.getElementById('pantry-edit-modal').classList.remove('open');
-  document.body.style.overflow = '';
+  restoreScrollLock();
   _editingPantryId = null;
+  if (_kitchenRepaintPending) requestKitchenRepaint();
 }
 
 function savePantryItem() {
@@ -5834,14 +5937,20 @@ function savePantryItem() {
     vat: 0.17
   };
 
+  // Write only this row. A snapshot can replace PANTRY at any moment, so if the
+  // id no longer resolves, re-add it under its own id rather than dropping the
+  // edit on the floor.
+  let saved;
   if (_editingPantryId) {
     const idx = PANTRY.findIndex(p => p.id === _editingPantryId);
-    if (idx !== -1) PANTRY[idx] = { ...PANTRY[idx], ...item };
+    if (idx !== -1) { PANTRY[idx] = { ...PANTRY[idx], ...item }; saved = PANTRY[idx]; }
+    else            { saved = { id: _editingPantryId, ...item }; PANTRY.push(saved); }
   } else {
-    PANTRY.push({ id: 'pi_' + Date.now(), ...item });
+    saved = { id: 'pi_' + Date.now(), ...item };
+    PANTRY.push(saved);
   }
 
-  savePantry();
+  savePantryItem_(saved);
   closePantryEditor();
   renderPantry();
 }
@@ -5851,7 +5960,9 @@ function deletePantryItem() {
   if (!confirm('למחוק מרכיב זה מהמחסן?')) return;
   const idx = PANTRY.findIndex(p => p.id === _editingPantryId);
   if (idx !== -1) PANTRY.splice(idx, 1);
-  savePantry();
+  // Explicit null. Now that saves are per-key, a delete has to say so — an
+  // update() of the surviving rows would leave this one in the database.
+  db.ref(`${ROOT}/kitchen/pantry/${_editingPantryId}`).set(null).catch(fbError);
   closePantryEditor();
   renderPantry();
 }

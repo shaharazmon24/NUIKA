@@ -27,9 +27,16 @@ nothing else — they install the safety hooks on first use, refuse to push
 broken code, and refuse to push while behind the other machine:
 
 ```bash
+node scripts/status.mjs                # where is everyone — run this first
 node scripts/sync.mjs                  # before you start
 node scripts/ship.mjs "what changed"   # when you are done
 ```
+
+`status.mjs` compares this folder, GitHub and the live site, and refuses to
+pretend everything is fine when they differ. It also catches the case that has
+now bitten this project twice in a different form: a folder that is not the
+repo at all. `ship.mjs` stamps the version into `index.html` on every publish —
+never edit the `nuika-version` meta tag by hand.
 
 If the user asks in Hebrew to update or to publish ("תעדכני", "תשלחי"), run
 these. Do not hand them raw git commands; plain `git push` skips the checks
@@ -132,10 +139,23 @@ Code changes are for layout, new features, and bugs.
 
 ## Known, not yet fixed
 
-- The admin password is plaintext in the source and the database rules are
-  open, so the password protects nothing at the data layer. Anyone can read
-  `nuika/orders` (customer names and phone numbers) or wipe the tree. Fixing
-  this properly means Firebase Auth plus rules scoped to Noy's uid.
+- ~~The admin password is plaintext in the source and the database rules are
+  open.~~ **Fixed and verified 17 Aug 2026.** Sign-in is Firebase Auth against a
+  real account, authorised by `nuika/admins/{uid}`, and the rules are published:
+  an unauthenticated read of `nuika/orders` and `nuika/admins` returns
+  PERMISSION_DENIED while `nuika/settings` stays public. No password exists in
+  the source.
+- **Kitchen saves replace whole subtrees.** `savePantry()`, `saveRecipes()` and
+  `saveWeeklyPlan()` call `.set()` on the entire node built from a local array.
+  Noy uses a phone and a laptop, and the Firebase SDK queues offline writes, so
+  a stale queued write can land later and delete recipes the other device added.
+  `savePlanQty()` shows the correct per-key pattern, with a comment explaining
+  why — four lines above a function that violates it.
+- **`vat: 0` is unrepresentable.** `calcIngCost` uses `(1 + (p.vat || 0.17))`,
+  so a genuine zero falls back to 17%, and `savePantryItem` hardcodes `0.17`
+  back on every save. The same function guards `pricePerKg` correctly with
+  `typeof` one line earlier. Whether `pricePerKg` is gross or net is also
+  undefined per supplier — worth settling with Noy before trusting any margin.
 - Product photos uploaded in the admin are stored as base64 inside the products
   node, so every visitor downloads them on every load. They should be resized
   before upload, or moved to Firebase Storage.
