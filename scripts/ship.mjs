@@ -7,6 +7,7 @@
 // project its entire data-sync layer once.
 
 import { execSync } from 'node:child_process';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { ensureHooks } from './ensure-hooks.mjs';
@@ -54,6 +55,32 @@ try {
 
   // 2. Save locally.
   say('\n2/4  שומר את השינויים...');
+
+  // Stamp the version into the page itself, before the commit, so the stamp is
+  // part of what ships. Without it "which version are you looking at?" has no
+  // answer that does not require git — and one of the two people here does not
+  // use git. The timestamp orders the versions; the hash identifies the commit
+  // it was built on. Read it back with `node scripts/status.mjs`, or in the
+  // admin panel header, or as NUIKA_VERSION in the browser console.
+  try {
+    const idxPath = join(ROOT, 'index.html');
+    const before  = readFileSync(idxPath, 'utf8');
+    const stamp   = new Date().toISOString();
+    const parent  = git('rev-parse --short HEAD', true);
+    const after    = before.replace(
+      /(<meta name="nuika-version" content=")[^"]*("\s*\/?>)/,
+      `$1${stamp}|${parent}$2`
+    );
+    if (after === before) {
+      say('     ⚠  לא מצאתי את תג הגרסה ב-index.html — ממשיך בלי לחתום.');
+    } else {
+      writeFileSync(idxPath, after);
+      say(`     גרסה: ${stamp.slice(0, 16).replace('T', ' ')}`);
+    }
+  } catch (e) {
+    say('     ⚠  חתימת הגרסה נכשלה: ' + e.message + ' — ממשיך.');
+  }
+
   git('add -A', true);
   execSync(`git commit -q -m "${message.replace(/"/g, "'")}"`, { cwd: ROOT });
 

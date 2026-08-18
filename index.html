@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>נואיקה — מאפייה ארטיזנלית עונתית</title>
 
+  <!-- Version stamp. Rewritten automatically by scripts/ship.mjs on every
+       publish — never edit it by hand. Two people work on this file from two
+       machines, and "which version am I looking at?" had no answer before this
+       existed. `node scripts/status.mjs` compares this value across your
+       machine, GitHub, and the live site. -->
+  <meta name="nuika-version" content="2026-08-18T06:02:02.116Z|869a9cc" />
+
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#6B2E1E" />
@@ -1927,6 +1934,11 @@
     <div>
       <div style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.25rem;font-weight:700;line-height:1.1;">לוח ניהול</div>
       <div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.75rem;">נואיקה — לחם בוטיק</div>
+      <!-- Filled in by stampVersion(). Noy can read this aloud over the phone,
+           which is the whole point: "which version are you on?" now has an
+           answer that does not require git. -->
+      <div id="admin-version" title="גרסת האתר שאת רואה כרגע"
+           style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#B8A990;font-size:0.65rem;letter-spacing:0.02em;margin-top:2px;"></div>
     </div>
     <button onclick="adminSignOut()" title="התנתקי מהחשבון" style="background:transparent;border:none;color:#9B8B75;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;cursor:pointer;padding:6px 10px;flex-shrink:0;">התנתקי</button>
     <button onclick="closeAdminPanel()" style="background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;" aria-label="סגור">
@@ -3834,7 +3846,38 @@ function closeAdminLogin() {
   }
 }
 
+// Which version of the site is this? Two people publish this file from two
+// machines, so "it works on mine" was unanswerable without a stamp that
+// travels with the page itself. scripts/ship.mjs rewrites the meta tag on
+// every publish; this reads it back.
+//
+// Exposed on window so it can be read from the browser console on ANY device —
+// including Noy's phone — without opening the admin panel:
+//     NUIKA_VERSION
+function readSiteVersion() {
+  const el = document.querySelector('meta[name="nuika-version"]');
+  const raw = (el && el.getAttribute('content')) || 'unknown|unknown';
+  const [stamp, commit] = raw.split('|');
+  return { stamp, commit, raw };
+}
+
+const NUIKA_VERSION = readSiteVersion();
+window.NUIKA_VERSION = NUIKA_VERSION;
+
+function stampVersion() {
+  const el = document.getElementById('admin-version');
+  if (!el) return;
+  const v = NUIKA_VERSION;
+  if (v.stamp === 'dev') { el.textContent = 'גרסה: מקומית, טרם פורסמה'; return; }
+  // Show the date in a form Noy can read out loud, and keep the commit for us.
+  const d = new Date(v.stamp);
+  const when = isNaN(d) ? v.stamp
+    : `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  el.textContent = `גרסה ${when} · ${v.commit}`;
+}
+
 function openAdminPanel() {
+  stampVersion();
   document.getElementById('admin-bit-link').value    = _settingsCache.bitLink    || '';
   document.getElementById('admin-paybox-link').value = _settingsCache.payboxLink || '';
 
