@@ -10,7 +10,7 @@
        machines, and "which version am I looking at?" had no answer before this
        existed. `node scripts/status.mjs` compares this value across your
        machine, GitHub, and the live site. -->
-  <meta name="nuika-version" content="2026-08-19T19:05:43.574Z|92c4bb8" />
+  <meta name="nuika-version" content="2026-08-19T19:08:49.110Z|397f257" />
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
@@ -1526,6 +1526,51 @@
       padding: 20px;
     }
 
+    /* ── Recipe import from a spreadsheet ── */
+    #recipe-import-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 2150;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(44,24,16,0.45);
+      overflow-y: auto;
+    }
+    #recipe-import-modal.open { display: flex; }
+    #recipe-import-modal .k-modal-card {
+      position: relative;
+      background: #FDFAF4;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 540px;
+      padding: 22px;
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+    #recipe-import-modal .k-lbl {
+      display: block;
+      font-family: 'Noto Sans Hebrew', sans-serif;
+      font-weight: 600;
+      color: #2C1810;
+      font-size: 0.82rem;
+      margin-bottom: 5px;
+    }
+    .ri-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-family: 'Noto Sans Hebrew', sans-serif;
+      font-size: 0.8rem;
+      padding: 5px 0;
+      border-bottom: 1px solid #EFE7D8;
+    }
+    .ri-unmatched { color: #B45032; }
+    @media (max-width: 560px) {
+      #recipe-import-modal .k-modal-card { padding: 16px; }
+    }
+
     /* ── PWA Install button ── */
     #install-pwa-btn {
       display: none;
@@ -2252,10 +2297,16 @@
     <div class="k-section" id="ksec-recipes">
       <div class="k-section-header">
         <p class="k-section-title">ספריית מתכונים</p>
-        <button class="k-add-btn" onclick="openRecipeEditor(null)">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          מתכון חדש
-        </button>
+        <div style="display:flex;gap:8px;">
+          <button class="k-add-btn" onclick="openRecipeImport()" style="background:#F0E9D8;color:#6B2E1E;border:1.5px solid #D5C9B5;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            ייבוא מאקסל
+          </button>
+          <button class="k-add-btn" onclick="openRecipeEditor(null)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            מתכון חדש
+          </button>
+        </div>
       </div>
       <div class="recipe-grid" id="recipe-grid"></div>
     </div>
@@ -2444,6 +2495,65 @@
 <!-- ════════════════════════════════════════════════════════
      PANTRY EDIT MODAL
 ════════════════════════════════════════════════════════ -->
+<!-- ============ RECIPE IMPORT ============
+     Paste straight out of Excel. Deliberately not an OCR-of-a-photo feature:
+     Hebrew handwriting and phone photos of recipe sheets do not read reliably,
+     and a costing built on a misread number is worse than no costing. Copying
+     the cells is two seconds and is exact. -->
+<div id="recipe-import-modal" onclick="if(event.target===this)closeRecipeImport()">
+  <div class="k-modal-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <h3 style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.25rem;font-weight:700;margin:0;">ייבוא מתכון מאקסל</h3>
+      <button onclick="closeRecipeImport()" aria-label="סגירה" style="background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;margin-bottom:14px;line-height:1.6;">
+      באקסל: לסמן שתי עמודות — <b>שם המרכיב</b> ו<b>משקל בגרמים</b> — להעתיק (Ctrl+C), ולהדביק כאן (Ctrl+V).
+      שורת כותרת זה בסדר, היא תזוהה לבד.
+    </p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div>
+        <label class="k-lbl" for="ri-name">שם המתכון</label>
+        <input id="ri-name" class="field" placeholder="לחם כוסמין" />
+      </div>
+      <div>
+        <label class="k-lbl" for="ri-category">קטגוריה</label>
+        <select id="ri-category" class="field">
+          <option value="לחם">לחם</option>
+          <option value="מאפה">מאפה</option>
+          <option value="עוגה">עוגה</option>
+          <option value="בצק בסיס">בצק בסיס</option>
+          <option value="קרם / מילוי">קרם / מילוי</option>
+          <option value="אחר">אחר</option>
+        </select>
+      </div>
+      <div>
+        <label class="k-lbl" for="ri-yield">כמה יחידות יוצאות</label>
+        <input id="ri-yield" type="number" min="1" class="field" value="1" dir="ltr" />
+      </div>
+      <div>
+        <label class="k-lbl" for="ri-price">מחיר מכירה ליחידה (₪)</label>
+        <input id="ri-price" type="text" inputmode="decimal" class="field" placeholder="30" dir="ltr" />
+      </div>
+    </div>
+
+    <label class="k-lbl" for="ri-paste">המרכיבים</label>
+    <textarea id="ri-paste" rows="9" class="field" dir="rtl"
+      oninput="previewRecipeImport()"
+      placeholder="קמח לבן&#9;500&#10;מים&#9;350&#10;מלח&#9;10&#10;שמרים&#9;7"
+      style="width:100%;font-family:ui-monospace,Menlo,monospace;font-size:0.82rem;line-height:1.7;resize:vertical;"></textarea>
+
+    <div id="ri-preview" style="margin-top:12px;"></div>
+
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button id="ri-save-btn" onclick="commitRecipeImport()" class="admin-save-btn" style="flex:1;">ייבוא המתכון ✓</button>
+      <button onclick="closeRecipeImport()" style="flex:0 0 auto;background:transparent;border:2px solid #6B2E1E;color:#6B2E1E;font-family:'Noto Serif Hebrew',serif;font-weight:700;padding:13px 20px;border-radius:100px;cursor:pointer;">ביטול</button>
+    </div>
+  </div>
+</div>
+
 <div id="pantry-edit-modal">
   <div class="pe-backdrop" onclick="closePantryEditor()"></div>
   <div class="pe-box">
@@ -6248,6 +6358,150 @@ function removeIngredientRow(rowId) {
 // (see addIngredientRow for why), so every reader has to normalise the decimal
 // comma a Hebrew keyboard produces. Three separate readers used bare
 // parseFloat; "0,5" became 0 in all of them.
+// ─── RECIPE IMPORT FROM A SPREADSHEET ─────────────
+// Excel puts a tab between cells and a newline between rows when you copy, so
+// a paste is already a parseable table. Commas and semicolons are accepted too
+// because that is what a CSV export produces.
+
+function openRecipeImport() {
+  if (!kitchenReady()) return;
+  ['ri-name', 'ri-price', 'ri-paste'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('ri-yield').value = '1';
+  document.getElementById('ri-preview').innerHTML = '';
+  document.getElementById('ri-save-btn').disabled = false;
+  document.getElementById('recipe-import-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeRecipeImport() {
+  document.getElementById('recipe-import-modal').classList.remove('open');
+  restoreScrollLock();
+}
+
+// Names are matched loosely: Excel carries stray spaces, and the same
+// ingredient is written with and without quotes, hyphens and final-letter
+// forms. Anything that does not resolve is reported rather than dropped.
+function normaliseIngName(s) {
+  return String(s || '')
+    .replace(/["'`״׳]/g, '')
+    .replace(/[־–—-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function parseRecipePaste(text) {
+  const rows = [];
+  String(text || '').split(/\r?\n/).forEach((line, i) => {
+    if (!line.trim()) return;
+    // Tab first — that is what a spreadsheet copy uses, and ingredient names
+    // legitimately contain commas ("קמח, מלא").
+    let cells = line.includes('\t') ? line.split('\t') : line.split(/[;,]/);
+    if (cells.length < 2) {
+      // "קמח לבן 500" — a single cell with the number at the end.
+      const m = line.trim().match(/^(.*?)[\s]+([\d.,]+)\s*(?:גרם|ג'|גר|g)?$/);
+      cells = m ? [m[1], m[2]] : [line, ''];
+    }
+    const name = String(cells[0] || '').replace(/["']/g, '').trim();
+    const rawW = String(cells[1] || '').replace(/[^\d.,]/g, '').replace(',', '.');
+    const weightG = parseFloat(rawW);
+
+    // A header row has a non-numeric second cell. Skip it, but only on the
+    // first line — a bad number further down is a mistake worth reporting.
+    if (i === 0 && !Number.isFinite(weightG)) return;
+    if (!name) return;
+
+    const match = PANTRY.find(p => normaliseIngName(p.name) === normaliseIngName(name));
+    rows.push({
+      name,
+      weightG: Number.isFinite(weightG) && weightG > 0 ? weightG : 0,
+      pantryId: match ? match.id : '',
+      matched: !!match
+    });
+  });
+  return rows;
+}
+
+function previewRecipeImport() {
+  const box = document.getElementById('ri-preview');
+  const rows = parseRecipePaste(document.getElementById('ri-paste').value);
+  if (!rows.length) { box.innerHTML = ''; return; }
+
+  const noWeight  = rows.filter(r => !r.weightG);
+  const unmatched = rows.filter(r => r.matched === false && r.weightG);
+  let cost = 0, unknown = 0;
+  rows.forEach(r => {
+    const c = r.pantryId ? calcIngCost(r.weightG, r.pantryId) : null;
+    if (c === null) unknown++; else cost += c;
+  });
+
+  box.innerHTML = `
+    <div style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:700;color:#2C1810;font-size:0.85rem;margin-bottom:6px;">
+      ${rows.length} מרכיבים זוהו
+    </div>
+    ${rows.map(r => `
+      <div class="ri-row">
+        <span class="${r.matched ? '' : 'ri-unmatched'}">${esc(r.name)}${r.matched ? '' : ' — לא נמצא במזווה'}</span>
+        <span dir="ltr" class="${r.weightG ? '' : 'ri-unmatched'}">${r.weightG ? r.weightG + 'ג' : 'חסר משקל'}</span>
+      </div>`).join('')}
+    <div style="margin-top:10px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.82rem;color:#6B5D4E;">
+      עלות מרכיבים מזוהים: <b dir="ltr">₪${cost.toFixed(2)}</b>
+      ${unknown ? `<span class="ri-unmatched"> · ${unknown} ללא מחיר</span>` : ''}
+    </div>
+    ${noWeight.length ? `<div class="ri-unmatched" style="margin-top:8px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;">
+      ${noWeight.length} שורות בלי משקל — הן לא ייובאו. אפשר לתקן ולהדביק שוב.</div>` : ''}
+    ${unmatched.length ? `<div style="margin-top:8px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#9B8B75;">
+      מרכיבים שלא נמצאו במזווה ייובאו בכל זאת, אבל בלי מחיר — אפשר להוסיף אותם למזווה אחר כך והעלות תתעדכן לבד.</div>` : ''}
+  `;
+}
+
+function commitRecipeImport() {
+  if (!kitchenReady()) return;
+  const name = document.getElementById('ri-name').value.trim();
+  if (!name) { alert('צריך שם למתכון.'); return; }
+
+  const rows = parseRecipePaste(document.getElementById('ri-paste').value).filter(r => r.weightG > 0);
+  if (!rows.length) { alert('לא זיהיתי מרכיבים עם משקל. צריך שתי עמודות: שם ומשקל בגרמים.'); return; }
+
+  const yieldCount = parseInt(document.getElementById('ri-yield').value, 10) || 1;
+  const priceRaw   = String(document.getElementById('ri-price').value).replace(',', '.');
+  const sellingPrice = parseFloat(priceRaw) || 0;
+
+  const recipe = {
+    id: 'rec_' + Date.now(),
+    name,
+    category: document.getElementById('ri-category').value || 'אחר',
+    yieldCount,
+    // Sensible default: the batch weighs what went into it. Noy can correct it,
+    // and it is the number that makes "half a recipe" meaningful later.
+    yieldWeightG: Math.round(rows.reduce((s, r) => s + r.weightG, 0)),
+    sellingPrice,
+    prepTimeMin: 0, bakingTimeMin: 0, bakingTempC: 0, notes: '',
+    ingredients: rows.map((r, i) => ({
+      id: 'ri_' + Date.now() + '_' + i,
+      name: r.name, pantryId: r.pantryId, weightG: r.weightG, bakerPct: 0
+    }))
+  };
+
+  const btn = document.getElementById('ri-save-btn');
+  btn.disabled = true;
+  RECIPES.push(recipe);
+  db.ref(`${ROOT}/kitchen/recipes/${recipe.id}`).set(recipe)
+    .then(() => {
+      btn.disabled = false;
+      closeRecipeImport();
+      renderRecipeGrid();
+      alert(`"${name}" יובא עם ${rows.length} מרכיבים.`);
+    })
+    .catch(err => {
+      btn.disabled = false;
+      const i = RECIPES.findIndex(r => r.id === recipe.id);
+      if (i !== -1) RECIPES.splice(i, 1);
+      alert('הייבוא נכשל — המתכון לא נשמר. בדקי חיבור לאינטרנט ונסי שוב.');
+      fbError(err);
+    });
+}
+
 function weightFromInput(el) {
   const raw = (el && el.value != null ? String(el.value) : '').trim().replace(',', '.');
   const n = parseFloat(raw);
