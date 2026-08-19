@@ -10,7 +10,7 @@
        machines, and "which version am I looking at?" had no answer before this
        existed. `node scripts/status.mjs` compares this value across your
        machine, GitHub, and the live site. -->
-  <meta name="nuika-version" content="2026-08-19T19:08:49.110Z|397f257" />
+  <meta name="nuika-version" content="2026-08-19T19:12:43.039Z|784f595" />
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
@@ -1526,6 +1526,80 @@
       padding: 20px;
     }
 
+    /* ── Finance tab ── */
+    .fin-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .fin-card {
+      background: #FDFAF4;
+      border: 1px solid #E3D7C3;
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+    }
+    .fin-card-label {
+      font-family: 'Noto Sans Hebrew', sans-serif;
+      font-size: 0.72rem;
+      color: #9B8B75;
+      margin-bottom: 4px;
+    }
+    .fin-card-value {
+      font-family: 'Noto Serif Hebrew', serif;
+      font-weight: 700;
+      font-size: 1.15rem;
+    }
+    .fin-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #FDFAF4;
+      border: 1px solid #E3D7C3;
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      text-align: right;
+      width: 100%;
+    }
+    .fin-row:hover { border-color: #C9B99F; }
+    .fin-thumb {
+      width: 38px; height: 38px; flex: 0 0 auto;
+      border-radius: 8px; object-fit: cover; border: 1px solid #E3D7C3;
+      background: #F0E9D8;
+    }
+    #expense-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 2150;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(44,24,16,0.45);
+      overflow-y: auto;
+    }
+    #expense-modal.open { display: flex; }
+    #expense-modal .k-modal-card {
+      position: relative;
+      background: #FDFAF4;
+      border-radius: 16px;
+      width: 100%;
+      padding: 22px;
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+    #expense-modal .k-lbl {
+      display: block;
+      font-family: 'Noto Sans Hebrew', sans-serif;
+      font-weight: 600;
+      color: #2C1810;
+      font-size: 0.82rem;
+      margin-bottom: 5px;
+    }
+
     /* ── Recipe import from a spreadsheet ── */
     #recipe-import-modal {
       position: fixed;
@@ -2019,6 +2093,10 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2h18l-2 7H5L3 2z"/><path d="M5 9l1 11h12l1-11"/><path d="M9 13h6"/></svg>
         מטבח
       </button>
+      <button class="admin-tab-btn" id="atab-finance" onclick="switchAdminTab('finance')" role="tab">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        כספים
+      </button>
     </div>
   </div>
 
@@ -2249,6 +2327,39 @@
   <!-- ══════════════════════════════════════════════════ -->
   <!-- TAB: מטבח — Kitchen Studio                        -->
   <!-- ══════════════════════════════════════════════════ -->
+  <!-- ══════════════════════════════════════════ -->
+  <!-- TAB: כספים (income and expenses)          -->
+  <!-- ══════════════════════════════════════════ -->
+  <div id="admin-tab-finance" class="admin-tab-content">
+
+    <div class="k-section">
+      <div class="k-section-header">
+        <p class="k-section-title">הכנסות והוצאות</p>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input id="fin-month" type="month" class="field" style="width:150px;" onchange="renderFinance()" dir="ltr" />
+          <button class="k-add-btn" onclick="openExpense(null)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            הוצאה
+          </button>
+        </div>
+      </div>
+
+      <div id="fin-summary" class="fin-summary"></div>
+
+      <p style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.76rem;color:#9B8B75;margin:2px 0 14px;line-height:1.6;">
+        ההכנסות מחושבות לבד מההזמנות של החודש — אין מה להזין. צריך להזין רק הוצאות, ואפשר לצרף צילום של החשבונית.
+      </p>
+
+      <div id="fin-list"></div>
+
+      <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button onclick="exportFinanceCSV()" class="k-add-btn" style="background:#F0E9D8;color:#6B2E1E;border:1.5px solid #D5C9B5;">
+          ייצוא החודש לאקסל
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="admin-tab-kitchen" class="admin-tab-content">
 
     <!-- Sub navigation -->
@@ -2495,6 +2606,69 @@
 <!-- ════════════════════════════════════════════════════════
      PANTRY EDIT MODAL
 ════════════════════════════════════════════════════════ -->
+<!-- ============ EXPENSE EDITOR ============
+     Deliberately NOT invoice OCR. Reading a photographed Hebrew invoice is not
+     reliable in a browser, and a bookkeeping total built on a misread number is
+     worse than no total at all. The photo is kept as the record; the amount is
+     typed once, which takes seconds and is exact. -->
+<div id="expense-modal" onclick="if(event.target===this)closeExpense()">
+  <div class="k-modal-card" style="max-width:440px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h3 id="exp-title" style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.25rem;font-weight:700;margin:0;">הוצאה חדשה</h3>
+      <button onclick="closeExpense()" aria-label="סגירה" style="background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div>
+        <label class="k-lbl" for="exp-date">תאריך</label>
+        <input id="exp-date" type="date" class="field" dir="ltr" />
+      </div>
+      <div>
+        <label class="k-lbl" for="exp-amount">סכום (₪)</label>
+        <input id="exp-amount" type="text" inputmode="decimal" class="field" placeholder="0" dir="ltr" />
+      </div>
+      <div>
+        <label class="k-lbl" for="exp-category">קטגוריה</label>
+        <select id="exp-category" class="field">
+          <option value="חומרי גלם">חומרי גלם</option>
+          <option value="אריזות">אריזות</option>
+          <option value="ציוד">ציוד</option>
+          <option value="שיווק">שיווק</option>
+          <option value="משלוחים">משלוחים</option>
+          <option value="אחר">אחר</option>
+        </select>
+      </div>
+      <div>
+        <label class="k-lbl" for="exp-supplier">ספק</label>
+        <input id="exp-supplier" class="field" placeholder="קמח הארץ" />
+      </div>
+    </div>
+
+    <label class="k-lbl" for="exp-note">הערה</label>
+    <input id="exp-note" class="field" style="width:100%;margin-bottom:12px;" placeholder="לא חובה" />
+
+    <label class="k-lbl">צילום החשבונית</label>
+    <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:6px;">
+      <label style="flex:0 0 auto;background:#F0E9D8;border:1.5px dashed #C9B99F;border-radius:12px;padding:12px 16px;cursor:pointer;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#6B2E1E;">
+        צילום / בחירת קובץ
+        <input type="file" accept="image/*" capture="environment" onchange="previewInvoice(this)" style="display:none;" />
+      </label>
+      <div style="flex:1;">
+        <img id="exp-img-preview" alt="החשבונית" style="display:none;max-width:100%;max-height:150px;border-radius:10px;border:1px solid #E3D7C3;" />
+        <button id="exp-img-remove" onclick="removeInvoicePhoto()" style="display:none;margin-top:6px;background:none;border:none;color:#B45032;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.78rem;text-decoration:underline;cursor:pointer;">הסרת התמונה</button>
+      </div>
+    </div>
+    <div id="exp-error" style="color:#B45032;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;min-height:18px;margin-bottom:8px;"></div>
+
+    <div style="display:flex;gap:10px;">
+      <button id="exp-save-btn" onclick="saveExpense()" class="admin-save-btn" style="flex:1;">שמירה ✓</button>
+      <button id="exp-delete-btn" onclick="deleteExpense()" style="display:none;background:transparent;border:2px solid #B45032;color:#B45032;font-family:'Noto Serif Hebrew',serif;font-weight:700;padding:13px 18px;border-radius:100px;cursor:pointer;">מחיקה</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============ RECIPE IMPORT ============
      Paste straight out of Excel. Deliberately not an OCR-of-a-photo feature:
      Hebrew handwriting and phone photos of recipe sheets do not read reliably,
@@ -3037,6 +3211,7 @@ function attachAdminListeners() {
     alert('אין הרשאה לקרוא הזמנות — נסי להתחבר מחדש.');
   });
   attachKitchenListener();
+  attachFinanceListener();
 }
 
 function ordersSnapshot(snap) {
@@ -5390,6 +5565,7 @@ function switchAdminTab(tab) {
     initKitchen();
     switchKitchenTab(_currentKitchenTab || 'pantry');
   }
+  if (tab === 'finance') initFinance();
 }
 
 function updateOrdersTabBadge() {
@@ -6358,6 +6534,307 @@ function removeIngredientRow(rowId) {
 // (see addIngredientRow for why), so every reader has to normalise the decimal
 // comma a Hebrew keyboard produces. Three separate readers used bare
 // parseFloat; "0,5" became 0 in all of them.
+// ─── FINANCE: INCOME AND EXPENSES ─────────────────
+// Income is never typed in. It is already in nuika/orders, so entering it by
+// hand would only create a second set of numbers to disagree with the first.
+// Only expenses are entered, and the invoice photo rides along as the record.
+//
+// Entries and photos live in separate nodes: the month list has to load without
+// dragging every invoice image down with it.
+let FINANCE = [];
+let _financeLoaded = false;
+let _editingExpenseId = null;
+let _pendingInvoiceUrl = null;      // null = unchanged, '' = remove, string = new
+let _invoiceDecoding = false;
+
+function attachFinanceListener() {
+  db.ref(`${ROOT}/finance/entries`).on('value', snap => {
+    FINANCE = [];
+    const v = snap.val() || {};
+    Object.keys(v).forEach(id => FINANCE.push({ ...v[id], id }));
+    FINANCE.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    _financeLoaded = true;
+    if (currentAdminTab === 'finance') renderFinance();
+  }, err => {
+    _financeLoaded = true;
+    console.warn('finance listener denied:', err && err.code);
+  });
+}
+
+function initFinance() {
+  const m = document.getElementById('fin-month');
+  if (m && !m.value) {
+    const d = new Date();
+    m.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+  renderFinance();
+}
+
+function financeMonth() {
+  const m = document.getElementById('fin-month');
+  if (m && m.value) return m.value;
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+// Income for the month, derived from the orders that already exist. Archived
+// orders still count — they were still sales.
+function incomeForMonth(ym) {
+  let total = 0, count = 0;
+  ORDER_LOG.forEach(o => {
+    const t = o.timestamp || 0;
+    if (!t) return;
+    const d = new Date(t);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    if (key !== ym) return;
+    total += Number(o.total) || 0;
+    count++;
+  });
+  return { total, count };
+}
+
+function renderFinance() {
+  const ym  = financeMonth();
+  const box = document.getElementById('fin-summary');
+  const list = document.getElementById('fin-list');
+  if (!box || !list) return;
+
+  const income   = incomeForMonth(ym);
+  const expenses = FINANCE.filter(e => String(e.date || '').slice(0, 7) === ym && e.kind !== 'income');
+  const spent    = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  const profit   = income.total - spent;
+
+  box.innerHTML = `
+    <div class="fin-card">
+      <div class="fin-card-label">הכנסות (${income.count} הזמנות)</div>
+      <div class="fin-card-value" style="color:#3A7A50;" dir="ltr">₪${income.total.toFixed(0)}</div>
+    </div>
+    <div class="fin-card">
+      <div class="fin-card-label">הוצאות (${expenses.length})</div>
+      <div class="fin-card-value" style="color:#B45032;" dir="ltr">₪${spent.toFixed(0)}</div>
+    </div>
+    <div class="fin-card">
+      <div class="fin-card-label">${profit >= 0 ? 'רווח' : 'הפסד'}</div>
+      <div class="fin-card-value" style="color:${profit >= 0 ? '#3A7A50' : '#B45032'};" dir="ltr">₪${Math.abs(profit).toFixed(0)}</div>
+    </div>`;
+
+  if (!_financeLoaded) { list.innerHTML = `<div class="k-empty">טוען...</div>`; return; }
+  if (!expenses.length) {
+    list.innerHTML = `<div class="k-empty" style="padding:22px 12px;"><div class="k-empty-icon">🧾</div>אין הוצאות רשומות בחודש הזה<br>
+      <button class="k-add-btn" onclick="openExpense(null)" style="margin-top:12px;">הוספת הוצאה</button></div>`;
+    return;
+  }
+
+  const byCat = {};
+  expenses.forEach(e => { byCat[e.category || 'אחר'] = (byCat[e.category || 'אחר'] || 0) + (Number(e.amount) || 0); });
+
+  list.innerHTML =
+    `<div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.76rem;color:#9B8B75;margin-bottom:8px;">
+      ${Object.entries(byCat).sort((a, b) => b[1] - a[1])
+        .map(([c, v]) => `${esc(c)} <b dir="ltr">₪${v.toFixed(0)}</b>`).join(' · ')}
+    </div>` +
+    expenses.map(e => `
+      <button class="fin-row" onclick="openExpense('${esc(e.id)}')">
+        ${e.hasPhoto
+          ? `<img class="fin-thumb" id="fin-thumb-${esc(e.id)}" alt="חשבונית" />`
+          : `<div class="fin-thumb" style="display:flex;align-items:center;justify-content:center;color:#C9B99F;font-size:1.1rem;">🧾</div>`}
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            ${esc(e.supplier || e.category || 'הוצאה')}
+          </div>
+          <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#9B8B75;">
+            ${esc(e.date || '')} · ${esc(e.category || '')}${e.note ? ' · ' + esc(e.note) : ''}
+          </div>
+        </div>
+        <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#B45032;" dir="ltr">₪${(Number(e.amount) || 0).toFixed(0)}</div>
+      </button>`).join('');
+
+  // Thumbnails are fetched per row, only for the month on screen, so opening
+  // the tab never pulls a year of invoice images.
+  expenses.filter(e => e.hasPhoto).forEach(e => {
+    db.ref(`${ROOT}/finance/photos/${e.id}`).once('value')
+      .then(s => { const img = document.getElementById('fin-thumb-' + e.id); if (img && s.val()) img.src = s.val(); })
+      .catch(() => {});
+  });
+}
+
+function openExpense(id) {
+  if (!IS_ADMIN) return;
+  _editingExpenseId  = id;
+  _pendingInvoiceUrl = null;
+  _invoiceDecoding   = false;
+  const e = id ? FINANCE.find(x => x.id === id) : null;
+
+  document.getElementById('exp-title').textContent = e ? 'עריכת הוצאה' : 'הוצאה חדשה';
+  document.getElementById('exp-date').value     = e ? (e.date || '') : new Date().toISOString().slice(0, 10);
+  document.getElementById('exp-amount').value   = e ? (e.amount != null ? e.amount : '') : '';
+  document.getElementById('exp-category').value = (e && e.category) || 'חומרי גלם';
+  document.getElementById('exp-supplier').value = (e && e.supplier) || '';
+  document.getElementById('exp-note').value     = (e && e.note) || '';
+  document.getElementById('exp-error').textContent = '';
+  document.getElementById('exp-save-btn').disabled = false;
+  document.getElementById('exp-delete-btn').style.display = e ? 'block' : 'none';
+
+  const img = document.getElementById('exp-img-preview');
+  const rm  = document.getElementById('exp-img-remove');
+  img.style.display = 'none'; img.removeAttribute('src');
+  rm.style.display  = 'none';
+  if (e && e.hasPhoto) {
+    db.ref(`${ROOT}/finance/photos/${e.id}`).once('value')
+      .then(s => { if (s.val() && _editingExpenseId === id) { img.src = s.val(); img.style.display = 'block'; rm.style.display = 'block'; } })
+      .catch(() => {});
+  }
+
+  document.getElementById('expense-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeExpense() {
+  document.getElementById('expense-modal').classList.remove('open');
+  _editingExpenseId = null;
+  _pendingInvoiceUrl = null;
+  restoreScrollLock();
+}
+
+// An invoice has to stay readable, so it is compressed less aggressively than a
+// product photo — but it is still capped, and the rules cap it again at 700KB.
+function previewInvoice(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const err = document.getElementById('exp-error');
+  if (!/^image\//.test(file.type)) { err.textContent = 'אפשר לצרף רק תמונה.'; input.value = ''; return; }
+  if (file.size > 10 * 1024 * 1024) { err.textContent = 'התמונה גדולה מדי (מקסימום 10MB).'; input.value = ''; return; }
+
+  err.textContent = '';
+  _invoiceDecoding = true;
+  const reader = new FileReader();
+  reader.onerror = () => { _invoiceDecoding = false; err.textContent = 'לא הצלחתי לקרוא את הקובץ.'; };
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1400;   // an invoice must stay legible
+      const scale = Math.min(1, MAX / img.naturalWidth, MAX / img.naturalHeight);
+      const w = Math.round(img.naturalWidth * scale), h = Math.round(img.naturalHeight * scale);
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, w, h);
+
+      let out = c.toDataURL('image/jpeg', 0.7);
+      // Step the quality down rather than letting the rules reject the write.
+      let q = 0.7;
+      while (out.length > 690000 && q > 0.35) { q -= 0.1; out = c.toDataURL('image/jpeg', q); }
+      _invoiceDecoding = false;
+
+      if (out.length > 690000) { err.textContent = 'התמונה כבדה מדי גם אחרי כיווץ. נסי צילום קטן יותר.'; return; }
+      _pendingInvoiceUrl = out;
+      const prev = document.getElementById('exp-img-preview');
+      prev.src = out; prev.style.display = 'block';
+      document.getElementById('exp-img-remove').style.display = 'block';
+    };
+    img.onerror = () => {
+      _invoiceDecoding = false;
+      input.value = '';
+      err.textContent = 'לא הצלחתי לפתוח את התמונה (אולי HEIC מאייפון). אפשר לצלם מסך ולצרף אותו.';
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeInvoicePhoto() {
+  _pendingInvoiceUrl = '';           // explicit removal, distinct from "unchanged"
+  const img = document.getElementById('exp-img-preview');
+  img.style.display = 'none'; img.removeAttribute('src');
+  document.getElementById('exp-img-remove').style.display = 'none';
+}
+
+function saveExpense() {
+  const err = document.getElementById('exp-error');
+  const btn = document.getElementById('exp-save-btn');
+  err.textContent = '';
+  if (_invoiceDecoding) { err.textContent = 'התמונה עדיין נטענת — עוד רגע.'; return; }
+
+  const date   = document.getElementById('exp-date').value;
+  const amount = parseFloat(String(document.getElementById('exp-amount').value).replace(',', '.'));
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { err.textContent = 'צריך תאריך.'; return; }
+  if (!Number.isFinite(amount) || amount < 0) { err.textContent = 'צריך סכום תקין.'; return; }
+  if (amount > 1000000) { err.textContent = 'הסכום גבוה מדי.'; return; }
+
+  const id = _editingExpenseId || ('exp_' + Date.now());
+  const existing = _editingExpenseId ? FINANCE.find(x => x.id === _editingExpenseId) : null;
+  const hasPhoto = _pendingInvoiceUrl === '' ? false
+                 : _pendingInvoiceUrl ? true
+                 : !!(existing && existing.hasPhoto);
+
+  const entry = {
+    date, kind: 'expense', amount,
+    category: document.getElementById('exp-category').value || 'אחר',
+    supplier: document.getElementById('exp-supplier').value.trim().slice(0, 80),
+    note:     document.getElementById('exp-note').value.trim().slice(0, 300),
+    hasPhoto,
+    created: (existing && existing.created) || Date.now()
+  };
+
+  btn.disabled = true;
+  // The photo is written first: an entry that claims a photo it does not have
+  // shows a broken thumbnail, which is worse than an entry with no photo.
+  const photoWrite = _pendingInvoiceUrl === null
+    ? Promise.resolve()
+    : db.ref(`${ROOT}/finance/photos/${id}`).set(_pendingInvoiceUrl || null);
+
+  photoWrite
+    .then(() => db.ref(`${ROOT}/finance/entries/${id}`).set(entry))
+    .then(() => { btn.disabled = false; closeExpense(); renderFinance(); })
+    .catch(e => {
+      btn.disabled = false;
+      err.textContent = /PERMISSION_DENIED/i.test(String(e && (e.code || e.message)))
+        ? 'אין הרשאה לכתוב — צריך לפרסם את כללי האבטחה המעודכנים בקונסול.'
+        : 'השמירה נכשלה — בדקי חיבור לאינטרנט ונסי שוב.';
+      fbError(e);
+    });
+}
+
+function deleteExpense() {
+  if (!_editingExpenseId) return;
+  const e = FINANCE.find(x => x.id === _editingExpenseId);
+  if (!confirm(`למחוק את ההוצאה${e && e.supplier ? ' של ' + e.supplier : ''}${e ? ' על ₪' + e.amount : ''}?`)) return;
+  const id = _editingExpenseId;
+  // Both nodes, one atomic update, so a photo cannot outlive its entry.
+  db.ref(`${ROOT}/finance`).update({ [`entries/${id}`]: null, [`photos/${id}`]: null })
+    .then(() => { closeExpense(); renderFinance(); })
+    .catch(err => { alert('המחיקה נכשלה — נסי שוב.'); fbError(err); });
+}
+
+function exportFinanceCSV() {
+  const ym = financeMonth();
+  const rows = FINANCE.filter(e => String(e.date || '').slice(0, 7) === ym && e.kind !== 'income');
+  const income = incomeForMonth(ym);
+  const cell = v => {
+    let s = String(v == null ? '' : v);
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    return `"${s.replace(/"/g, '""')}"`;
+  };
+  const lines = [
+    ['תאריך', 'סוג', 'קטגוריה', 'ספק', 'הערה', 'סכום'].map(cell).join(','),
+    ...rows.map(e => [e.date, 'הוצאה', e.category || '', e.supplier || '', e.note || '', Number(e.amount) || 0].map(cell).join(',')),
+    ['', '', '', '', 'סה"כ הוצאות', rows.reduce((s, e) => s + (Number(e.amount) || 0), 0)].map(cell).join(','),
+    ['', '', '', '', `הכנסות (${income.count} הזמנות)`, income.total].map(cell).join(','),
+    ['', '', '', '', 'רווח', income.total - rows.reduce((s, e) => s + (Number(e.amount) || 0), 0)].map(cell).join(',')
+  ];
+  const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `nuika-כספים-${ym}.csv`;
+  // Appended before clicking: an anchor that is not in the document has its
+  // download aborted in some browsers.
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 // ─── RECIPE IMPORT FROM A SPREADSHEET ─────────────
 // Excel puts a tab between cells and a newline between rows when you copy, so
 // a paste is already a parseable table. Commas and semicolons are accepted too
