@@ -10,7 +10,7 @@
        machines, and "which version am I looking at?" had no answer before this
        existed. `node scripts/status.mjs` compares this value across your
        machine, GitHub, and the live site. -->
-  <meta name="nuika-version" content="2026-08-19T20:12:32.983Z|d3a3159" />
+  <meta name="nuika-version" content="2026-08-19T20:19:25.530Z|f48dba2" />
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
@@ -4148,16 +4148,19 @@ function openAdminLogin() {
 // Once she has signed in, the session persists, so surface a real button
 // rather than making her tap the logo every time.
 function updateAdminEntryButton() {
-  // A device that has signed in before, so the button is there the instant
-  // the app opens rather than after the auth round-trip.
-  let knownAdminDevice = false;
-  try { knownAdminDevice = localStorage.getItem('nuika_admin_device') === '1'; } catch (e) {}
-
-  // Nothing admin-related is ever rendered for a customer: this needs either a
-  // live admin session or a device that has held one. Noy reaches the sign-in
-  // through admin.html, which is a separate home-screen icon.
+  // A LIVE admin session and nothing else.
+  //
+  // This used to also accept a localStorage flag left by any past sign-in, so
+  // the button could stay on the shop's header for the life of that browser —
+  // visible to whoever picked up the phone next, and to anyone who set the flag
+  // by hand. It granted no access (Firebase Auth and the database rules are
+  // what protect the data) but it advertised the door, which is exactly what
+  // the separate admin.html entrance exists to avoid.
+  //
+  // Noy loses nothing: she opens the panel from the "ניהול" home-screen icon,
+  // and once she is signed in this button reappears for the rest of the session.
   const header = document.getElementById('admin-entry-btn');
-  if (header) header.style.display = (IS_ADMIN || knownAdminDevice) ? 'flex' : 'none';
+  if (header) header.style.display = IS_ADMIN ? 'flex' : 'none';
 }
 
 // Run at load: on Noy's phone the button is there before Firebase answers.
@@ -4185,7 +4188,9 @@ function checkAdminPassword() {
     .then(snap => {
       if (snap.val() !== true) throw { code: 'not-admin' };
       IS_ADMIN = true;
-      try { localStorage.setItem('nuika_admin_device', '1'); } catch (e) {}
+      // Deliberately nothing written to localStorage. A persisted "this device
+      // is an admin" marker is what kept the admin button on the shop header
+      // long after the session ended.
       updateAdminEntryButton();
       attachAdminListeners();
       closeAdminLogin();
@@ -4240,6 +4245,8 @@ function sendAdminPasswordReset() {
 
 function adminSignOut() {
   IS_ADMIN = false;
+  // Clear the old marker on the way out, so a device that carries one from a
+  // previous version of the app stops showing the button.
   try { localStorage.removeItem('nuika_admin_device'); } catch (e) {}
   firebase.auth().signOut().catch(() => {});
   location.href = location.pathname;
