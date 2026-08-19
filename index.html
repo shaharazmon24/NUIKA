@@ -10,7 +10,7 @@
        machines, and "which version am I looking at?" had no answer before this
        existed. `node scripts/status.mjs` compares this value across your
        machine, GitHub, and the live site. -->
-  <meta name="nuika-version" content="2026-08-19T20:01:02.421Z|9c07d85" />
+  <meta name="nuika-version" content="2026-08-19T20:12:32.983Z|d3a3159" />
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
@@ -7308,8 +7308,32 @@ function previewRecipeImport() {
     </div>
     ${noWeight.length ? `<div class="ri-unmatched" style="margin-top:8px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;">
       ${noWeight.length} שורות בלי משקל — הן לא ייובאו. אפשר לתקן ולהדביק שוב.</div>` : ''}
-    ${unmatched.length ? `<div style="margin-top:8px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#9B8B75;">
-      מרכיבים שלא נמצאו במזווה ייובאו בכל זאת, אבל בלי מחיר — אפשר להוסיף אותם למזווה אחר כך והעלות תתעדכן לבד.</div>` : ''}
+
+    ${unmatched.length ? `
+      <div style="margin-top:14px;background:#FDFAF4;border:1px solid #E3D7C3;border-radius:12px;padding:12px;">
+        <div style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:700;color:#2C1810;font-size:0.83rem;margin-bottom:4px;">
+          ${unmatched.length} מרכיבים חדשים — להוסיף למזווה?
+        </div>
+        <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.74rem;color:#9B8B75;margin-bottom:10px;line-height:1.6;">
+          הם ייווצרו במזווה ויתחברו למתכון. מחיר לק"ג זה לא חובה — בלעדיו המתכון פשוט יראה "ללא מחיר" עד שתמלאי אותו במזווה.
+        </div>
+        ${unmatched.map((r, i) => `
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+            <label style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#2C1810;cursor:pointer;">
+              <input type="checkbox" class="ri-new-add" data-name="${esc(r.name)}" checked />
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.name)}</span>
+            </label>
+            <input type="text" inputmode="decimal" class="ri-new-price field" data-name="${esc(r.name)}"
+                   placeholder="₪ לק״ג" dir="ltr" style="width:92px;flex:0 0 auto;padding:6px 8px;font-size:0.8rem;" />
+            <select class="ri-new-cat field" data-name="${esc(r.name)}" style="width:104px;flex:0 0 auto;padding:6px 8px;font-size:0.78rem;">
+              <option value="קמח">קמח</option><option value="שמן וחמאה">שמן וחמאה</option>
+              <option value="חלב וביצים">חלב וביצים</option><option value="ממתיקים">ממתיקים</option>
+              <option value="שוקולד">שוקולד</option><option value="פירות ואגוזים">פירות ואגוזים</option>
+              <option value="תוספים">תוספים</option><option value="אריזות">אריזות</option>
+              <option value="אחר" selected>אחר</option>
+            </select>
+          </div>`).join('')}
+      </div>` : ''}
   `;
 }
 
@@ -7324,6 +7348,42 @@ function commitRecipeImport() {
   const yieldCount = parseInt(document.getElementById('ri-yield').value, 10) || 1;
   const priceRaw   = String(document.getElementById('ri-price').value).replace(',', '.');
   const sellingPrice = parseFloat(priceRaw) || 0;
+
+  // Create pantry items for the ingredients the sheet introduced, and link the
+  // recipe rows to them in the same pass. Without this an imported recipe left
+  // its new ingredients dangling: unpriced, unlinked, and invisible to the
+  // shopping list — so importing a recipe was only ever half the job.
+  const newPantry = [];
+  document.querySelectorAll('.ri-new-add:checked').forEach(cb => {
+    const name = cb.dataset.name;
+    if (!name) return;
+    if (PANTRY.some(p => normaliseIngName(p.name) === normaliseIngName(name))) return;
+    const priceEl = document.querySelector(`.ri-new-price[data-name="${CSS.escape(name)}"]`);
+    const catEl   = document.querySelector(`.ri-new-cat[data-name="${CSS.escape(name)}"]`);
+    const price   = parseFloat(String(priceEl ? priceEl.value : '').replace(',', '.'));
+
+    const item = {
+      id: 'pi_' + Date.now() + '_' + newPantry.length,
+      name,
+      cat: (catEl && catEl.value) || 'אחר',
+      supplier: '',
+      waste: 0,
+      vat: 0.17
+    };
+    // pricePerKg is omitted rather than zeroed when she leaves it blank.
+    // calcIngCost treats a missing price as "unknown" and the recipe says
+    // "ללא מחיר"; a zero would read as a genuinely free ingredient and quietly
+    // understate the cost of everything it appears in.
+    if (Number.isFinite(price) && price >= 0) item.pricePerKg = price;
+    newPantry.push(item);
+  });
+
+  // Link the rows before they are written into the recipe.
+  newPantry.forEach(item => {
+    rows.forEach(r => {
+      if (!r.pantryId && normaliseIngName(r.name) === normaliseIngName(item.name)) r.pantryId = item.id;
+    });
+  });
 
   const recipe = {
     id: 'rec_' + Date.now(),
@@ -7343,19 +7403,39 @@ function commitRecipeImport() {
 
   const btn = document.getElementById('ri-save-btn');
   btn.disabled = true;
+
+  // One update() across the kitchen node, naming the new pantry rows and the
+  // recipe together. Two separate writes could leave a recipe pointing at
+  // pantry ids that were never created — a permanently broken costing with no
+  // way for Noy to see why.
+  const patch = { [`recipes/${recipe.id}`]: recipe };
+  newPantry.forEach(item => { patch[`pantry/${item.id}`] = item; });
+
   RECIPES.push(recipe);
-  db.ref(`${ROOT}/kitchen/recipes/${recipe.id}`).set(recipe)
+  newPantry.forEach(item => PANTRY.push(item));
+
+  db.ref(`${ROOT}/kitchen`).update(patch)
     .then(() => {
       btn.disabled = false;
       closeRecipeImport();
       renderRecipeGrid();
-      alert(`"${name}" יובא עם ${rows.length} מרכיבים.`);
+      renderPantry();
+      const unpriced = newPantry.filter(p => typeof p.pricePerKg !== 'number').length;
+      alert(`"${name}" יובא עם ${rows.length} מרכיבים.` +
+        (newPantry.length ? `\n${newPantry.length} מרכיבים חדשים נוספו למזווה.` : '') +
+        (unpriced ? `\n\n${unpriced} מהם עדיין בלי מחיר — עד שתמלאי אותו במזווה, העלות של המתכון לא תהיה מלאה.` : ''));
     })
     .catch(err => {
       btn.disabled = false;
+      // Roll the local arrays back, or the screen shows a recipe and pantry
+      // rows that do not exist in the database.
       const i = RECIPES.findIndex(r => r.id === recipe.id);
       if (i !== -1) RECIPES.splice(i, 1);
-      alert('הייבוא נכשל — המתכון לא נשמר. בדקי חיבור לאינטרנט ונסי שוב.');
+      newPantry.forEach(item => {
+        const j = PANTRY.findIndex(p => p.id === item.id);
+        if (j !== -1) PANTRY.splice(j, 1);
+      });
+      alert('הייבוא נכשל — לא נשמר כלום. בדקי חיבור לאינטרנט ונסי שוב.');
       fbError(err);
     });
 }
@@ -7519,6 +7599,16 @@ function deleteRecipe() {
     [`recipes/${_editingRecipeId}`]:    null,
     [`weeklyPlan/${_editingRecipeId}`]: null
   }).catch(fbError);
+
+  // Clear the link from any dish that pointed here, or the menu keeps a
+  // reference to a recipe that no longer exists. Nothing crashes on a dangling
+  // id — the picker flags it and the costing reports it as unknown — but the
+  // link is dead, and leaving dead links around is how "why does this say
+  // unavailable?" starts.
+  PRODUCTS.filter(p => p.recipeId === _editingRecipeId).forEach(p => {
+    p.recipeId = null;
+    db.ref(`${ROOT}/products/${p.id}/recipeId`).set(null).catch(fbError);
+  });
   closeRecipeEditor();
   renderRecipeGrid();
 }
