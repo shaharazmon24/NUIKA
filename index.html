@@ -10,7 +10,7 @@
        machines, and "which version am I looking at?" had no answer before this
        existed. `node scripts/status.mjs` compares this value across your
        machine, GitHub, and the live site. -->
-  <meta name="nuika-version" content="2026-08-19T17:44:02.737Z|ca89e4f" />
+  <meta name="nuika-version" content="2026-08-19T19:05:43.574Z|92c4bb8" />
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
@@ -3255,11 +3255,29 @@ function pruneCart() {
 
 // Start of the current ordering cycle, used to key the public stock counter
 // so it resets by itself every week.
+// The public stock counter is stored under a key derived from this window, so
+// the window must not move when Noy nudges the deadline.
+//
+// It used to be derived straight from the deadline: moving closing time from
+// Tuesday to Wednesday shifted `start` by a day, the counter was read from a
+// key that did not exist yet, every capped dish showed full stock to every
+// customer, and the orders already placed fell outside the new window — so
+// they were never counted again. Nudging the deadline mid-week oversold it.
+//
+// Anchoring on the ISO week instead means the bucket only changes when the
+// week does. The anchor is a fixed Tuesday 00:00 Israel time; `end` still
+// follows the real deadline, because that is what the countdown shows.
 function currentCycle() {
   const WEEK = 7 * 24 * 60 * 60 * 1000;
+  // Declared inside the function on purpose. As a module-level `const` it sat
+  // in the temporal dead zone while watchStock() — which runs at load and calls
+  // this — was still initialising, and threw.
+  const EPOCH = Date.UTC(2026, 0, 6, 0, 0, 0);   // Tue 6 Jan 2026, a Tuesday
   let end = (getNextTuesdayDeadline() || new Date()).getTime();
   while (end < Date.now()) end += WEEK;
-  return { start: end - WEEK, end };
+  // Bucket the deadline into its week rather than using it directly.
+  const start = EPOCH + Math.floor((end - EPOCH) / WEEK) * WEEK;
+  return { start, end: start + WEEK, deadline: end };
 }
 
 // Public per-product tally for the current cycle. Customers read this instead
@@ -3305,16 +3323,20 @@ function getStockRemaining(productId) {
   let sold = 0;
   // Filtering on status !== 'done' meant that ticking orders off as delivered
   // handed their units back to the shop mid-week and let it oversell.
-  const WEEK = 7 * 24 * 60 * 60 * 1000;
-  let cycleEnd = (getNextTuesdayDeadline() || new Date()).getTime();
-  // A custom deadline left in the past would freeze the window open forever.
-  while (cycleEnd < Date.now()) cycleEnd += WEEK;
-  const cycleStart = cycleEnd - WEEK;
+  //
+  // One source for the window. This used to recompute it from the deadline
+  // independently of currentCycle(), so Noy's view and the customers' view
+  // could disagree about which orders were in this week.
+  const { start: cycleStart, end: cycleEnd } = currentCycle();
   ORDER_LOG.filter(o => !o.archived
     && (o.timestamp || 0) >= cycleStart
     && (o.timestamp || 0) < cycleEnd).forEach(o => {
     (o.itemsArr || []).forEach(item => {
-      if ((item.id && item.id === productId) || item.name === p.nameHe) sold += item.qty;
+      if (!item) return;
+      // id first, name only as a fallback for orders written before items
+      // carried one — matching on a name a rename has since changed would
+      // under-count and hand sold units back to the shop.
+      if (item.id != null ? item.id === productId : item.name === p.nameHe) sold += (item.qty || 0);
     });
   });
   return Math.max(0, p.maxStock - sold);
@@ -4777,24 +4799,53 @@ async function translateHeToEn(text) {
   try {
     const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.trim())}&langpair=he|en`);
     const data = await res.json();
-    return (data && data.responseData && data.responseData.translatedText) || '';
+    // On the free tier this endpoint returns its quota warning as the
+    // translated text. Stored unchecked, that sentence becomes the dish's
+    // English name on the live menu.
+    if (!data || data.responseStatus !== 200) return '';
+    const out = (data.responseData && data.responseData.translatedText) || '';
+    if (/MYMEMORY|QUOTA|WARNING|INVALID/i.test(out)) return '';
+    return out;
   } catch (e) {
     return '';
   }
 }
+// Bumped every time the dish editor opens. A translation that resolves after
+// the editor moved on belongs to a different dish and must be discarded —
+// without this, editing dish A, closing it, then opening dish B wrote A's
+// English name into B and saved it there.
+let _translateToken = 0;
+// Every in-flight translation, so saveProductEdit can wait for it. blur fires
+// before click, so the request started and yielded, the save then ran
+// synchronously against an empty English field, and stored the HEBREW name as
+// the English one. On the ordinary path — type the name, tap save — the
+// feature never worked at all.
+const _translationsInFlight = new Set();
+
 async function autoTranslateField(heFieldId, enFieldId, noteId) {
   const heEl = document.getElementById(heFieldId);
   const enEl = document.getElementById(enFieldId);
   if (!heEl || !enEl || enEl.value.trim() || !heEl.value.trim()) return;
   const note = noteId ? document.getElementById(noteId) : null;
   if (note) note.textContent = 'מתרגם...';
-  const translated = await translateHeToEn(heEl.value);
-  if (translated && !enEl.value.trim()) {
-    enEl.value = translated;
-    if (note) note.textContent = 'תורגם אוטומטית — אפשר לערוך בעצמך';
-  } else if (note) {
-    note.textContent = '';
-  }
+
+  const myToken = _translateToken;
+  const job = translateHeToEn(heEl.value).then(translated => {
+    if (myToken !== _translateToken) return;      // a different dish by now
+    if (translated && !enEl.value.trim()) {
+      enEl.value = translated;
+      if (note) note.textContent = 'תורגם אוטומטית — אפשר לערוך בעצמך';
+    } else if (note) {
+      note.textContent = '';
+    }
+  });
+  _translationsInFlight.add(job);
+  try { await job; } finally { _translationsInFlight.delete(job); }
+}
+
+// Resolves once nothing is in flight, so the save reads a settled field.
+function awaitTranslations() {
+  return Promise.all([..._translationsInFlight]).catch(() => {});
 }
 
 // ─── MENU ↔ KITCHEN LINK ──────────────────────────
@@ -4879,6 +4930,8 @@ function openEditProduct(id) {
   if (!p) return;
   editingNewProduct = false;
   pendingImageDataUrl = null;
+  _imageDecoding = false;
+  _translateToken++;   // discard any translation still running for another dish
 
   document.getElementById('edit-modal-title').textContent = 'עריכת מנה';
   document.getElementById('edit-product-id').value = id;
@@ -4916,6 +4969,8 @@ function openEditProduct(id) {
 function openAddProduct() {
   editingNewProduct = true;
   pendingImageDataUrl = null;
+  _imageDecoding = false;
+  _translateToken++;
 
   document.getElementById('edit-modal-title').textContent  = 'הוספת מנה חדשה';
   document.getElementById('edit-product-id').value = '';
@@ -4941,10 +4996,36 @@ function openAddProduct() {
   document.getElementById('edit-product-modal').classList.add('open');
 }
 
+// Set while a photo is still being read and decoded. Saving in that window
+// stored the OLD image on an edit, or no image at all on a new dish — silently.
+let _imageDecoding = false;
+
 function previewImage(input) {
   if (!input.files || !input.files[0]) return;
   const file = input.files[0];
+
+  // The upload label promises "JPG, PNG up to 5MB" and nothing enforced either
+  // half. These photos are stored as base64 inside the products node, which
+  // every visitor downloads on every load, so an oversized one is not a private
+  // mistake — it slows the shop down for everyone.
+  if (!/^image\//.test(file.type)) {
+    alert('אפשר להעלות רק תמונה (JPG או PNG).');
+    input.value = '';
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    alert(`התמונה גדולה מדי (${(file.size / 1048576).toFixed(1)}MB). המקסימום הוא 5MB.\n\nאפשר לצלם מחדש באיכות נמוכה יותר, או לקחת צילום מסך של התמונה.`);
+    input.value = '';
+    return;
+  }
+
+  _imageDecoding = true;
   const reader = new FileReader();
+  reader.onerror = function() {
+    _imageDecoding = false;
+    alert('לא הצלחתי לקרוא את הקובץ. נסי תמונה אחרת.');
+    input.value = '';
+  };
   reader.onload = function(e) {
     // A phone photo is 3-5 MB. Stored raw it goes into the products node as
     // base64, is re-downloaded by every visitor on every load, and can blow
@@ -4952,7 +5033,9 @@ function previewImage(input) {
     const img = new Image();
     img.onload = function() {
       const MAX = 900;
-      const scale = Math.min(1, MAX / img.naturalWidth);
+      // Both axes. Bounding width alone let a tall photo (900×5000) through at
+      // full size, which is exactly the shape a phone produces held upright.
+      const scale = Math.min(1, MAX / img.naturalWidth, MAX / img.naturalHeight);
       const w = Math.round(img.naturalWidth * scale);
       const h = Math.round(img.naturalHeight * scale);
 
@@ -4963,6 +5046,7 @@ function previewImage(input) {
       ctx.drawImage(img, 0, 0, w, h);
 
       pendingImageDataUrl = c.toDataURL('image/jpeg', 0.82);
+      _imageDecoding = false;
 
       const preview = document.getElementById('edit-img-preview');
       const placeholder = document.getElementById('edit-img-placeholder');
@@ -4970,22 +5054,27 @@ function previewImage(input) {
       preview.style.display = 'block';
       placeholder.style.display = 'none';
     };
-    // If the browser cannot decode it, fall back to the original rather than
-    // silently losing the photo.
+    // Refuse, rather than storing the original. The fallback here used to keep
+    // an undecodable 5MB HEIC or CMYK JPEG as a ~6.7MB base64 string in a
+    // world-readable node, downloaded by every visitor forever — a much worse
+    // outcome than losing one photo.
     img.onerror = function() {
-      pendingImageDataUrl = e.target.result;
-      const preview = document.getElementById('edit-img-preview');
-      const placeholder = document.getElementById('edit-img-placeholder');
-      preview.src = pendingImageDataUrl;
-      preview.style.display = 'block';
-      placeholder.style.display = 'none';
+      _imageDecoding = false;
+      pendingImageDataUrl = null;
+      input.value = '';
+      alert('לא הצלחתי לפתוח את התמונה הזאת — יכול להיות שהיא בפורמט שהדפדפן לא מכיר (למשל HEIC מאייפון).\n\nהכי פשוט: לפתוח אותה בגלריה, לצלם מסך, ולהעלות את צילום המסך.');
     };
     img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
 
-function saveProductEdit() {
+async function saveProductEdit() {
+  // Let any translation started by the blur that preceded this click finish
+  // first, or the English fields are read while still empty and the Hebrew
+  // name is stored as the English one.
+  await awaitTranslations();
+
   // A dish added from the panel goes onto the menu unless it is explicitly
   // parked afterwards.
   const nameHe  = document.getElementById('edit-name-he').value.trim();
@@ -5008,6 +5097,10 @@ function saveProductEdit() {
   const tag     = tagRadio && tagRadio.value ? tagRadio.value : null;
   const recipeSel = document.getElementById('edit-recipe-id');
   const recipeId  = recipeSel ? recipeSel.value : '';
+
+  // A phone photo takes a moment to read and decode. Saving inside that window
+  // kept the previous image, or none at all, without saying so.
+  if (_imageDecoding) { alert('התמונה עדיין נטענת — עוד רגע ונסי לשמור שוב.'); return; }
 
   if (!nameHe) { alert('חובה למלא שם בעברית'); return; }
   // The order rules cap an item name at 80 characters. A longer dish name

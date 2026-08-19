@@ -1,5 +1,5 @@
 // Bump this version on every deploy that must reach existing users.
-const CACHE = 'nuika-v7';
+const CACHE = 'nuika-v8';
 
 // Relative paths, so the same worker is correct whether the site is served
 // from the domain root (nuika.co.il) or a subdirectory.
@@ -44,7 +44,11 @@ self.addEventListener('fetch', e => {
 
   // Never cache the live database. fonts.googleapis.com also ends in
   // googleapis.com, so match it exactly rather than by suffix.
-  if (url.hostname.endsWith('firebaseio.com') || url.hostname === 'www.googleapis.com') return;
+  // The translation API is per-phrase and its answers are not assets — cached,
+  // they only grow the app cache with third-party JSON.
+  if (url.hostname.endsWith('firebaseio.com')
+      || url.hostname === 'www.googleapis.com'
+      || url.hostname === 'api.mymemory.translated.net') return;
 
   // Only store a genuinely good response. Without this a transient Cloudflare
   // or GitHub Pages error page — which is text/html and matches the HTML test —
