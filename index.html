@@ -10,7 +10,7 @@
        machines, and "which version am I looking at?" had no answer before this
        existed. `node scripts/status.mjs` compares this value across your
        machine, GitHub, and the live site. -->
-  <meta name="nuika-version" content="dev|unpublished" />
+  <meta name="nuika-version" content="2026-08-19T17:44:02.737Z|ca89e4f" />
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
@@ -2563,8 +2563,21 @@
     <div style="margin-bottom:12px;">
       <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:6px;">מלאי מקסימלי לשבוע</label>
       <div style="display:flex;align-items:center;gap:10px;">
-        <input id="edit-stock" type="number" class="field" style="width:110px;" placeholder="ללא הגבלה" min="1" dir="ltr" />
-        <span style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#9B8B75;">יחידות (ריק = ללא הגבלה)</span>
+        <input id="edit-stock" type="number" class="field" style="width:110px;" placeholder="ללא הגבלה" min="0" dir="ltr" />
+        <span style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#9B8B75;">יחידות (ריק = ללא הגבלה · 0 = לא זמין השבוע)</span>
+      </div>
+    </div>
+
+    <!-- The link between the menu and the kitchen. Before this, the two were
+         joined only by comparing Hebrew names, so renaming a dish silently
+         broke its recipe, its weekly-plan import and its costing. -->
+    <div style="margin-bottom:20px;">
+      <label for="edit-recipe-id" style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:8px;">מתכון מקושר</label>
+      <select id="edit-recipe-id" class="field" style="width:100%;">
+        <option value="">— ללא מתכון —</option>
+      </select>
+      <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.75rem;color:#9B8B75;margin-top:6px;">
+        מקשר את המנה למתכון במטבח. אחרי הקישור, שינוי שם המנה יעדכן גם את שם המתכון, והתכנון השבועי ידע לזהות את ההזמנות שלה.
       </div>
     </div>
 
@@ -2586,7 +2599,7 @@
 
     <!-- Buttons -->
     <div style="display:flex;flex-direction:column;gap:10px;">
-      <button onclick="saveProductEdit()" class="admin-save-btn" style="width:100%;">שמור מנה ✓</button>
+      <button id="save-product-btn" onclick="saveProductEdit()" class="admin-save-btn" style="width:100%;">שמור מנה ✓</button>
       <button id="delete-product-btn" onclick="deleteProduct()" class="delete-product-btn" style="width:100%;padding:11px;">מחק מנה זו</button>
     </div>
 
@@ -2788,6 +2801,10 @@ function fbError(err) {
 let _productsLoaded = false;
 let _cartRestored  = false;
 let _kitchenLoaded  = false;
+// Distinguishes "the order listener has answered and there are genuinely no
+// orders" from "it has not answered yet". reconcileStock must not write in the
+// second case, and must write in the first.
+let _ordersLoaded   = false;
 
 // Local caches — populated by Firebase listeners
 let ORDER_LOG = [];
@@ -2850,9 +2867,24 @@ db.ref(`${ROOT}/products`).on('value', snap => {
   const data = snap.val();
   _productsLoaded = true;
   PRODUCTS.length = 0;
-  if (data) Object.values(data).sort((a, b) => a.id - b.id).forEach(p => PRODUCTS.push({ ...p, svg: null }));
+  // Coerce the id once, here. A string id sorts as NaN and then fails every
+  // `p.id === id` lookup downstream, which shows up as an Edit button that
+  // does nothing at all.
+  if (data) Object.values(data)
+    .map(p => ({ ...p, id: +p.id, svg: null }))
+    .filter(p => Number.isFinite(p.id))
+    .sort((a, b) => a.id - b.id)
+    .forEach(p => PRODUCTS.push(p));
 
+  backfillRecipeLinks();
   pruneCart();
+  // If the customer is sitting in the order modal while Noy changes a price or
+  // marks a dish sold out, the modal kept showing the old lines and the old
+  // total — while submit rebuilt both from the current data. The number they
+  // confirmed was not the number that went to WhatsApp, to Firebase or to the
+  // thank-you page.
+  const om = document.getElementById('order-modal');
+  if (om && om.classList.contains('open') && typeof renderOrderSummary === 'function') renderOrderSummary();
 
   // Only latch once real products have arrived; latching on an empty fire
   // discarded the saved cart permanently.
@@ -2899,7 +2931,15 @@ function attachAdminListeners() {
 
 function ordersSnapshot(snap) {
   ORDER_LOG = [];
-  if (snap.val()) snap.forEach(child => ORDER_LOG.push(child.val()));
+  // Keep the Firebase key. An order written by an older build with no numeric
+  // `id` fell back to 0 in every button, so its status buttons wrote to
+  // nuika/orders/0 and its delete removed nothing — the card kept coming back
+  // and the order looked impossible to remove.
+  if (snap.val()) snap.forEach(child => {
+    const v = child.val() || {};
+    ORDER_LOG.push({ ...v, id: v.id != null ? v.id : Number(child.key) });
+  });
+  _ordersLoaded = true;
   ORDER_LOG.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
   // Stock counts are derived from orders, so the grid has to redraw too —
   // otherwise "נותרו N" stays frozen at whatever it was on first paint.
@@ -2940,6 +2980,10 @@ function kitchenSnapshot(snap) {
   PANTRY      = data.pantry  ? Object.values(data.pantry).sort(byName) : [];
   RECIPES     = data.recipes ? Object.values(data.recipes) : [];
   WEEKLY_PLAN = data.weeklyPlan || {};
+
+  // Both trees are needed to derive the menu↔recipe links, and either may
+  // arrive second.
+  backfillRecipeLinks();
 
   // Don't rebuild the panel while she is working in it.
   const panel = document.getElementById('admin-panel');
@@ -3248,7 +3292,10 @@ function watchStock() {
 
 function getStockRemaining(productId) {
   const p = PRODUCTS.find(p => p.id === productId);
-  if (!p || !p.maxStock) return null;
+  // == null, not falsy: null means "no cap set", but 0 is a real cap meaning
+  // none available this week. Treating 0 as no-cap made a sold-out-by-design
+  // dish look unlimited.
+  if (!p || p.maxStock == null) return null;
 
   // Customers cannot read the order log, so they use the public tally.
   if (!IS_ADMIN) {
@@ -3371,10 +3418,10 @@ function renderProducts() {
 
       <!-- Info -->
       <div style="padding:12px 14px 14px;">
-        <div class="font-serif font-bold text-ink leading-snug mb-1" style="font-size:0.92rem;" lang-content="he">${p.nameHe}</div>
-        <div class="font-serif font-bold text-ink leading-snug mb-1" style="font-size:0.92rem;" lang-content="en">${p.nameEn}</div>
-        <p style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.75rem;line-height:1.5;color:#6B5D4E;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" lang-content="he">${p.descHe}</p>
-        <p style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.75rem;line-height:1.5;color:#6B5D4E;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" lang-content="en">${p.descEn}</p>
+        <div class="font-serif font-bold text-ink leading-snug mb-1" style="font-size:0.92rem;" lang-content="he">${esc(p.nameHe)}</div>
+        <div class="font-serif font-bold text-ink leading-snug mb-1" style="font-size:0.92rem;" lang-content="en">${esc(p.nameEn)}</div>
+        <p style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.75rem;line-height:1.5;color:#6B5D4E;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" lang-content="he">${esc(p.descHe)}</p>
+        <p style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.75rem;line-height:1.5;color:#6B5D4E;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" lang-content="en">${esc(p.descEn)}</p>
         ${stockHtml}
         <div class="flex items-center justify-between" style="margin-top:8px;">
           <span class="font-serif font-bold text-earth" style="font-size:1rem;">₪${p.price}</span>
@@ -3488,7 +3535,12 @@ function restoreCart() {
     const saved = JSON.parse(localStorage.getItem('nuika_cart') || '{}');
     Object.entries(saved).forEach(([id, qty]) => {
       const p = PRODUCTS.find(p => p.id === +id);
-      if (p && !p.soldOut && qty > 0) cart[+id] = qty;
+      // inMenu too, not just soldOut. A dish parked in the bank has no card on
+      // the page, so updateCard() bails and there is no way to remove it — but
+      // getCartTotal() still counts it. The customer saw a total they could not
+      // account for and could not clear, and submitting sent Noy a paid order
+      // for a dish she had taken off the menu.
+      if (p && !p.soldOut && p.inMenu !== false && qty > 0) cart[+id] = qty;
     });
   } catch (e) {}
 }
@@ -3964,13 +4016,13 @@ function productRow(p) {
         onerror="this.style.display='none'"
         style="width:56px;height:56px;object-fit:cover;border-radius:8px;flex-shrink:0;" />
       <div style="flex:1;min-width:0;">
-        <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#2C1810;font-size:0.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.nameHe}</div>
+        <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#2C1810;font-size:0.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.nameHe)}</div>
         <div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;">₪${p.price}</div>
       </div>
       <!-- Edit button -->
       <button onclick="openEditProduct(${p.id})"
         style="background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:8px;padding:6px 10px;cursor:pointer;flex-shrink:0;"
-        aria-label="ערוך ${p.nameHe}">
+        aria-label="ערוך ${esc(p.nameHe)}">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       </button>
       <!-- Move between this week's menu and the bank -->
@@ -4038,9 +4090,11 @@ function saveAdminSettings() {
   db.ref(`${ROOT}/settings/payboxLink`).set(payboxVal || null).catch(fbError);
   _settingsCache.payboxLink = payboxVal || '';
 
-  // Persist sold-out flags — the toggles only mutate PRODUCTS in memory
-  saveAllProducts();
-
+  // No product write here. The sold-out and bank toggles already write their
+  // own key the moment they are tapped (liveToggleSoldOut / toggleInMenu), so
+  // this call added nothing — while republishing the entire menu from this
+  // device's memory every time Noy pressed save on the settings tab, which is
+  // how a stale tab could silently delete dishes added on the other device.
   renderProducts();
   updateCartBar();
 
@@ -4142,13 +4196,24 @@ function saveOrderToLog(orderData) {
         ORDER_LOG.push(saved);
         ORDER_LOG.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
       }
-      const key = String(currentCycle().start);
-      (saved.itemsArr || []).forEach(item => {
-        if (!item || item.id == null) return;   // id 0 is a valid product id
-        db.ref(`${ROOT}/stockUsed/${key}/${item.id}`)
-          .transaction(v => (v || 0) + (item.qty || 0))
-          .catch(() => {});
-      });
+      // Only a customer increments the public counter. In an admin session the
+      // reconciler already recomputes the whole tally from ORDER_LOG — and the
+      // SDK fires the local `value` event before this promise resolves, so the
+      // order is already counted by the time we get here. Adding to it again
+      // double-charged every manual order: stock drained twice as fast and
+      // dishes flipped to sold-out at half their real cap, blocking real sales.
+      // Noy never saw it, because her own view reads ORDER_LOG directly.
+      if (!IS_ADMIN) {
+        const key = String(currentCycle().start);
+        (saved.itemsArr || []).forEach(item => {
+          if (!item || item.id == null) return;   // id 0 is a valid product id
+          db.ref(`${ROOT}/stockUsed/${key}/${item.id}`)
+            .transaction(v => (v || 0) + (item.qty || 0))
+            .catch(err => console.warn('stock tally failed', err));
+        });
+      } else {
+        reconcileStock();
+      }
       return saved;
     });
 }
@@ -4253,7 +4318,15 @@ function moOpen(order) {
   document.getElementById('mo-modal-hint').textContent  = order
     ? 'אפשר לשנות כמויות, להוסיף מוצרים או לאפס אותם כדי להוריד, ולעדכן שם, טלפון, אופן תשלום והערות. השינוי נשמר על אותה הזמנה, והסטטוס והתאריך שלה נשמרים.'
     : 'להוספת הזמנה שקיבלת בטלפון/בוואטסאפ/בעל פה — היא תופיע ברשימת ההזמנות בדיוק כמו הזמנה מהאתר.';
-  document.getElementById('mo-save-btn').textContent = order ? 'שמירת השינויים ✓' : 'שמירת הזמנה ✓';
+  // Re-enable the button. It is disabled while a save is in flight, and if that
+  // save never settles — an offline write is queued, not rejected — it stayed
+  // disabled for the rest of the session. Every field above was being reset
+  // except this one, so the form looked completely normal and the button looked
+  // completely normal, and tapping it did nothing at all. That is the reported
+  // "I entered the second order and it didn't save it either".
+  const moBtn = document.getElementById('mo-save-btn');
+  moBtn.disabled = false;
+  moBtn.textContent = order ? 'שמירת השינויים ✓' : 'שמירת הזמנה ✓';
 
   moRenderRows(qtyById);
   updateManualOrderTotal();
@@ -4280,7 +4353,16 @@ function closeManualOrderModal() {
 }
 
 function handleManualOrderBackdrop(e) {
-  if (e.target === document.getElementById('manual-order-modal')) closeManualOrderModal();
+  if (e.target !== document.getElementById('manual-order-modal')) return;
+  // On a phone this sheet sits at the bottom, so the whole upper half of the
+  // screen is live backdrop. One stray tap while scrolling the dish list wiped
+  // the name, the phone and every quantity with no warning and no undo — which
+  // looks exactly like "it didn't save".
+  const hasWork = (document.getElementById('mo-name').value.trim()
+                || document.getElementById('mo-phone').value.trim()
+                || manualOrderTally().itemsArr.length);
+  if (hasWork && !confirm('לסגור בלי לשמור? מה שמילאת יימחק.')) return;
+  closeManualOrderModal();
 }
 
 // Reads the quantity boxes and returns the lines, the structured items and the
@@ -4329,6 +4411,11 @@ function saveManualOrder() {
   // The rules reject a total outside this range, and a rejected write would
   // otherwise look like a lost order.
   if (total > 100000) { errEl.textContent = 'הסכום גבוה מדי — בדקי את הכמויות.'; return; }
+  // Same reasoning, same rules file, different field: qty is capped at 500 per
+  // line. A catering order of 600 was rejected outright and reported as an
+  // internet problem, so retrying could never work.
+  const over = itemsArr.find(i => i.qty > 500);
+  if (over) { errEl.textContent = `הכמות של "${over.name}" גבוהה מדי — עד 500 יחידות בשורה.`; return; }
 
   btn.disabled = true;
   errEl.textContent = 'שומרת...';
@@ -4337,17 +4424,32 @@ function saveManualOrder() {
   // was never written.
   const fail = err => {
     btn.disabled = false;
-    errEl.textContent = (err && err.message === 'order-not-persisted')
-      ? 'ההזמנה לא נשמרה. כל מה שמילאת נשאר כאן — נסי לשמור שוב.'
+    const code = (err && (err.code || err.message)) || '';
+    errEl.textContent =
+        code === 'order-not-persisted' ? 'ההזמנה לא נשמרה. כל מה שמילאת נשאר כאן — נסי לשמור שוב.'
+      : code === 'timeout'             ? 'אין חיבור כרגע. ההזמנה תישלח כשהחיבור יחזור — אל תזיני אותה שוב, ובדקי ברשימה בעוד רגע.'
+      // A rules rejection is permanent. Telling her to check the internet sent
+      // her retrying the same rejected write forever.
+      : /PERMISSION_DENIED/i.test(code) ? 'ההזמנה נדחתה. בדקי שהכמויות סבירות ושהשם אינו ארוך מדי.'
       : 'השמירה נכשלה — בדקי חיבור לאינטרנט ונסי שוב.';
     fbError(err);
   };
+
+  // Firebase set() does not settle until the server acknowledges, and offline
+  // that is never. Without this the promise stayed pending, the button stayed
+  // disabled, and — because opening the form did not re-enable it — every
+  // later order silently did nothing. The customer path has had this guard all
+  // along; the manual path never got it.
+  const withTimeout = pr => Promise.race([
+    pr,
+    new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))
+  ]);
 
   if (editId != null) {
     const fields = { name, phone, items: lines.join(' | '), itemsArr, total, paymentMethod, notes };
     // update(), not set(): status, timestamp, date, archived and doneAt are the
     // order's own history, and an edit must not erase them.
-    db.ref(`${ROOT}/orders/${editId}`).update(fields).then(() => {
+    withTimeout(db.ref(`${ROOT}/orders/${editId}`).update(fields)).then(() => {
       // Keep the in-memory copy in step so the list redraws with the new
       // numbers instead of waiting for Firebase to echo back.
       const local = ORDER_LOG.find(o => o.id === editId);
@@ -4365,7 +4467,12 @@ function saveManualOrder() {
     return;
   }
 
-  saveOrderToLog({
+  // Promise.resolve().then(...) so that a synchronous throw inside
+  // saveOrderToLog — Firebase v8 validates the payload synchronously and
+  // THROWS on any undefined value — becomes a rejection this chain can catch.
+  // Thrown, it skipped both handlers, left the button disabled forever and
+  // never reported anything.
+  withTimeout(Promise.resolve().then(() => saveOrderToLog({
     name, phone,
     items: lines.join(' | '),
     itemsArr,
@@ -4374,7 +4481,7 @@ function saveManualOrder() {
     address: PICKUP_ADDRESS,
     paymentMethod,
     notes
-  })
+  })))
     .then(saved => {
       btn.disabled = false;
       closeManualOrderModal();
@@ -4391,8 +4498,12 @@ function saveManualOrder() {
 function reconcileStock() {
   if (!IS_ADMIN) return;
   const { start, end } = currentCycle();
-  // Nothing to reconcile against yet — writing now would zero the tally.
-  if (!ORDER_LOG.length) return;
+  // "Not loaded yet" and "genuinely empty" are different things, and the old
+  // length check conflated them. Guarding on length meant that after Noy
+  // deleted the last order the tally was never zeroed: her panel showed full
+  // stock while every customer still saw the item sold out for the rest of the
+  // week. Guard on the load flag instead, exactly as products and kitchen do.
+  if (!_ordersLoaded) return;
 
   const counts = {};
   ORDER_LOG.filter(o => !o.archived && (o.timestamp || 0) >= start && (o.timestamp || 0) < end)
@@ -4686,6 +4797,83 @@ async function autoTranslateField(heFieldId, enFieldId, noteId) {
   }
 }
 
+// ─── MENU ↔ KITCHEN LINK ──────────────────────────
+// The menu and the recipe book were two separate trees joined by nothing but
+// an identical Hebrew string. Renaming a dish therefore broke three things at
+// once, silently: the recipe kept the old name, the weekly-plan import stopped
+// recognising that dish's orders, and the stock reconciler could hand already
+// sold units back to the shop. A stored recipeId fixes all three.
+
+// One-time repair. Every existing dish and recipe still share a name today,
+// because the name IS what joined them. That stops being true the moment Noy
+// renames anything — so capture the links now, while they can still be
+// derived, and never depend on the name again.
+//
+// Runs only for an admin, only once both trees have loaded, and only writes
+// products that have no link yet. It never invents a recipe and never renames.
+let _linksBackfilled = false;
+function backfillRecipeLinks() {
+  if (_linksBackfilled || !IS_ADMIN || !_productsLoaded || !_kitchenLoaded) return;
+  if (!PRODUCTS.length || !RECIPES.length) return;
+  _linksBackfilled = true;
+
+  const linked = [];
+  PRODUCTS.forEach(p => {
+    if (p.recipeId) return;
+    const r = RECIPES.find(x => (x.name || '').trim() === (p.nameHe || '').trim());
+    if (!r) return;
+    p.recipeId = r.id;
+    linked.push(p.nameHe);
+    // Per-key, so this cannot disturb anything else on the menu.
+    db.ref(`${ROOT}/products/${p.id}/recipeId`).set(r.id).catch(fbError);
+  });
+  if (linked.length) console.info('nuika: linked', linked.length, 'dishes to recipes:', linked.join(', '));
+}
+
+function fillRecipePicker(selectedId) {
+  const sel = document.getElementById('edit-recipe-id');
+  if (!sel) return;
+  const opts = ['<option value="">— ללא מתכון —</option>']
+    .concat((RECIPES || []).slice()
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'))
+      .map(r => `<option value="${esc(r.id)}">${esc(r.name || r.id)}</option>`));
+  sel.innerHTML = opts.join('');
+  sel.value = selectedId || '';
+  // The recipe may not be loaded yet, or may have been deleted. Say so rather
+  // than quietly dropping the link on the next save.
+  if (selectedId && sel.value !== selectedId) {
+    sel.insertAdjacentHTML('beforeend',
+      `<option value="${esc(selectedId)}" selected>מתכון שאינו זמין (${esc(selectedId)})</option>`);
+    sel.value = selectedId;
+  }
+}
+
+// Push a renamed dish through to its recipe. Only ever renames — it never
+// creates, deletes or reorders anything in the kitchen.
+function syncRecipeNameFromProduct(p) {
+  if (!p || !p.recipeId || !_kitchenLoaded) return;
+  const r = RECIPES.find(x => x.id === p.recipeId);
+  if (!r || r.name === p.nameHe) return;
+  r.name = p.nameHe;
+  saveRecipe_(r);
+}
+
+// Given an order line, find its recipe. Prefers the stored link and falls back
+// to the old name match, so orders taken before the link existed still count.
+function recipeForOrderItem(item) {
+  if (!item) return null;
+  const prod = item.id != null
+    ? PRODUCTS.find(p => p.id === item.id)
+    : PRODUCTS.find(p => p.nameHe === item.name);
+  if (prod && prod.recipeId) {
+    const linked = RECIPES.find(r => r.id === prod.recipeId);
+    if (linked) return linked;
+  }
+  return RECIPES.find(r => r.name === item.name)
+      || (prod ? RECIPES.find(r => r.name === prod.nameHe) : null)
+      || null;
+}
+
 function openEditProduct(id) {
   const p = PRODUCTS.find(p => p.id === id);
   if (!p) return;
@@ -4701,7 +4889,9 @@ function openEditProduct(id) {
   document.getElementById('edit-name-en-note').textContent = '';
   document.getElementById('edit-desc-en-note').textContent = '';
   document.getElementById('edit-price').value     = p.price;
-  document.getElementById('edit-stock').value     = p.maxStock || '';
+  // == null so a genuine cap of 0 shows as 0 rather than as an empty field.
+  document.getElementById('edit-stock').value     = p.maxStock == null ? '' : p.maxStock;
+  fillRecipePicker(p.recipeId);
   // Tag radio
   const tagRadios = document.querySelectorAll('input[name="edit-tag"]');
   tagRadios.forEach(r => { r.checked = (r.value === (p.tag || '')); });
@@ -4737,6 +4927,7 @@ function openAddProduct() {
   document.getElementById('edit-desc-en-note').textContent = '';
   document.getElementById('edit-price').value      = '';
   document.getElementById('edit-stock').value      = '';
+  fillRecipePicker('');
   // Clear tag radios
   document.querySelectorAll('input[name="edit-tag"]').forEach(r => { r.checked = (r.value === ''); });
   document.getElementById('delete-product-btn').style.display = 'none';
@@ -4801,22 +4992,34 @@ function saveProductEdit() {
   const nameEn  = document.getElementById('edit-name-en').value.trim();
   const descHe  = document.getElementById('edit-desc-he').value.trim();
   const descEn  = document.getElementById('edit-desc-en').value.trim();
-  const price   = parseInt(document.getElementById('edit-price').value);
-  const stockVal= parseInt(document.getElementById('edit-stock').value);
-  const maxStock= isNaN(stockVal) || stockVal < 1 ? null : stockVal;
+  // parseFloat, not parseInt. A price of 27.5 was truncated to 27 with no
+  // warning — the shop then charged 27, and the number Noy typed was simply
+  // gone. Half-shekel pricing is normal here.
+  const price   = parseFloat(String(document.getElementById('edit-price').value).replace(',', '.'));
+
+  // A cap of 0 means "none available this week". It used to be folded into
+  // null, and null means unlimited — the exact inverse of what she asked for,
+  // on the field that prevents overselling.
+  const stockRaw = String(document.getElementById('edit-stock').value).trim();
+  const stockVal = parseInt(stockRaw, 10);
+  const maxStock = stockRaw === '' || isNaN(stockVal) || stockVal < 0 ? null : stockVal;
+
   const tagRadio= document.querySelector('input[name="edit-tag"]:checked');
   const tag     = tagRadio && tagRadio.value ? tagRadio.value : null;
+  const recipeSel = document.getElementById('edit-recipe-id');
+  const recipeId  = recipeSel ? recipeSel.value : '';
 
-  if (!nameHe || !price) {
-    alert('חובה למלא שם בעברית ומחיר');
-    return;
-  }
+  if (!nameHe) { alert('חובה למלא שם בעברית'); return; }
+  // The order rules cap an item name at 80 characters. A longer dish name
+  // makes every customer order containing it fail validation outright, and the
+  // customer is told the save failed with no idea why.
+  if (nameHe.length > 80) { alert('השם ארוך מדי — עד 80 תווים.'); return; }
+  if (!Number.isFinite(price) || price < 0) { alert('חובה למלא מחיר תקין'); return; }
 
+  let target;
   if (editingNewProduct) {
-    // Add new product
-    const newId = Date.now();
-    PRODUCTS.push({
-      id: newId,
+    target = {
+      id: Date.now(),
       nameHe, nameEn: nameEn || nameHe,
       descHe: descHe || '',
       descEn: descEn || '',
@@ -4824,42 +5027,82 @@ function saveProductEdit() {
       illustration: pendingImageDataUrl || null,
       svg: null,
       soldOut: false,
+      inMenu: true,
       maxStock,
-      tag
-    });
+      tag,
+      recipeId: recipeId || null
+    };
+    PRODUCTS.push(target);
   } else {
-    // Update existing
     const id = +document.getElementById('edit-product-id').value;
-    const p = PRODUCTS.find(p => p.id === id);
-    if (!p) return;
-    p.nameHe   = nameHe;
-    p.nameEn   = nameEn || nameHe;
-    p.descHe   = descHe;
-    p.descEn   = descEn;
-    p.price    = price;
-    p.maxStock = maxStock;
-    p.tag      = tag;
-    if (pendingImageDataUrl) p.illustration = pendingImageDataUrl;
+    target = PRODUCTS.find(p => p.id === id);
+    // Reached when the dish was deleted from the other device while this modal
+    // sat open. Returning in silence left Noy tapping a button that did
+    // nothing — say what happened instead.
+    if (!target) {
+      alert('המנה כבר לא קיימת — כנראה נמחקה ממכשיר אחר.');
+      closeEditModal();
+      renderAdminProducts();
+      return;
+    }
+    target.nameHe   = nameHe;
+    target.nameEn   = nameEn || nameHe;
+    target.descHe   = descHe;
+    target.descEn   = descEn;
+    target.price    = price;
+    target.maxStock = maxStock;
+    target.tag      = tag;
+    target.recipeId = recipeId || null;
+    if (pendingImageDataUrl) target.illustration = pendingImageDataUrl;
   }
 
-  saveAllProducts();
-  closeEditModal();
-  renderAdminProducts();
-  renderProducts();
+  // Close only once the write has landed. This used to close the modal and
+  // repaint both grids immediately, so a failed write showed Noy the new price
+  // on screen while customers kept seeing the old one, with an alert arriving
+  // seconds later and no way to tell which state the shop was actually in.
+  const btn = document.getElementById('save-product-btn');
+  if (btn) btn.disabled = true;
+  saveOneProduct(target)
+    .then(() => {
+      if (btn) btn.disabled = false;
+      // A rename has to travel to the linked recipe, or the kitchen keeps
+      // showing the old name — the mismatch Noy reported.
+      syncRecipeNameFromProduct(target);
+      closeEditModal();
+      renderAdminProducts();
+      renderProducts();
+    })
+    .catch(err => {
+      if (btn) btn.disabled = false;
+      if (err && err.message === 'products-not-loaded') return;
+      alert('השמירה נכשלה — המנה לא עודכנה. בדקי חיבור לאינטרנט ונסי שוב.');
+      fbError(err);
+    });
 }
 
 function deleteProduct() {
   const id = +document.getElementById('edit-product-id').value;
-  if (!confirm('למחוק את המנה הזו?')) return;
-  const idx = PRODUCTS.findIndex(p => p.id === id);
-  if (idx !== -1) PRODUCTS.splice(idx, 1);
-  // Remove from cart
-  delete cart[id];
-  saveAllProducts();
-  closeEditModal();
-  renderAdminProducts();
-  renderProducts();
-  updateCartBar();
+  const p  = PRODUCTS.find(x => x.id === id);
+  if (!confirm(`למחוק את "${p ? p.nameHe : 'המנה'}"?\n\nאם את רק לא מוכרת אותה השבוע — עדיף להעביר אותה לבנק המנות במקום למחוק.`)) return;
+
+  // Deleting used to work only as a side effect of rewriting the whole node
+  // with this key omitted. Now that each dish is written on its own key, the
+  // removal has to be explicit — otherwise the dish would vanish from Noy's
+  // screen and stay orderable by every customer.
+  db.ref(`${ROOT}/products/${id}`).remove()
+    .then(() => {
+      const idx = PRODUCTS.findIndex(x => x.id === id);
+      if (idx !== -1) PRODUCTS.splice(idx, 1);
+      delete cart[id];
+      closeEditModal();
+      renderAdminProducts();
+      renderProducts();
+      updateCartBar();
+    })
+    .catch(err => {
+      alert('המחיקה נכשלה — המנה עדיין בתפריט. בדקי חיבור לאינטרנט ונסי שוב.');
+      fbError(err);
+    });
 }
 
 function closeEditModal() {
@@ -4871,25 +5114,45 @@ function handleEditBackdrop(e) {
   if (e.target === document.getElementById('edit-product-modal')) closeEditModal();
 }
 
-function saveAllProducts() {
-  // Before the listener answers, PRODUCTS still holds the build-time defaults.
-  // Writing then replaces the real menu with them for every customer.
-  if (!_productsLoaded) { alert('הנתונים עדיין נטענים — רגע אחד ונסי שוב.'); return; }
-  const toSave = {};
-  PRODUCTS.forEach(p => {
-    toSave[p.id] = {
-      id: p.id, nameHe: p.nameHe, nameEn: p.nameEn,
-      descHe: p.descHe, descEn: p.descEn,
-      price: p.price, illustration: p.illustration || null,
-      soldOut: p.soldOut || false,
-      inMenu: p.inMenu !== false,
-      maxStock: p.maxStock || null,
-      tag: p.tag || null
-    };
-  });
-  // No localStorage mirror: base64 product photos blow the 5MB quota and the
-  // throw would abort saveProductEdit before the modal ever closes.
-  db.ref(`${ROOT}/products`).set(toSave).catch(fbError);
+// The wire shape of one product. Kept in one place so the add path, the edit
+// path and any future writer cannot drift apart.
+function productRecord(p) {
+  return {
+    id: p.id, nameHe: p.nameHe, nameEn: p.nameEn,
+    descHe: p.descHe, descEn: p.descEn,
+    price: p.price,
+    illustration: p.illustration || null,
+    soldOut: p.soldOut || false,
+    inMenu: p.inMenu !== false,
+    maxStock: p.maxStock == null ? null : p.maxStock,   // 0 is a real cap
+    tag: p.tag || null,
+    recipeId: p.recipeId || null
+  };
+}
+
+// Writes ONE product. This replaces a saveAllProducts() that called .set() on
+// the entire nuika/products node, rebuilt from this device's array — the same
+// pattern that was removed from the kitchen, except here it sits on the menu
+// customers order from, and it was reachable from the settings tab's save
+// button as well as from the dish editor.
+//
+// Two ways it destroyed the menu. Both are ordinary Tuesdays:
+//   • Two panels open. She adds a dish on the phone; the laptop has not yet
+//     received the snapshot; she presses save on the laptop, and its older
+//     array overwrites the node. The new dish is gone.
+//   • The phone loses signal in the kitchen. The SDK queues the whole-node
+//     write against a stale array. She adds a dish on the laptop. The phone
+//     reconnects, its queued write lands, and the laptop's dish is deleted —
+//     with a success message already shown on both devices.
+//
+// It also re-uploaded every dish's base64 photo on every price change.
+function saveOneProduct(p) {
+  if (!_productsLoaded) {
+    alert('הנתונים עדיין נטענים — רגע אחד ונסי שוב.');
+    return Promise.reject(new Error('products-not-loaded'));
+  }
+  if (!p || p.id == null) return Promise.reject(new Error('no-product-id'));
+  return db.ref(`${ROOT}/products/${p.id}`).set(productRecord(p));
 }
 
 // ─── LANGUAGE TOGGLE ───────────────────────────────
@@ -5104,7 +5367,14 @@ function exportOrdersCSV() {
     o.paymentMethod ? (PAYMENT_LABELS_HE[o.paymentMethod] || o.paymentMethod) : '',
     o.notes || '',
     statusMap[o.status] || o.status || ''
-  ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
+  ].map(v => {
+    // Doubling the quotes makes the CSV well-formed, but it does not stop
+    // Excel and Sheets treating a cell that starts with = + - @ as a live
+    // formula. Customer names and notes are free text, so prefix those.
+    let s = String(v);
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    return `"${s.replace(/"/g, '""')}"`;
+  }).join(','));
 
   const csv = BOM + [headers.join(','), ...rows].join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -5643,7 +5913,11 @@ function importFromOrders() {
   const tally = {};
   orders.forEach(o => {
     (o.itemsArr || []).forEach(item => {
-      const r = RECIPES.find(r => r.name === item.name || (item.id && r.id === item.id));
+      // Was `r.name === item.name || (item.id && r.id === item.id)`. The second
+      // half could never be true — item.id is a product id (a number) and r.id
+      // is a recipe id (a string) — so this matched on the Hebrew name alone,
+      // and every rename split the history in two. Go through the stored link.
+      const r = recipeForOrderItem(item);
       if (r) tally[r.id] = (tally[r.id] || 0) + item.qty;
     });
   });
