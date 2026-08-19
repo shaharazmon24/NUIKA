@@ -10,7 +10,7 @@
        machines, and "which version am I looking at?" had no answer before this
        existed. `node scripts/status.mjs` compares this value across your
        machine, GitHub, and the live site. -->
-  <meta name="nuika-version" content="2026-08-19T19:14:59.771Z|ef032c0" />
+  <meta name="nuika-version" content="2026-08-19T20:01:02.421Z|9c07d85" />
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
@@ -2353,10 +2353,17 @@
       <div id="fin-list"></div>
 
       <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+        <label class="k-add-btn" style="background:#F0E9D8;color:#6B2E1E;border:1.5px solid #D5C9B5;cursor:pointer;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          ייבוא הוצאות מאקסל
+          <input type="file" accept=".xlsx,.csv,.tsv,.txt" onchange="importExpensesFromFile(this)" style="display:none;" />
+        </label>
         <button onclick="exportFinanceCSV()" class="k-add-btn" style="background:#F0E9D8;color:#6B2E1E;border:1.5px solid #D5C9B5;">
           ייצוא החודש לאקסל
         </button>
       </div>
+
+      <div id="fin-import-preview" style="margin-top:12px;"></div>
     </div>
   </div>
 
@@ -2682,9 +2689,15 @@
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
-    <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;margin-bottom:14px;line-height:1.6;">
-      באקסל: לסמן שתי עמודות — <b>שם המרכיב</b> ו<b>משקל בגרמים</b> — להעתיק (Ctrl+C), ולהדביק כאן (Ctrl+V).
-      שורת כותרת זה בסדר, היא תזוהה לבד.
+    <label style="display:block;background:#F0E9D8;border:1.5px dashed #C9B99F;border-radius:12px;padding:16px;text-align:center;cursor:pointer;margin-bottom:12px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 6px;display:block;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#6B2E1E;font-size:0.88rem;">בחירת קובץ אקסל</span>
+      <span style="display:block;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.74rem;color:#9B8B75;margin-top:3px;">xlsx או csv — הכל ייקרא לבד</span>
+      <input type="file" accept=".xlsx,.csv,.tsv,.txt" onchange="importRecipeFromFile(this)" style="display:none;" />
+    </label>
+
+    <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.74rem;margin-bottom:12px;text-align:center;">
+      או להעתיק שתי עמודות מאקסל ולהדביק למטה
     </p>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
@@ -6807,6 +6820,152 @@ function deleteExpense() {
     .catch(err => { alert('המחיקה נכשלה — נסי שוב.'); fbError(err); });
 }
 
+// Noy already keeps her expenses in a spreadsheet. Retyping a year of it by
+// hand is how a ledger stops being kept, so the same reader that handles a
+// recipe file handles hers.
+//
+// Dates are the awkward part: a spreadsheet stores a formatted date as a serial
+// number of days, and this reader does not look at cell styles — so a date
+// arrives here as "45900". Every plausible shape is accepted below.
+function parseSheetDate(v) {
+  const s = String(v == null ? '' : v).trim();
+  if (!s) return '';
+  // Already ISO.
+  let m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s);
+  if (m) return `${m[1]}-${String(+m[2]).padStart(2,'0')}-${String(+m[3]).padStart(2,'0')}`;
+  // Excel/Sheets serial. The window is deliberately narrow so an amount is
+  // never mistaken for a date.
+  if (/^\d+(\.\d+)?$/.test(s)) {
+    const n = parseFloat(s);
+    if (n > 20000 && n < 80000) {
+      const d = new Date(Math.round((n - 25569) * 86400000));
+      if (!isNaN(d)) return d.toISOString().slice(0, 10);
+    }
+    return '';
+  }
+  // d/m/y or d.m.y — day first, which is what an Israeli sheet uses.
+  m = /^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})$/.exec(s);
+  if (m) {
+    let y = +m[3]; if (y < 100) y += 2000;
+    return `${y}-${String(+m[2]).padStart(2,'0')}-${String(+m[1]).padStart(2,'0')}`;
+  }
+  const d = new Date(s);
+  return isNaN(d) ? '' : d.toISOString().slice(0, 10);
+}
+
+async function importExpensesFromFile(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const box  = document.getElementById('fin-import-preview');
+  box.innerHTML = `<div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.82rem;color:#9B8B75;">קורא את ${esc(file.name)}...</div>`;
+
+  try {
+    const rows = await readSpreadsheetFile(file);
+    if (!rows.length) throw new Error('empty');
+
+    const width = Math.max(...rows.map(r => r.length));
+    const find = kws => {
+      for (let r = 0; r < Math.min(rows.length, 5); r++) {
+        const i = rows[r].findIndex(c => kws.some(k => String(c).toLowerCase().includes(k)));
+        if (i !== -1) return { col: i, headerRow: r };
+      }
+      return { col: -1, headerRow: -1 };
+    };
+    const dateH = find(['תאריך', 'date']);
+    const amtH  = find(['סכום', 'עלות', 'מחיר', 'amount', 'total', 'price', 'sum']);
+    const catH  = find(['קטגוריה', 'סוג', 'category', 'type']);
+    const supH  = find(['ספק', 'עסק', 'supplier', 'vendor', 'merchant']);
+    const noteH = find(['הערה', 'פירוט', 'תיאור', 'note', 'description']);
+    const headerRow = Math.max(dateH.headerRow, amtH.headerRow);
+
+    let dateCol = dateH.col, amtCol = amtH.col;
+    // No headers: fall back to the first column that parses as a date and the
+    // first that parses as money.
+    if (dateCol === -1 || amtCol === -1) {
+      for (let c = 0; c < width; c++) {
+        const vals = rows.map(r => r[c]).filter(Boolean);
+        if (!vals.length) continue;
+        if (dateCol === -1 && vals.filter(v => parseSheetDate(v)).length > vals.length / 2) { dateCol = c; continue; }
+        if (amtCol === -1 && c !== dateCol
+            && vals.filter(v => Number.isFinite(parseFloat(String(v).replace(',', '.')))).length > vals.length / 2) amtCol = c;
+      }
+    }
+    if (dateCol === -1 || amtCol === -1) throw new Error('no-columns');
+
+    const entries = [];
+    rows.forEach((r, i) => {
+      if (i <= headerRow) return;
+      const date = parseSheetDate(r[dateCol]);
+      const amount = parseFloat(String(r[amtCol] || '').replace(/[^\d.,-]/g, '').replace(',', '.'));
+      if (!date || !Number.isFinite(amount) || amount <= 0) return;
+      entries.push({
+        date, kind: 'expense', amount: Math.round(amount * 100) / 100,
+        category: String((catH.col !== -1 && r[catH.col]) || 'אחר').slice(0, 40),
+        supplier: String((supH.col !== -1 && r[supH.col]) || '').slice(0, 80),
+        note:     String((noteH.col !== -1 && r[noteH.col]) || '').slice(0, 300),
+        hasPhoto: false, created: Date.now()
+      });
+    });
+    if (!entries.length) throw new Error('no-rows');
+
+    window.__pendingFinanceImport = entries;
+    const total = entries.reduce((s, e) => s + e.amount, 0);
+    const months = [...new Set(entries.map(e => e.date.slice(0, 7)))].sort();
+    box.innerHTML = `
+      <div style="background:#FDFAF4;border:1px solid #E3D7C3;border-radius:12px;padding:12px;">
+        <div style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:700;color:#2C1810;font-size:0.85rem;margin-bottom:6px;">
+          ${entries.length} הוצאות זוהו · סה"כ <span dir="ltr">₪${total.toFixed(0)}</span>
+        </div>
+        <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.76rem;color:#9B8B75;margin-bottom:10px;">
+          חודשים: ${months.map(esc).join(', ')}
+        </div>
+        ${entries.slice(0, 5).map(e => `<div class="ri-row">
+            <span>${esc(e.date)} · ${esc(e.supplier || e.category)}</span>
+            <span dir="ltr">₪${e.amount.toFixed(0)}</span></div>`).join('')}
+        ${entries.length > 5 ? `<div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.74rem;color:#9B8B75;padding-top:6px;">ועוד ${entries.length - 5}...</div>` : ''}
+        <button onclick="commitFinanceImport()" class="admin-save-btn" style="width:100%;margin-top:12px;">ייבוא ${entries.length} ההוצאות ✓</button>
+      </div>`;
+  } catch (e) {
+    const msg = {
+      'old-xls':    'הפורמט הישן (.xls) לא נתמך. באקסל: קובץ → שמירה בשם → xlsx.',
+      'not-a-zip':  'הקובץ לא נראה כמו קובץ אקסל תקין.',
+      'no-inflate': 'הדפדפן הזה לא יודע לפתוח xlsx. אפשר לשמור כ-CSV ולצרף אותו.',
+      'no-columns': 'לא זיהיתי עמודת תאריך ועמודת סכום. כדאי שיהיו כותרות "תאריך" ו"סכום".',
+      'no-rows':    'לא מצאתי שורות עם תאריך וסכום תקינים.',
+      'empty':      'הקובץ ריק.'
+    }[e && e.message] || 'לא הצלחתי לקרוא את הקובץ.';
+    box.innerHTML = `<div class="ri-unmatched" style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.82rem;">${esc(msg)}</div>`;
+    console.warn('expense import failed:', e);
+  } finally {
+    input.value = '';
+  }
+}
+
+function commitFinanceImport() {
+  const entries = window.__pendingFinanceImport || [];
+  if (!entries.length) return;
+  const box = document.getElementById('fin-import-preview');
+  box.innerHTML = `<div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.82rem;color:#9B8B75;">מייבא...</div>`;
+
+  // One update() naming every key, so the import either lands whole or not at
+  // all — a half-imported ledger is worse than none.
+  const patch = {};
+  entries.forEach((e, i) => { patch[`imp_${Date.now()}_${i}`] = e; });
+  db.ref(`${ROOT}/finance/entries`).update(patch)
+    .then(() => {
+      window.__pendingFinanceImport = null;
+      box.innerHTML = `<div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.82rem;color:#3A7A50;">✓ ${entries.length} הוצאות יובאו.</div>`;
+      renderFinance();
+    })
+    .catch(err => {
+      box.innerHTML = `<div class="ri-unmatched" style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.82rem;">${
+        /PERMISSION_DENIED/i.test(String(err && (err.code || err.message)))
+          ? 'אין הרשאה לכתוב — צריך לפרסם את כללי האבטחה המעודכנים בקונסול.'
+          : 'הייבוא נכשל — בדקי חיבור לאינטרנט ונסי שוב.'}</div>`;
+      fbError(err);
+    });
+}
+
 function exportFinanceCSV() {
   const ym = financeMonth();
   const rows = FINANCE.filter(e => String(e.date || '').slice(0, 7) === ym && e.kind !== 'income');
@@ -6835,10 +6994,232 @@ function exportFinanceCSV() {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+// ─── READING A SPREADSHEET FILE ───────────────────
+// An .xlsx is a ZIP of XML parts, and the browser can already inflate raw
+// DEFLATE via DecompressionStream. So this reads the file directly rather than
+// pulling in a spreadsheet library — the shop's own scripts are ~260KB, and a
+// ~900KB dependency loaded for an admin-only feature would be felt by every
+// customer on every visit.
+//
+// Handles what Excel, Google Sheets and LibreOffice actually emit: shared
+// strings, inline strings, numbers, and both STORED and DEFLATE entries.
+
+async function inflateRaw(bytes) {
+  if (typeof DecompressionStream === 'undefined') throw new Error('no-inflate');
+  const ds = new DecompressionStream('deflate-raw');
+  const stream = new Blob([bytes]).stream().pipeThrough(ds);
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+// Returns { name -> Uint8Array } for the entries asked for.
+async function readZipEntries(buffer, wanted) {
+  const b  = new Uint8Array(buffer);
+  const dv = new DataView(buffer);
+
+  // The end-of-central-directory record sits at the tail, after a comment of
+  // unknown length, so scan backwards for its signature.
+  let eocd = -1;
+  for (let i = b.length - 22; i >= 0 && i > b.length - 66000; i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error('not-a-zip');
+
+  const count     = dv.getUint16(eocd + 10, true);
+  let   ptr       = dv.getUint32(eocd + 16, true);
+  const dec       = new TextDecoder('utf-8');
+  const out       = {};
+
+  for (let i = 0; i < count; i++) {
+    if (dv.getUint32(ptr, true) !== 0x02014b50) break;
+    const method   = dv.getUint16(ptr + 10, true);
+    const compSize = dv.getUint32(ptr + 20, true);
+    const nameLen  = dv.getUint16(ptr + 28, true);
+    const extraLen = dv.getUint16(ptr + 30, true);
+    const commLen  = dv.getUint16(ptr + 32, true);
+    const localOff = dv.getUint32(ptr + 42, true);
+    const name     = dec.decode(b.subarray(ptr + 46, ptr + 46 + nameLen));
+    ptr += 46 + nameLen + extraLen + commLen;
+
+    if (!wanted.some(w => name === w || (w.endsWith('/') && name.startsWith(w)))) continue;
+
+    // The local header repeats the name and extra fields with its own lengths.
+    const lNameLen  = dv.getUint16(localOff + 26, true);
+    const lExtraLen = dv.getUint16(localOff + 28, true);
+    const dataStart = localOff + 30 + lNameLen + lExtraLen;
+    const raw = b.subarray(dataStart, dataStart + compSize);
+    out[name] = method === 0 ? raw : await inflateRaw(raw);
+  }
+  return out;
+}
+
+// Cell reference "B7" -> column index 1.
+function colIndexFromRef(ref) {
+  const m = /^([A-Z]+)/.exec(ref || '');
+  if (!m) return 0;
+  let n = 0;
+  for (const ch of m[1]) n = n * 26 + (ch.charCodeAt(0) - 64);
+  return n - 1;
+}
+
+// Reads the first worksheet into a dense array of rows of strings.
+async function readXlsx(arrayBuffer) {
+  const parts = await readZipEntries(arrayBuffer, [
+    'xl/sharedStrings.xml', 'xl/worksheets/sheet1.xml', 'xl/worksheets/'
+  ]);
+  const dec = new TextDecoder('utf-8');
+  const parseXml = s => new DOMParser().parseFromString(s, 'application/xml');
+
+  const shared = [];
+  if (parts['xl/sharedStrings.xml']) {
+    const doc = parseXml(dec.decode(parts['xl/sharedStrings.xml']));
+    doc.querySelectorAll('si').forEach(si => {
+      // A styled cell splits its text across <r><t> runs.
+      shared.push([...si.querySelectorAll('t')].map(t => t.textContent).join(''));
+    });
+  }
+
+  const sheetName = parts['xl/worksheets/sheet1.xml']
+    ? 'xl/worksheets/sheet1.xml'
+    : Object.keys(parts).find(k => /^xl\/worksheets\/.*\.xml$/.test(k));
+  if (!sheetName) throw new Error('no-sheet');
+
+  const doc  = parseXml(dec.decode(parts[sheetName]));
+  const rows = [];
+  doc.querySelectorAll('row').forEach(row => {
+    const cells = [];
+    row.querySelectorAll('c').forEach(c => {
+      const idx = colIndexFromRef(c.getAttribute('r'));
+      const t   = c.getAttribute('t');
+      let val = '';
+      if (t === 's') {
+        const v = c.querySelector('v');
+        val = v ? (shared[+v.textContent] ?? '') : '';
+      } else if (t === 'inlineStr') {
+        val = [...c.querySelectorAll('t')].map(x => x.textContent).join('');
+      } else {
+        const v = c.querySelector('v');
+        val = v ? v.textContent : '';
+      }
+      cells[idx] = String(val).trim();
+    });
+    for (let i = 0; i < cells.length; i++) if (cells[i] == null) cells[i] = '';
+    if (cells.some(x => x !== '')) rows.push(cells);
+  });
+  return rows;
+}
+
+// One entry point for every spreadsheet Noy might have: .xlsx, or a .csv/.tsv
+// exported from anywhere.
+async function readSpreadsheetFile(file) {
+  const name = (file.name || '').toLowerCase();
+  if (/\.(csv|tsv|txt)$/.test(name)) {
+    const text = await file.text();
+    return text.split(/\r?\n/).filter(l => l.trim())
+               .map(l => (l.includes('\t') ? l.split('\t') : l.split(',')).map(c => c.replace(/^"|"$/g, '').trim()));
+  }
+  if (/\.xls$/.test(name)) throw new Error('old-xls');
+  return readXlsx(await file.arrayBuffer());
+}
+
+// Works out which column holds names and which holds numbers, so Noy does not
+// have to arrange her sheet a particular way. Header keywords win; otherwise
+// it falls back to "the column that is mostly text" and "mostly numbers".
+function detectColumns(rows, opts) {
+  const kwName = opts.nameKeywords, kwNum = opts.numberKeywords;
+  const num = s => { const n = parseFloat(String(s).replace(/[^\d.,-]/g, '').replace(',', '.')); return Number.isFinite(n) ? n : null; };
+
+  for (let r = 0; r < Math.min(rows.length, 5); r++) {
+    const row = rows[r].map(c => String(c).toLowerCase());
+    const ni = row.findIndex(c => kwName.some(k => c.includes(k)));
+    const wi = row.findIndex(c => kwNum.some(k => c.includes(k)));
+    if (ni !== -1 && wi !== -1 && ni !== wi) return { nameCol: ni, numCol: wi, headerRow: r };
+  }
+
+  const width = Math.max(...rows.map(r => r.length));
+  const textScore = [], numScore = [];
+  for (let c = 0; c < width; c++) {
+    textScore[c] = 0; numScore[c] = 0;
+    rows.forEach(r => {
+      const v = r[c]; if (!v) return;
+      if (num(v) !== null) numScore[c]++; else textScore[c]++;
+    });
+  }
+  const nameCol = textScore.indexOf(Math.max(...textScore));
+  let numCol = -1, best = 0;
+  for (let c = 0; c < width; c++) if (c !== nameCol && numScore[c] > best) { best = numScore[c]; numCol = c; }
+  return { nameCol, numCol, headerRow: -1 };
+}
+
 // ─── RECIPE IMPORT FROM A SPREADSHEET ─────────────
 // Excel puts a tab between cells and a newline between rows when you copy, so
 // a paste is already a parseable table. Commas and semicolons are accepted too
 // because that is what a CSV export produces.
+
+// Attach the file and everything is pulled out of it: the ingredient rows, the
+// column layout, and the recipe name if the sheet carries one.
+async function importRecipeFromFile(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const box  = document.getElementById('ri-preview');
+  box.innerHTML = `<div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.82rem;color:#9B8B75;">קורא את ${esc(file.name)}...</div>`;
+
+  try {
+    const rows = await readSpreadsheetFile(file);
+    if (!rows.length) throw new Error('empty');
+
+    const { nameCol, numCol, headerRow } = detectColumns(rows, {
+      nameKeywords:   ['מרכיב', 'רכיב', 'שם', 'חומר', 'ingredient', 'item', 'name'],
+      numberKeywords: ['משקל', 'כמות', 'גרם', 'גר', 'weight', 'qty', 'amount', 'grams']
+    });
+    if (numCol === -1) throw new Error('no-numbers');
+
+    // Rebuild the paste box from the file so the existing preview, the pantry
+    // matching and the save path all stay a single code path.
+    const lines = [];
+    rows.forEach((r, i) => {
+      if (i <= headerRow) return;
+      const n = String(r[nameCol] || '').trim();
+      const w = String(r[numCol]  || '').trim();
+      if (n && w) lines.push(n + '\t' + w);
+    });
+    if (!lines.length) throw new Error('no-rows');
+    document.getElementById('ri-paste').value = lines.join('\n');
+
+    // A recipe name if the file offers one: a labelled cell, else a lone cell
+    // above the table, else the filename.
+    const nameEl = document.getElementById('ri-name');
+    if (!nameEl.value.trim()) {
+      let guess = '';
+      for (let i = 0; i < Math.min(rows.length, 5) && !guess; i++) {
+        const row = rows[i];
+        const lbl = row.findIndex(c => /^(שם המתכון|שם מתכון|מתכון|recipe)\s*:?$/i.test(String(c).trim()));
+        if (lbl !== -1 && row[lbl + 1]) guess = String(row[lbl + 1]).trim();
+      }
+      if (!guess && headerRow > 0) {
+        const first = rows[0].filter(c => String(c).trim());
+        if (first.length === 1) guess = String(first[0]).trim();
+      }
+      if (!guess) guess = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
+      nameEl.value = guess.slice(0, 60);
+    }
+
+    previewRecipeImport();
+  } catch (e) {
+    const msg = {
+      'old-xls':   'הפורמט הישן (.xls) לא נתמך. באקסל: קובץ → שמירה בשם → xlsx.',
+      'not-a-zip': 'הקובץ לא נראה כמו קובץ אקסל תקין.',
+      'no-inflate':'הדפדפן הזה לא יודע לפתוח xlsx. אפשר לשמור מהאקסל כ-CSV ולצרף אותו.',
+      'no-sheet':  'לא מצאתי גיליון בקובץ.',
+      'no-numbers':'לא זיהיתי עמודה עם משקלים. צריך עמודה של שמות ועמודה של מספרים.',
+      'no-rows':   'לא מצאתי שורות עם שם ומשקל.',
+      'empty':     'הקובץ ריק.'
+    }[e && e.message] || 'לא הצלחתי לקרוא את הקובץ. אפשר להעתיק את התאים ולהדביק למטה במקום.';
+    box.innerHTML = `<div class="ri-unmatched" style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.82rem;">${esc(msg)}</div>`;
+    console.warn('recipe file import failed:', e);
+  } finally {
+    input.value = '';
+  }
+}
 
 function openRecipeImport() {
   if (!kitchenReady()) return;
