@@ -10,7 +10,7 @@
        machines, and "which version am I looking at?" had no answer before this
        existed. `node scripts/status.mjs` compares this value across your
        machine, GitHub, and the live site. -->
-  <meta name="nuika-version" content="2026-08-18T06:16:03.592Z|e5a3795" />
+  <meta name="nuika-version" content="2026-08-19T17:30:07.704Z|7b365cb" />
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
@@ -5285,6 +5285,11 @@ function calcIngCost(weightG, pantryId) {
 
 // Returns { totalCost, knownCost, unknownCount, costPerUnit, fc, profitPerUnit }
 function calcRecipeCost(recipe) {
+  // Callers pass RECIPES.find(...), which is undefined whenever a snapshot has
+  // just replaced RECIPES or a plan row points at a deleted recipe. The grid
+  // recomputes this for every card on every repaint, so one such row threw and
+  // took the whole kitchen tab down with it — a dead screen, no error shown.
+  if (!recipe) return { totalCost: 0, knownCost: 0, unknownCount: 0, costPerUnit: 0, fc: null, profitPerUnit: 0 };
   let knownCost = 0, unknownCount = 0;
   (recipe.ingredients || []).forEach(ing => {
     const c = calcIngCost(ing.weightG, ing.pantryId);
@@ -5677,7 +5682,12 @@ function addIngredientRow(ing) {
       <datalist id="${dlId}">${PANTRY.map(p=>`<option value="${esc(p.name)}" data-id="${p.id}">`).join('')}</datalist>
     </td>
     <td style="min-width:70px;">
-      <input type="number" min="0" step="any" placeholder="0" class="ing-weight"
+      <!-- text + inputmode, not type="number". A number input silently discards
+           anything it considers invalid, so a decimal comma — which is what a
+           Hebrew keyboard produces — never reached the code at all and the row
+           was saved as weightless. inputmode="decimal" still raises the numeric
+           keypad on a phone, and saveRecipe() normalises the comma. -->
+      <input type="text" inputmode="decimal" placeholder="0" class="ing-weight"
         value="${ing ? ing.weightG : ''}" dir="ltr"
         style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#2C1810;background:#F5EFE3;border:1.5px solid #E5D9C5;border-radius:6px;padding:5px 7px;width:100%;text-align:center;"
         oninput="recalcEditorCosts()" />
@@ -5721,6 +5731,16 @@ function removeIngredientRow(rowId) {
   if (row) { row.remove(); recalcEditorCosts(); }
 }
 
+// One place that turns a weight field into a number. The field is a text input
+// (see addIngredientRow for why), so every reader has to normalise the decimal
+// comma a Hebrew keyboard produces. Three separate readers used bare
+// parseFloat; "0,5" became 0 in all of them.
+function weightFromInput(el) {
+  const raw = (el && el.value != null ? String(el.value) : '').trim().replace(',', '.');
+  const n = parseFloat(raw);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
 function recalcEditorCosts() {
   const tbody = document.getElementById('re-ing-tbody');
   if (!tbody) return;
@@ -5734,7 +5754,7 @@ function recalcEditorCosts() {
     const weightInput = tr.querySelector('.ing-weight');
     const pantryIdInput = tr.querySelector('.ing-pantry-id');
     const costCell = tr.querySelector('.ing-cost-cell');
-    const weightG = parseFloat(weightInput?.value) || 0;
+    const weightG = weightFromInput(weightInput);
     const pantryId = pantryIdInput?.value || '';
     const cost = pantryId ? calcIngCost(weightG, pantryId) : null;
 
@@ -5783,7 +5803,7 @@ function updateScaleCalc() {
     const nameInput = tr.querySelector('.ing-name');
     const weightInput = tr.querySelector('.ing-weight');
     const name = nameInput?.value?.trim();
-    const weightG = parseFloat(weightInput?.value) || 0;
+    const weightG = weightFromInput(weightInput);
     if (name && weightG) {
       const scaled = weightG * scaleFactor;
       const display = scaled >= 1000 ? `${(scaled/1000).toFixed(2)}ק"ג` : `${Math.round(scaled)}ג'`;
@@ -5820,8 +5840,7 @@ function saveRecipe() {
     const ingName  = tr.querySelector('.ing-name')?.value.trim();
     // Accept the Hebrew-keyboard decimal comma: "0,5" parsed to 0 and the row
     // vanished with no explanation.
-    const rawW     = (tr.querySelector('.ing-weight')?.value || '').replace(',', '.');
-    const weightG  = parseFloat(rawW) || 0;
+    const weightG  = weightFromInput(tr.querySelector('.ing-weight'));
     const pantryId = tr.querySelector('.ing-pantry-id')?.value || '';
     if (ingName && !(weightG > 0)) rejected.push(ingName);
     if (ingName && weightG > 0) {
