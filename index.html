@@ -10,7 +10,7 @@
        machines, and "which version am I looking at?" had no answer before this
        existed. `node scripts/status.mjs` compares this value across your
        machine, GitHub, and the live site. -->
-  <meta name="nuika-version" content="2026-08-20T05:03:44.079Z|08f9e70" />
+  <meta name="nuika-version" content="2026-08-20T05:16:15.501Z|83a165e" />
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
@@ -7404,9 +7404,21 @@ function commitRecipeImport() {
     prepTimeMin: 0, bakingTimeMin: 0, bakingTempC: 0, notes: '',
     ingredients: rows.map((r, i) => ({
       id: 'ri_' + Date.now() + '_' + i,
-      name: r.name, pantryId: r.pantryId, weightG: r.weightG, bakerPct: 0
+      name: r.name, pantryId: r.pantryId, weightG: r.weightG,
+      // Filled in below, once every row is known — baker's % is relative to the
+      // total flour, so it cannot be computed one row at a time.
+      bakerPct: 0
     }))
   };
+
+  // The rows already carry their pantry ids, and the new pantry rows go into
+  // PANTRY here so the flour categories resolve. Then an imported recipe
+  // carries the same baker's percentages a hand-typed one does — without this
+  // its card showed "—" in every row, which is the visible difference between
+  // an imported recipe and a real one.
+  newPantry.forEach(item => PANTRY.push(item));
+  const pcts = bakerPercents(recipe.ingredients);
+  recipe.ingredients.forEach((ing, i) => { ing.bakerPct = pcts[i] || 0; });
 
   const btn = document.getElementById('ri-save-btn');
   btn.disabled = true;
@@ -7419,7 +7431,8 @@ function commitRecipeImport() {
   newPantry.forEach(item => { patch[`pantry/${item.id}`] = item; });
 
   RECIPES.push(recipe);
-  newPantry.forEach(item => PANTRY.push(item));
+  // PANTRY already received these rows above, when the percentages were worked
+  // out. Pushing again here would duplicate every new ingredient in the list.
 
   db.ref(`${ROOT}/kitchen`).update(patch)
     .then(() => {
@@ -7430,7 +7443,15 @@ function commitRecipeImport() {
       const unpriced = newPantry.filter(p => typeof p.pricePerKg !== 'number').length;
       alert(`"${name}" יובא עם ${rows.length} מרכיבים.` +
         (newPantry.length ? `\n${newPantry.length} מרכיבים חדשים נוספו למזווה.` : '') +
-        (unpriced ? `\n\n${unpriced} מהם עדיין בלי מחיר — עד שתמלאי אותו במזווה, העלות של המתכון לא תהיה מלאה.` : ''));
+        (unpriced ? `\n\n${unpriced} מהם עדיין בלי מחיר — עד שתמלאי אותו במזווה, העלות של המתכון לא תהיה מלאה.` : '') +
+        `\n\nהכרטיס נפתח עכשיו — אפשר להשלים זמני הכנה, טמפרטורה והערות.`);
+
+      // Open the full card, the same one a hand-typed recipe gets. A file only
+      // carries ingredients and weights; the times, the temperature and the
+      // notes are hers to add, and this is the moment she has the recipe in
+      // front of her. It also puts the costing and the baker's percentages
+      // under her eyes while the import is still fresh enough to correct.
+      openRecipeEditor(recipe.id);
     })
     .catch(err => {
       btn.disabled = false;
@@ -7453,15 +7474,51 @@ function weightFromInput(el) {
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
+// Which rows count as flour for baker's percentage. The pantry category is the
+// reliable signal; the name is the fallback for an ingredient that was typed in
+// or arrived from a spreadsheet before it had a pantry entry.
+function isFlourRow(tr) {
+  const pantryId = tr.querySelector('.ing-pantry-id')?.value || '';
+  if (pantryId) {
+    const p = PANTRY.find(x => x.id === pantryId);
+    if (p) return (p.cat || '') === 'קמח';
+  }
+  const name = tr.querySelector('.ing-name')?.value || '';
+  return /קמח|סולת/.test(name);
+}
+
+// The same calculation off a plain ingredient array, for a recipe that is not
+// currently open in the editor — an imported one, before its card is shown.
+function bakerPercents(ingredients) {
+  const isFlour = ing => {
+    const p = ing.pantryId ? PANTRY.find(x => x.id === ing.pantryId) : null;
+    if (p) return (p.cat || '') === 'קמח';
+    return /קמח|סולת/.test(ing.name || '');
+  };
+  const flour = (ingredients || []).reduce((s, i) => s + (isFlour(i) ? (i.weightG || 0) : 0), 0);
+  return (ingredients || []).map(i => {
+    if (!flour) return 0;
+    const pct = ((i.weightG || 0) / flour) * 100;
+    return pct >= 10 ? Math.round(pct) : +pct.toFixed(1);
+  });
+}
+
 function recalcEditorCosts() {
   const tbody = document.getElementById('re-ing-tbody');
   if (!tbody) return;
 
   let totalCost = 0;
   let unknownCount = 0;
-  let totalFlourG = 0;
 
-  const rows = tbody.querySelectorAll('tr');
+  const rows = [...tbody.querySelectorAll('tr')];
+
+  // Baker's percentage: every ingredient as a share of the flour. It was being
+  // read from whatever was stored on the row and never recalculated, so it went
+  // stale the moment a weight changed and read 0% on any recipe that did not
+  // arrive with the numbers already baked in — an imported one, for instance.
+  const totalFlourG = rows.reduce((sum, tr) =>
+    sum + (isFlourRow(tr) ? weightFromInput(tr.querySelector('.ing-weight')) : 0), 0);
+
   rows.forEach(tr => {
     const weightInput = tr.querySelector('.ing-weight');
     const pantryIdInput = tr.querySelector('.ing-pantry-id');
@@ -7476,6 +7533,12 @@ function recalcEditorCosts() {
     } else {
       unknownCount++;
       if (costCell) costCell.textContent = pantryId ? '?' : '—';
+    }
+
+    const pctCell = tr.querySelector('.ing-baker-pct');
+    if (pctCell) {
+      const pct = totalFlourG > 0 ? (weightG / totalFlourG) * 100 : 0;
+      pctCell.textContent = pct > 0 ? (pct >= 10 ? Math.round(pct) : pct.toFixed(1)) + '%' : '—';
     }
   });
 
