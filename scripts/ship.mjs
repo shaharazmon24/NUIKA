@@ -83,31 +83,6 @@ try {
   // 2. Save locally.
   say('\n2/4  שומר את השינויים...');
 
-  // Stamp the version into the page itself, before the commit, so the stamp is
-  // part of what ships. Without it "which version are you looking at?" has no
-  // answer that does not require git — and one of the two people here does not
-  // use git. The timestamp orders the versions; the hash identifies the commit
-  // it was built on. Read it back with `node scripts/status.mjs`, or in the
-  // admin panel header, or as NUIKA_VERSION in the browser console.
-  try {
-    const idxPath = join(ROOT, 'index.html');
-    const before  = readFileSync(idxPath, 'utf8');
-    const stamp   = new Date().toISOString();
-    const parent  = git('rev-parse --short HEAD', true);
-    const after    = before.replace(
-      /(<meta name="nuika-version" content=")[^"]*("\s*\/?>)/,
-      `$1${stamp}|${parent}$2`
-    );
-    if (after === before) {
-      say('     ⚠  לא מצאתי את תג הגרסה ב-index.html — ממשיך בלי לחתום.');
-    } else {
-      writeFileSync(idxPath, after);
-      say(`     גרסה: ${stamp.slice(0, 16).replace('T', ' ')}`);
-    }
-  } catch (e) {
-    say('     ⚠  חתימת הגרסה נכשלה: ' + e.message + ' — ממשיך.');
-  }
-
   git('add -A', true);
   execSync(`git commit -q -m "${message.replace(/"/g, "'")}"`, { cwd: ROOT });
 
@@ -137,6 +112,38 @@ try {
       say(line);
       process.exit(1);
     }
+  }
+
+  // Stamp the version AFTER the merge, never before it.
+  //
+  // Both machines write this same line, so stamping before the commit made the
+  // version tag a guaranteed conflict on every parallel session — the one line
+  // both sides always touch. Two conflicts in a row landed here and nowhere
+  // else. Stamped after the merge, the incoming stamp is simply replaced by the
+  // fresh one and there is nothing left to collide over.
+  //
+  // The timestamp orders the versions; the hash identifies the commit it was
+  // built on. Read it back with `node scripts/status.mjs`, in the admin panel
+  // header, or as NUIKA_VERSION in the browser console.
+  try {
+    const idxPath = join(ROOT, 'index.html');
+    const before  = readFileSync(idxPath, 'utf8');
+    const stamp   = new Date().toISOString();
+    const parent  = git('rev-parse --short HEAD', true);
+    const after   = before.replace(
+      /(<meta name="nuika-version" content=")[^"]*("\s*\/?>)/,
+      `$1${stamp}|${parent}$2`
+    );
+    if (after === before) {
+      say('     ⚠  לא מצאתי את תג הגרסה ב-index.html — ממשיך בלי לחתום.');
+    } else {
+      writeFileSync(idxPath, after);
+      execSync('git add index.html', { cwd: ROOT });
+      execSync(`git commit -q -m "גרסה ${stamp.slice(0, 16).replace('T', ' ')}"`, { cwd: ROOT });
+      say(`     גרסה: ${stamp.slice(0, 16).replace('T', ' ')}`);
+    }
+  } catch (e) {
+    say('     ⚠  חתימת הגרסה נכשלה: ' + e.message + ' — ממשיך.');
   }
 
   // 4. Publish.
