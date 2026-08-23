@@ -10,7 +10,7 @@
        machines, and "which version am I looking at?" had no answer before this
        existed. `node scripts/status.mjs` compares this value across your
        machine, GitHub, and the live site. -->
-  <meta name="nuika-version" content="2026-08-23T11:01:13.643Z|75777ee" />
+  <meta name="nuika-version" content="dev|unpublished" />
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
@@ -195,6 +195,17 @@
     }
     .mo-item-row:last-child { border-bottom: none; }
     .mo-qty-input { width: 76px; text-align: center; margin: 0; }
+    .ord-btn {
+      background: #F0E9D8;
+      border: 1.5px solid #D5C9B5;
+      border-radius: 6px;
+      width: 28px; height: 21px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; padding: 0;
+      color: #6B2E1E; font-size: 0.7rem; line-height: 1;
+    }
+    .ord-btn:hover:not(:disabled) { background: #EFE1C7; border-color: #BD4D30; }
+    .ord-btn:disabled { opacity: 0.3; cursor: default; }
     .edit-modal-box {
       background: #FDFAF4;
       border-radius: 24px 24px 0 0;
@@ -3163,6 +3174,26 @@ db.ref(`${ROOT}/_seeded`).once('value').then(seedSnap => {
   });
 }).catch(err => console.error('seed check failed:', err));
 
+// The order Noy arranged in the panel, which is the order customers see.
+// A dish that has never been moved has no `order` yet and falls back to its
+// id — the order the menu had before this existed — so nothing reshuffles on
+// its own, and a newly added dish lands at the end rather than in the middle.
+// +null is 0, not NaN. Ranking on that alone sent a dish with no order to the
+// very front of the menu — reachable just by editing a dish that had never
+// been moved, which would silently rearrange what customers see.
+function orderRank(p) {
+  if (p.order == null) return Infinity;
+  const n = +p.order;
+  return Number.isFinite(n) ? n : Infinity;
+}
+
+function productSortFn(a, b) {
+  const ao = orderRank(a);
+  const bo = orderRank(b);
+  if (ao !== bo) return ao - bo;
+  return a.id - b.id;
+}
+
 // Products listener — runs whenever products change in Firebase
 db.ref(`${ROOT}/products`).on('value', snap => {
   const data = snap.val();
@@ -3174,7 +3205,7 @@ db.ref(`${ROOT}/products`).on('value', snap => {
   if (data) Object.values(data)
     .map(p => ({ ...p, id: +p.id, svg: null }))
     .filter(p => Number.isFinite(p.id))
-    .sort((a, b) => a.id - b.id)
+    .sort(productSortFn)
     .forEach(p => PRODUCTS.push(p));
 
   backfillRecipeLinks();
@@ -4339,10 +4370,21 @@ function renderAdminProducts() {
        : `<div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.82rem;padding:10px 0;">ריק כרגע</div>`);
 }
 
-function productRow(p) {
+function productRow(p, i, arr) {
   const parked = p.inMenu === false;
+  // Only the menu has an order worth arranging. The bank is a shelf.
+  // .map() hands in the index and the array, so first/last need no bookkeeping.
+  const last = arr ? arr.length - 1 : 0;
+  const arrows = parked ? '' : `
+      <div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0;">
+        <button class="ord-btn" onclick="moveProduct(${+p.id || 0}, -1)" ${i === 0 ? 'disabled' : ''}
+          title="להזיז למעלה" aria-label="להזיז את ${esc(p.nameHe)} למעלה בתפריט">▲</button>
+        <button class="ord-btn" onclick="moveProduct(${+p.id || 0}, 1)" ${i === last ? 'disabled' : ''}
+          title="להזיז למטה" aria-label="להזיז את ${esc(p.nameHe)} למטה בתפריט">▼</button>
+      </div>`;
   return `
     <div class="admin-card" style="${parked ? 'opacity:0.6;' : ''}">
+      ${arrows}
       <img src="${esc(p.illustration || '')}" alt="${esc(p.nameHe)}"
         onerror="this.style.display='none'"
         style="width:56px;height:56px;object-fit:cover;border-radius:8px;flex-shrink:0;" />
@@ -4395,6 +4437,38 @@ function toggleInMenu(id, btn) {
   pruneCart();
   updateCartBar();
   updateOrdersOpenBanner();
+}
+
+// Moves one dish up or down the menu. Order is stored per dish in Firebase,
+// so the arrangement follows Noy to her phone and reaches customers at once.
+function moveProduct(id, dir) {
+  if (!_productsLoaded) { alert('הנתונים עדיין נטענים — רגע אחד ונסי שוב.'); return; }
+  const menu = menuProducts();          // already in display order
+  const from = menu.findIndex(p => p.id === id);
+  const to   = from + dir;
+  if (from === -1 || to < 0 || to >= menu.length) return;
+
+  menu.splice(to, 0, menu.splice(from, 1)[0]);
+
+  // Renumber the menu from the top and write only the dishes that actually
+  // moved. Per dish, never a .set() on the products node — that pattern has
+  // destroyed this menu before.
+  const writes = [];
+  menu.forEach((p, i) => {
+    if (p.order != null && +p.order === i) return;
+    p.order = i;
+    writes.push(db.ref(`${ROOT}/products/${p.id}/order`).set(i));
+  });
+
+  // Re-sort the live array too. Rendering off the old order would snap the
+  // dish back to where it was until Firebase answered.
+  PRODUCTS.sort(productSortFn);
+
+  renderAdminProducts();
+  renderProducts();
+  Object.keys(cart).forEach(cid => updateCard(+cid));
+  updateOrdersOpenBanner();
+  Promise.all(writes).catch(fbError);
 }
 
 function liveToggleSoldOut(id, checkbox) {
@@ -5528,7 +5602,10 @@ function productRecord(p) {
     inMenu: p.inMenu !== false,
     maxStock: p.maxStock == null ? null : p.maxStock,   // 0 is a real cap
     tag: p.tag || null,
-    recipeId: p.recipeId || null
+    recipeId: p.recipeId || null,
+    // Without this, saving a dish from the editor would .set() the record
+    // without its order and drop it back to the bottom of the menu.
+    order: p.order == null || !Number.isFinite(+p.order) ? null : +p.order
   };
 }
 
