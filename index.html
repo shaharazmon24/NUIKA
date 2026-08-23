@@ -10,7 +10,7 @@
        machines, and "which version am I looking at?" had no answer before this
        existed. `node scripts/status.mjs` compares this value across your
        machine, GitHub, and the live site. -->
-  <meta name="nuika-version" content="2026-08-20T05:16:15.501Z|83a165e" />
+  <meta name="nuika-version" content="2026-08-23T11:01:13.643Z|75777ee" />
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
@@ -2734,7 +2734,11 @@
 
     <div id="ri-preview" style="margin-top:12px;"></div>
 
-    <div style="display:flex;gap:10px;margin-top:16px;">
+    <!-- Shown instead of everything above when a file turns out to hold more
+         than one recipe: each gets its own row and its own decision. -->
+    <div id="ri-multi" style="display:none;"></div>
+
+    <div id="ri-single-actions" style="display:flex;gap:10px;margin-top:16px;">
       <button id="ri-save-btn" onclick="commitRecipeImport()" class="admin-save-btn" style="flex:1;">ייבוא המתכון ✓</button>
       <button onclick="closeRecipeImport()" style="flex:0 0 auto;background:transparent;border:2px solid #6B2E1E;color:#6B2E1E;font-family:'Noto Serif Hebrew',serif;font-weight:700;padding:13px 20px;border-radius:100px;cursor:pointer;">ביטול</button>
     </div>
@@ -6516,7 +6520,14 @@ function addIngredientRow(ing) {
         ${ing && ing.bakerPct ? ing.bakerPct+'%' : '—'}
       </span>
     </td>
-    <td class="ing-cost-cell" id="${rowId}-cost">—</td>
+    <!-- Clickable. An unpriced ingredient used to mean leaving the recipe,
+         going to the pantry tab, finding the row and coming back — so it
+         usually just stayed unpriced and the costing stayed wrong. -->
+    <td class="ing-cost-cell" id="${rowId}-cost"
+        onclick="editRowPrice('${rowId}')" role="button" tabindex="0"
+        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();editRowPrice('${rowId}')}"
+        title="לחיצה כדי לעדכן מחיר לק״ג במזווה"
+        style="cursor:pointer;">—</td>
     <td>
       <button class="ing-del-btn" onclick="removeIngredientRow('${rowId}')">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -7068,10 +7079,12 @@ function colIndexFromRef(ref) {
   return n - 1;
 }
 
-// Reads the first worksheet into a dense array of rows of strings.
-async function readXlsx(arrayBuffer) {
+// Reads EVERY worksheet, as [{ name, rows }]. A workbook with one recipe per
+// tab is the most natural way to keep a recipe book, and reading only the first
+// sheet silently threw the rest away.
+async function readXlsxSheets(arrayBuffer) {
   const parts = await readZipEntries(arrayBuffer, [
-    'xl/sharedStrings.xml', 'xl/worksheets/sheet1.xml', 'xl/worksheets/'
+    'xl/sharedStrings.xml', 'xl/workbook.xml', 'xl/_rels/workbook.xml.rels', 'xl/worksheets/'
   ]);
   const dec = new TextDecoder('utf-8');
   const parseXml = s => new DOMParser().parseFromString(s, 'application/xml');
@@ -7085,34 +7098,70 @@ async function readXlsx(arrayBuffer) {
     });
   }
 
-  const sheetName = parts['xl/worksheets/sheet1.xml']
-    ? 'xl/worksheets/sheet1.xml'
-    : Object.keys(parts).find(k => /^xl\/worksheets\/.*\.xml$/.test(k));
-  if (!sheetName) throw new Error('no-sheet');
+  // Tab names live in workbook.xml and point at files through the rels map.
+  // Going by sheetN.xml order instead is right most of the time and wrong
+  // exactly when a tab has been moved or deleted.
+  const relTarget = {};
+  if (parts['xl/_rels/workbook.xml.rels']) {
+    parseXml(dec.decode(parts['xl/_rels/workbook.xml.rels']))
+      .querySelectorAll('Relationship').forEach(r => {
+        relTarget[r.getAttribute('Id')] = String(r.getAttribute('Target') || '').replace(/^\/?xl\//, '').replace(/^\//, '');
+      });
+  }
+  const ordered = [];
+  if (parts['xl/workbook.xml']) {
+    parseXml(dec.decode(parts['xl/workbook.xml']))
+      .querySelectorAll('sheet').forEach(s => {
+        const rid = s.getAttribute('r:id') || s.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id');
+        const target = relTarget[rid];
+        ordered.push({ name: s.getAttribute('name') || '', file: target ? 'xl/' + target : null });
+      });
+  }
 
-  const doc  = parseXml(dec.decode(parts[sheetName]));
-  const rows = [];
-  doc.querySelectorAll('row').forEach(row => {
-    const cells = [];
-    row.querySelectorAll('c').forEach(c => {
-      const idx = colIndexFromRef(c.getAttribute('r'));
-      const t   = c.getAttribute('t');
-      let val = '';
-      if (t === 's') {
-        const v = c.querySelector('v');
-        val = v ? (shared[+v.textContent] ?? '') : '';
-      } else if (t === 'inlineStr') {
-        val = [...c.querySelectorAll('t')].map(x => x.textContent).join('');
-      } else {
-        const v = c.querySelector('v');
-        val = v ? v.textContent : '';
-      }
-      cells[idx] = String(val).trim();
+  const sheetFiles = Object.keys(parts).filter(k => /^xl\/worksheets\/.*\.xml$/.test(k)).sort();
+  if (!sheetFiles.length) throw new Error('no-sheet');
+
+  const plan = ordered.filter(o => o.file && parts[o.file]).length
+    ? ordered.filter(o => o.file && parts[o.file])
+    : sheetFiles.map((f, i) => ({ name: 'גיליון ' + (i + 1), file: f }));
+
+  const readSheet = file => {
+    const doc  = parseXml(dec.decode(parts[file]));
+    const rows = [];
+    doc.querySelectorAll('row').forEach(row => {
+      const cells = [];
+      row.querySelectorAll('c').forEach(c => {
+        const idx = colIndexFromRef(c.getAttribute('r'));
+        const t   = c.getAttribute('t');
+        let val = '';
+        if (t === 's') {
+          const v = c.querySelector('v');
+          val = v ? (shared[+v.textContent] ?? '') : '';
+        } else if (t === 'inlineStr') {
+          val = [...c.querySelectorAll('t')].map(x => x.textContent).join('');
+        } else {
+          const v = c.querySelector('v');
+          val = v ? v.textContent : '';
+        }
+        cells[idx] = String(val).trim();
+      });
+      for (let i = 0; i < cells.length; i++) if (cells[i] == null) cells[i] = '';
+      // Keep blank rows: they are what separates one recipe from the next when
+      // several are stacked on a single sheet.
+      rows.push(cells);
     });
-    for (let i = 0; i < cells.length; i++) if (cells[i] == null) cells[i] = '';
-    if (cells.some(x => x !== '')) rows.push(cells);
-  });
-  return rows;
+    return rows;
+  };
+
+  return plan.map(p => ({ name: p.name, rows: readSheet(p.file) }))
+             .filter(s => s.rows.some(r => r.some(c => c !== '')));
+}
+
+// Kept for the single-sheet callers: the first sheet's rows, blanks removed.
+async function readXlsx(arrayBuffer) {
+  const sheets = await readXlsxSheets(arrayBuffer);
+  if (!sheets.length) throw new Error('no-sheet');
+  return sheets[0].rows.filter(r => r.some(c => c !== ''));
 }
 
 // One entry point for every spreadsheet Noy might have: .xlsx, or a .csv/.tsv
@@ -7157,6 +7206,139 @@ function detectColumns(rows, opts) {
   return { nameCol, numCol, headerRow: -1 };
 }
 
+// ─── SPLITTING A FILE INTO RECIPES ────────────────
+// Noy keeps her recipes however she keeps them, so rather than demand one
+// layout this recognises the three she is actually likely to have:
+//
+//   1. one recipe per tab           — the tab name is the recipe name
+//   2. one sheet, a "מתכון" column  — rows grouped by that column
+//   3. one sheet, blocks separated  — a title line, its ingredients, a blank
+//                                     line, the next title
+//
+// Anything it cannot split confidently stays one recipe, which is the old
+// behaviour and never worse than it was.
+
+const ING_NAME_KWS = ['מרכיב', 'רכיב', 'שם', 'חומר', 'ingredient', 'item', 'name'];
+const ING_NUM_KWS  = ['משקל', 'כמות', 'גרם', 'גר', 'weight', 'qty', 'amount', 'grams'];
+const RECIPE_KWS   = ['מתכון', 'שם המתכון', 'recipe', 'dish'];
+
+function rowsToPairs(rows, nameCol, numCol, headerRow) {
+  const out = [];
+  rows.forEach((r, i) => {
+    if (i <= headerRow) return;
+    const n = String(r[nameCol] || '').trim();
+    const w = String(r[numCol]  || '').trim();
+    if (n && w) out.push(n + '\t' + w);
+  });
+  return out;
+}
+
+function splitSheetIntoRecipes(sheet, fallbackName) {
+  const dense = sheet.rows.filter(r => r.some(c => String(c).trim() !== ''));
+  if (!dense.length) return [];
+
+  // (2) a column that names the recipe on every row
+  let recipeCol = -1, headerAt = -1;
+  for (let r = 0; r < Math.min(dense.length, 5) && recipeCol === -1; r++) {
+    const idx = dense[r].findIndex(c => RECIPE_KWS.some(k => String(c).toLowerCase().trim() === k
+      || String(c).toLowerCase().includes(k)));
+    if (idx !== -1) { recipeCol = idx; headerAt = r; }
+  }
+  if (recipeCol !== -1) {
+    const { nameCol, numCol } = detectColumns(
+      dense.map(r => r.filter((_, i) => i !== recipeCol)),
+      { nameKeywords: ING_NAME_KWS, numberKeywords: ING_NUM_KWS });
+    // map back past the removed column
+    const back = i => (i >= recipeCol ? i + 1 : i);
+    const nC = back(nameCol), wC = back(numCol);
+    if (wC !== -1) {
+      const groups = new Map();
+      dense.forEach((r, i) => {
+        if (i <= headerAt) return;
+        const key = String(r[recipeCol] || '').trim();
+        const n = String(r[nC] || '').trim();
+        const w = String(r[wC] || '').trim();
+        if (!key || !n || !w) return;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(n + '\t' + w);
+      });
+      if (groups.size > 1) return [...groups].map(([name, lines]) => ({ name, lines }));
+    }
+  }
+
+  // (3) blocks separated by blank rows, each opening with a lone title cell
+  const blocks = [];
+  let cur = [];
+  sheet.rows.forEach(r => {
+    const filled = r.filter(c => String(c).trim() !== '');
+    if (!filled.length) { if (cur.length) { blocks.push(cur); cur = []; } return; }
+    cur.push(r);
+  });
+  if (cur.length) blocks.push(cur);
+
+  if (blocks.length > 1) {
+    const parsed = blocks.map(rows => {
+      const first = rows[0].filter(c => String(c).trim() !== '');
+      let title = '', body = rows;
+      // A single-cell first line is a heading, not an ingredient.
+      if (first.length === 1 && rows.length > 1) { title = String(first[0]).trim(); body = rows.slice(1); }
+      const det = detectColumns(body, { nameKeywords: ING_NAME_KWS, numberKeywords: ING_NUM_KWS });
+      if (det.numCol === -1) return null;
+      const lines = rowsToPairs(body, det.nameCol, det.numCol, det.headerRow);
+      return lines.length ? { name: title, lines } : null;
+    }).filter(Boolean);
+    // Only treat it as several recipes if the blocks actually announced
+    // themselves. Otherwise a blank row inside one recipe would split it.
+    if (parsed.length > 1 && parsed.every(p => p.name)) return parsed;
+  }
+
+  // (1)/default — the whole sheet is one recipe
+  const det = detectColumns(dense, { nameKeywords: ING_NAME_KWS, numberKeywords: ING_NUM_KWS });
+  if (det.numCol === -1) return [];
+  const lines = rowsToPairs(dense, det.nameCol, det.numCol, det.headerRow);
+  if (!lines.length) return [];
+
+  // A labelled name cell beats the tab name, which beats the file name.
+  let title = '';
+  for (let i = 0; i < Math.min(dense.length, 5) && !title; i++) {
+    const lbl = dense[i].findIndex(c => /^(שם המתכון|שם מתכון|מתכון|recipe)\s*:?$/i.test(String(c).trim()));
+    if (lbl !== -1 && dense[i][lbl + 1]) title = String(dense[i][lbl + 1]).trim();
+  }
+  if (!title && det.headerRow > 0) {
+    const first = dense[0].filter(c => String(c).trim() !== '');
+    if (first.length === 1) title = String(first[0]).trim();
+  }
+  return [{ name: title || sheet.name || fallbackName, lines }];
+}
+
+// Everything a file contains, as a flat list of recipes.
+async function readRecipesFromFile(file) {
+  const base = (file.name || '').replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
+  const lower = (file.name || '').toLowerCase();
+  let sheets;
+
+  if (/\.(csv|tsv|txt)$/.test(lower)) {
+    const text = await file.text();
+    const rows = text.split(/\r?\n/).map(l =>
+      (l.includes('\t') ? l.split('\t') : l.split(',')).map(c => c.replace(/^"|"$/g, '').trim()));
+    sheets = [{ name: base, rows }];
+  } else if (/\.xls$/.test(lower)) {
+    throw new Error('old-xls');
+  } else {
+    sheets = await readXlsxSheets(await file.arrayBuffer());
+  }
+  if (!sheets.length) throw new Error('empty');
+
+  const out = [];
+  sheets.forEach(sheet => {
+    splitSheetIntoRecipes(sheet, base).forEach(r => {
+      out.push({ name: (r.name || sheet.name || base).slice(0, 60), lines: r.lines });
+    });
+  });
+  if (!out.length) throw new Error('no-rows');
+  return out;
+}
+
 // ─── RECIPE IMPORT FROM A SPREADSHEET ─────────────
 // Excel puts a tab between cells and a newline between rows when you copy, so
 // a paste is already a parseable table. Commas and semicolons are accepted too
@@ -7171,45 +7353,16 @@ async function importRecipeFromFile(input) {
   box.innerHTML = `<div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.82rem;color:#9B8B75;">קורא את ${esc(file.name)}...</div>`;
 
   try {
-    const rows = await readSpreadsheetFile(file);
-    if (!rows.length) throw new Error('empty');
+    const found = await readRecipesFromFile(file);
 
-    const { nameCol, numCol, headerRow } = detectColumns(rows, {
-      nameKeywords:   ['מרכיב', 'רכיב', 'שם', 'חומר', 'ingredient', 'item', 'name'],
-      numberKeywords: ['משקל', 'כמות', 'גרם', 'גר', 'weight', 'qty', 'amount', 'grams']
-    });
-    if (numCol === -1) throw new Error('no-numbers');
+    if (found.length > 1) { renderMultiRecipeImport(found); return; }
 
-    // Rebuild the paste box from the file so the existing preview, the pantry
-    // matching and the save path all stay a single code path.
-    const lines = [];
-    rows.forEach((r, i) => {
-      if (i <= headerRow) return;
-      const n = String(r[nameCol] || '').trim();
-      const w = String(r[numCol]  || '').trim();
-      if (n && w) lines.push(n + '\t' + w);
-    });
-    if (!lines.length) throw new Error('no-rows');
-    document.getElementById('ri-paste').value = lines.join('\n');
-
-    // A recipe name if the file offers one: a labelled cell, else a lone cell
-    // above the table, else the filename.
+    // One recipe: fill the fields the same way a paste would, so the preview,
+    // the pantry matching and the save path stay a single code path.
+    const only = found[0];
+    document.getElementById('ri-paste').value = only.lines.join('\n');
     const nameEl = document.getElementById('ri-name');
-    if (!nameEl.value.trim()) {
-      let guess = '';
-      for (let i = 0; i < Math.min(rows.length, 5) && !guess; i++) {
-        const row = rows[i];
-        const lbl = row.findIndex(c => /^(שם המתכון|שם מתכון|מתכון|recipe)\s*:?$/i.test(String(c).trim()));
-        if (lbl !== -1 && row[lbl + 1]) guess = String(row[lbl + 1]).trim();
-      }
-      if (!guess && headerRow > 0) {
-        const first = rows[0].filter(c => String(c).trim());
-        if (first.length === 1) guess = String(first[0]).trim();
-      }
-      if (!guess) guess = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
-      nameEl.value = guess.slice(0, 60);
-    }
-
+    if (!nameEl.value.trim()) nameEl.value = (only.name || '').slice(0, 60);
     previewRecipeImport();
   } catch (e) {
     const msg = {
@@ -7228,12 +7381,164 @@ async function importRecipeFromFile(input) {
   }
 }
 
+// ─── SEVERAL RECIPES IN ONE FILE ──────────────────
+// Each one gets its own row: keep or skip, its own name, category, yield and
+// price. Importing them silently as one blob, or all-or-nothing, would give
+// Noy a kitchen she then has to unpick by hand.
+let _multiRecipes = [];
+
+function renderMultiRecipeImport(list) {
+  _multiRecipes = list;
+
+  // The single-recipe fields no longer apply — hide them rather than leave two
+  // sets of controls on screen disagreeing about what is about to happen.
+  ['ri-name', 'ri-category', 'ri-yield', 'ri-price'].forEach(id => {
+    const f = document.getElementById(id); if (f) f.closest('div').style.display = 'none';
+  });
+  document.getElementById('ri-paste').style.display = 'none';
+  const pasteLbl = document.querySelector('label[for="ri-paste"]');
+  if (pasteLbl) pasteLbl.style.display = 'none';
+  document.getElementById('ri-preview').innerHTML = '';
+  document.getElementById('ri-single-actions').style.display = 'none';
+
+  const box = document.getElementById('ri-multi');
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:700;color:#2C1810;font-size:0.95rem;margin-bottom:4px;">
+      נמצאו ${list.length} מתכונים בקובץ
+    </div>
+    <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.76rem;color:#9B8B75;margin-bottom:12px;line-height:1.6;">
+      אפשר לבחור מה לייבא ולתקן כל שם. מרכיבים שלא נמצאו במזווה יופיעו אחרי הייבוא בכרטיס של כל מתכון.
+    </div>
+    ${list.map((r, i) => {
+      const parsed = parseRecipePaste(r.lines.join('\n'));
+      const missing = parsed.filter(p => !p.matched).length;
+      return `
+      <div class="ri-multi-row" style="background:#FDFAF4;border:1px solid #E3D7C3;border-radius:12px;padding:10px 12px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <input type="checkbox" class="ri-m-use" data-i="${i}" checked style="width:18px;height:18px;flex:0 0 auto;" />
+          <input type="text" class="ri-m-name field" data-i="${i}" value="${esc(r.name || '')}"
+                 placeholder="שם המתכון" style="flex:1;min-width:0;padding:6px 8px;font-size:0.86rem;" />
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <select class="ri-m-cat field" data-i="${i}" style="width:104px;padding:5px 7px;font-size:0.76rem;">
+            <option value="לחם">לחם</option><option value="מאפה">מאפה</option><option value="עוגה">עוגה</option>
+            <option value="בצק בסיס">בצק בסיס</option><option value="קרם / מילוי">קרם / מילוי</option>
+            <option value="אחר" selected>אחר</option>
+          </select>
+          <input type="number" min="1" class="ri-m-yield field" data-i="${i}" value="1" dir="ltr"
+                 title="כמה יחידות יוצאות" style="width:64px;padding:5px 7px;font-size:0.76rem;" />
+          <input type="text" inputmode="decimal" class="ri-m-price field" data-i="${i}" placeholder="₪ מכירה" dir="ltr"
+                 style="width:84px;padding:5px 7px;font-size:0.76rem;" />
+          <span style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.74rem;color:#9B8B75;align-self:center;">
+            ${parsed.length} מרכיבים${missing ? ` · <span class="ri-unmatched">${missing} חדשים</span>` : ''}
+          </span>
+        </div>
+      </div>`;
+    }).join('')}
+    <button onclick="commitMultiRecipeImport()" id="ri-multi-btn" class="admin-save-btn" style="width:100%;margin-top:12px;">
+      ייבוא הנבחרים ✓
+    </button>`;
+}
+
+function commitMultiRecipeImport() {
+  if (!kitchenReady()) return;
+  const btn = document.getElementById('ri-multi-btn');
+  const get = (cls, i) => document.querySelector(`.${cls}[data-i="${i}"]`);
+
+  const chosen = [];
+  _multiRecipes.forEach((r, i) => {
+    if (!get('ri-m-use', i)?.checked) return;
+    const name = (get('ri-m-name', i)?.value || '').trim();
+    if (!name) return;
+    chosen.push({ ...r, name,
+      category: get('ri-m-cat', i)?.value || 'אחר',
+      yieldCount: parseInt(get('ri-m-yield', i)?.value, 10) || 1,
+      sellingPrice: parseFloat(String(get('ri-m-price', i)?.value || '').replace(',', '.')) || 0 });
+  });
+  if (!chosen.length) { alert('לא נבחר אף מתכון.'); return; }
+
+  // Every new ingredient across every chosen recipe, created once. Asking per
+  // recipe would create the same flour three times under three ids.
+  const patch = {};
+  const newPantry = [];
+  const pantryFor = name => {
+    const existing = PANTRY.find(p => normaliseIngName(p.name) === normaliseIngName(name));
+    if (existing) return existing;
+    const item = { id: 'pi_' + Date.now() + '_' + newPantry.length, name,
+                   cat: 'אחר', supplier: '', waste: 0, vat: 0.17 };
+    newPantry.push(item);
+    PANTRY.push(item);
+    patch[`pantry/${item.id}`] = item;
+    return item;
+  };
+
+  const built = chosen.map((r, n) => {
+    const rows = parseRecipePaste(r.lines.join('\n')).filter(x => x.weightG > 0);
+    rows.forEach(row => { if (!row.pantryId) row.pantryId = pantryFor(row.name).id; });
+    const recipe = {
+      id: 'rec_' + Date.now() + '_' + n,
+      name: r.name, category: r.category,
+      yieldCount: r.yieldCount,
+      yieldWeightG: Math.round(rows.reduce((s, x) => s + x.weightG, 0)),
+      sellingPrice: r.sellingPrice,
+      prepTimeMin: 0, bakingTimeMin: 0, bakingTempC: 0, notes: '',
+      ingredients: rows.map((x, i) => ({
+        id: 'ri_' + Date.now() + '_' + n + '_' + i,
+        name: x.name, pantryId: x.pantryId, weightG: x.weightG, bakerPct: 0
+      }))
+    };
+    const pcts = bakerPercents(recipe.ingredients);
+    recipe.ingredients.forEach((ing, i) => { ing.bakerPct = pcts[i] || 0; });
+    patch[`recipes/${recipe.id}`] = recipe;
+    return recipe;
+  }).filter(r => r.ingredients.length);
+
+  if (!built.length) { alert('אף מתכון לא הכיל מרכיבים עם משקל.'); return; }
+
+  btn.disabled = true;
+  built.forEach(r => RECIPES.push(r));
+
+  // One write for the whole file, so a half-imported recipe book is impossible.
+  db.ref(`${ROOT}/kitchen`).update(patch)
+    .then(() => {
+      btn.disabled = false;
+      closeRecipeImport();
+      renderRecipeGrid();
+      renderPantry();
+      alert((built.length === 1 ? 'מתכון אחד יובא.' : `${built.length} מתכונים יובאו.`) +
+        (newPantry.length ? `\n${newPantry.length === 1 ? 'מרכיב חדש אחד נוסף' : newPantry.length + ' מרכיבים חדשים נוספו'} למזווה — עדיין בלי מחיר.` : '') +
+        `\n\nאפשר לפתוח כל מתכון ולהוסיף מחיר למרכיב ישירות מהכרטיס, בלחיצה על "+ מחיר".`);
+    })
+    .catch(err => {
+      btn.disabled = false;
+      built.forEach(r => { const i = RECIPES.findIndex(x => x.id === r.id); if (i !== -1) RECIPES.splice(i, 1); });
+      newPantry.forEach(p => { const i = PANTRY.findIndex(x => x.id === p.id); if (i !== -1) PANTRY.splice(i, 1); });
+      alert('הייבוא נכשל — לא נשמר כלום. בדקי חיבור לאינטרנט ונסי שוב.');
+      fbError(err);
+    });
+}
+
 function openRecipeImport() {
   if (!kitchenReady()) return;
   ['ri-name', 'ri-price', 'ri-paste'].forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('ri-yield').value = '1';
   document.getElementById('ri-preview').innerHTML = '';
   document.getElementById('ri-save-btn').disabled = false;
+
+  // Undo the multi-recipe view. Without this, opening the dialog again after a
+  // multi-recipe file left every single-recipe field hidden and the dialog
+  // looked broken.
+  _multiRecipes = [];
+  document.getElementById('ri-multi').style.display = 'none';
+  document.getElementById('ri-multi').innerHTML = '';
+  document.getElementById('ri-single-actions').style.display = 'flex';
+  document.getElementById('ri-paste').style.display = '';
+  const pasteLbl = document.querySelector('label[for="ri-paste"]');
+  if (pasteLbl) pasteLbl.style.display = '';
+  ['ri-name', 'ri-category', 'ri-yield', 'ri-price'].forEach(id => {
+    const f = document.getElementById(id); if (f) f.closest('div').style.display = '';
+  });
   document.getElementById('recipe-import-modal').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -7474,6 +7779,56 @@ function weightFromInput(el) {
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
+// Set an ingredient's price without leaving the recipe. The price belongs to
+// the pantry, so this writes there — one source of truth, and the new price
+// immediately applies to every other recipe using that ingredient.
+//
+// If the row is not linked to anything yet (a name typed by hand, or one a
+// spreadsheet introduced), the pantry item is created here and the row linked
+// to it, so pricing an ingredient and adding it are the same gesture.
+function editRowPrice(rowId) {
+  if (!kitchenReady()) return;
+  const tr = document.getElementById(rowId);
+  if (!tr) return;
+
+  const name = (tr.querySelector('.ing-name')?.value || '').trim();
+  if (!name) { alert('קודם צריך שם למרכיב.'); return; }
+
+  const idInput = tr.querySelector('.ing-pantry-id');
+  let item = idInput.value ? PANTRY.find(p => p.id === idInput.value) : null;
+  // Not linked, but the pantry may already hold it under the same name.
+  if (!item) item = PANTRY.find(p => normaliseIngName(p.name) === normaliseIngName(name)) || null;
+
+  const current = item && typeof item.pricePerKg === 'number' ? item.pricePerKg : '';
+  const answer = prompt(
+    `מחיר לק״ג של "${name}" (₪):` +
+    (item ? '' : '\n\nהמרכיב עדיין לא במזווה — הוא ייווצר עכשיו.') +
+    '\n\nאפשר להשאיר ריק כדי לא לתמחר.',
+    current === '' ? '' : String(current));
+  if (answer === null) return;                       // cancelled
+
+  const raw = String(answer).trim().replace(',', '.');
+  const price = parseFloat(raw);
+  if (raw !== '' && (!Number.isFinite(price) || price < 0)) { alert('מחיר לא תקין.'); return; }
+
+  if (!item) {
+    item = { id: 'pi_' + Date.now(), name, cat: 'אחר', supplier: '', waste: 0, vat: 0.17 };
+    PANTRY.push(item);
+  }
+  // Blank clears the price back to "unknown" rather than storing a zero, which
+  // would read as a genuinely free ingredient.
+  if (raw === '') delete item.pricePerKg; else item.pricePerKg = price;
+
+  idInput.value = item.id;
+  savePantryItem_(item);
+  // Firebase strips an absent key rather than deleting it, so an explicit null
+  // is needed to actually clear a price that was set before.
+  if (raw === '') db.ref(`${ROOT}/kitchen/pantry/${item.id}/pricePerKg`).set(null).catch(fbError);
+
+  recalcEditorCosts();
+  renderPantry();
+}
+
 // Which rows count as flour for baker's percentage. The pantry category is the
 // reliable signal; the name is the fallback for an ingredient that was typed in
 // or arrived from a spreadsheet before it had a pantry entry.
@@ -7529,10 +7884,26 @@ function recalcEditorCosts() {
 
     if (cost !== null) {
       totalCost += cost;
-      if (costCell) costCell.textContent = `₪${cost.toFixed(2)}`;
+      // Clear the "+ מחיר" styling: the same cell is reused when a price is
+      // added, and without this the amount kept the red underlined look.
+      if (costCell) {
+        costCell.textContent = `₪${cost.toFixed(2)}`;
+        costCell.style.color = '';
+        costCell.style.fontFamily = '';
+        costCell.style.fontSize = '';
+        costCell.style.textDecoration = '';
+      }
     } else {
       unknownCount++;
-      if (costCell) costCell.textContent = pantryId ? '?' : '—';
+      // Say what to do about it rather than showing a dead dash. This cell is
+      // the fastest route to a price and nothing on screen said so.
+      if (costCell) {
+        costCell.textContent = '+ מחיר';
+        costCell.style.color = '#B45032';
+        costCell.style.fontFamily = "'Noto Sans Hebrew',sans-serif";
+        costCell.style.fontSize = '0.74rem';
+        costCell.style.textDecoration = 'underline';
+      }
     }
 
     const pctCell = tr.querySelector('.ing-baker-pct');
