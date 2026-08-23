@@ -1,5 +1,5 @@
 // Bump this version on every deploy that must reach existing users.
-const CACHE = 'nuika-v8';
+const CACHE = 'nuika-v9';
 
 // Relative paths, so the same worker is correct whether the site is served
 // from the domain root (nuika.co.il) or a subdirectory.
@@ -17,6 +17,8 @@ const ASSETS = [
   './images/4-ugat-earl-grey.jpg',
   './images/5-lachmaniya.jpg',
   './images/6-maafe-ananin.jpg',
+  './images/hero-sandwich.jpg',
+  './images/hero-loaf.jpg',
 ];
 
 self.addEventListener('install', e => {

@@ -206,6 +206,39 @@
     }
     .ord-btn:hover:not(:disabled) { background: #EFE1C7; border-color: #BD4D30; }
     .ord-btn:disabled { opacity: 0.3; cursor: default; }
+
+    /* Hero: two arched photos with the name between them. The arch is the
+       shape the whole page is built around — it repeats the oven mouth. */
+    .hero-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(16px, 4vw, 52px);
+    }
+    .hero-arch {
+      margin: 0;
+      flex: 0 0 auto;
+      width: clamp(128px, 21vw, 208px);
+      /* Matches the exported crop, so the box is the right height before the
+         photo arrives and the name does not jump on load. */
+      aspect-ratio: 620 / 900;
+      border-radius: 999px 999px 14px 14px;
+      overflow: hidden;
+      background: #EFE1C7;
+      box-shadow: 0 10px 30px rgba(44, 24, 16, 0.10);
+    }
+    .hero-arch img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    /* Under ~640px three columns will not fit, so the name takes its own line
+       above and the two arches sit side by side beneath it. */
+    @media (max-width: 639px) {
+      .hero-name { order: -1; flex-basis: 100%; }
+      .hero-arch { width: clamp(130px, 40vw, 170px); }
+    }
     .edit-modal-box {
       background: #FDFAF4;
       border-radius: 24px 24px 0 0;
@@ -1790,8 +1823,20 @@
 
 <!-- ============ HERO ============ -->
 <section class="max-w-5xl mx-auto px-4 text-center" style="padding-top:clamp(2.5rem,6vw,4.5rem);padding-bottom:clamp(1.5rem,3vw,2.5rem);">
-  <h1 class="font-serif font-bold text-earth" style="font-size:clamp(2rem,5.5vw,3.5rem);line-height:1.15;letter-spacing:-0.01em;" lang-content="he">נואיקה</h1>
-  <h1 class="font-serif font-bold text-earth" style="font-size:clamp(2rem,5.5vw,3.5rem);line-height:1.15;letter-spacing:-0.01em;" lang-content="en">Nuika</h1>
+  <div class="hero-row">
+    <figure class="hero-arch">
+      <img src="images/hero-sandwich.jpg" width="620" height="900" alt="כריך פוקצ'ה עם עלים ירוקים" />
+    </figure>
+
+    <div class="hero-name">
+      <h1 class="font-serif font-bold text-earth" style="font-size:clamp(2rem,5.5vw,3.5rem);line-height:1.15;letter-spacing:-0.01em;" lang-content="he">נואיקה</h1>
+      <h1 class="font-serif font-bold text-earth" style="font-size:clamp(2rem,5.5vw,3.5rem);line-height:1.15;letter-spacing:-0.01em;" lang-content="en">Nuika</h1>
+    </div>
+
+    <figure class="hero-arch">
+      <img src="images/hero-loaf.jpg" width="620" height="900" alt="כיכר מחמצת בציפוי שומשום בשקית נייר" />
+    </figure>
+  </div>
 </section>
 
 <!-- ============ DIVIDER ============ -->
