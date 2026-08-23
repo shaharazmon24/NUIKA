@@ -1645,6 +1645,31 @@
     }
 
     /* ── Recipe import from a spreadsheet ── */
+    #import-undo-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 2160;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(44,24,16,0.45);
+      overflow-y: auto;
+    }
+    #import-undo-modal.open { display: flex; }
+    .iu-batch {
+      background: #FDFAF4;
+      border: 1.5px solid #E5D9C5;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+    .iu-names {
+      font-family: 'Noto Sans Hebrew', sans-serif;
+      font-size: 0.76rem; color: #9B8B75;
+      margin-top: 4px; line-height: 1.5;
+    }
+
     #recipe-import-modal {
       position: fixed;
       inset: 0;
@@ -2476,6 +2501,10 @@
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             ייבוא מאקסל
           </button>
+          <button class="k-add-btn" onclick="openImportUndo()" style="background:#F0E9D8;color:#B45032;border:1.5px solid #D5C9B5;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+            ביטול ייבוא
+          </button>
           <button class="k-add-btn" onclick="openRecipeEditor(null)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             מתכון חדש
@@ -2737,6 +2766,21 @@
      Hebrew handwriting and phone photos of recipe sheets do not read reliably,
      and a costing built on a misread number is worse than no costing. Copying
      the cells is two seconds and is exact. -->
+<div id="import-undo-modal" onclick="if(event.target===this)closeImportUndo()">
+  <div class="k-modal-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <h3 style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.25rem;font-weight:700;margin:0;">ביטול ייבוא מאקסל</h3>
+      <button onclick="closeImportUndo()" aria-label="סגירה" style="background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;margin:0 0 14px;">
+      כל ייבוא מקובץ אקסל מופיע כאן בשורה נפרדת. מחיקה מסירה רק את המתכונים שנכנסו באותו ייבוא — מתכונים שיצרת בעצמך לא ייגעו.
+    </p>
+    <div id="iu-list"></div>
+  </div>
+</div>
+
 <div id="recipe-import-modal" onclick="if(event.target===this)closeRecipeImport()">
   <div class="k-modal-card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
@@ -7637,6 +7681,123 @@ function commitMultiRecipeImport() {
       built.forEach(r => { const i = RECIPES.findIndex(x => x.id === r.id); if (i !== -1) RECIPES.splice(i, 1); });
       newPantry.forEach(p => { const i = PANTRY.findIndex(x => x.id === p.id); if (i !== -1) PANTRY.splice(i, 1); });
       alert('הייבוא נכשל — לא נשמר כלום. בדקי חיבור לאינטרנט ונסי שוב.');
+      fbError(err);
+    });
+}
+
+// ─── UNDO AN EXCEL IMPORT ───────────────────────────
+// A bulk import stamps every recipe it creates with 'rec_<batch>_<n>'. A
+// recipe made by hand, or imported one at a time, is 'rec_<time>' with no
+// trailing index — so the two can never be confused, and only whole batches
+// are ever offered for removal.
+const IMPORT_BATCH_RE = /^rec_(\d+)_(\d+)$/;
+
+function importBatches() {
+  const groups = new Map();
+  RECIPES.forEach(r => {
+    const m = r && typeof r.id === 'string' && r.id.match(IMPORT_BATCH_RE);
+    if (!m) return;
+    // Recipes in one batch are stamped a few milliseconds apart, so round to
+    // the second. Two separate imports one second apart is not a real case.
+    const key = Math.floor(+m[1] / 1000);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(r);
+  });
+  return [...groups.entries()]
+    .map(([sec, list]) => ({ sec, when: new Date(sec * 1000), list }))
+    .sort((a, b) => b.sec - a.sec);
+}
+
+function openImportUndo() {
+  if (!kitchenReady()) return;
+  const batches = importBatches();
+  const host = document.getElementById('iu-list');
+
+  host.innerHTML = batches.length ? batches.map(b => `
+    <div class="iu-batch">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <div style="min-width:0;">
+          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#2C1810;font-size:0.92rem;">
+            ${b.list.length === 1 ? 'מתכון אחד' : b.list.length + ' מתכונים'}
+          </div>
+          <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.74rem;color:#9B8B75;">
+            ${b.list.length === 1 ? 'יובא' : 'יובאו'} ב-${esc(b.when.toLocaleString('he-IL'))}
+          </div>
+        </div>
+        <button onclick="undoImportBatch(${b.sec})" class="btn-status" style="flex-shrink:0;border-color:#E0A79A;color:#B45032;">
+          מחיקת הייבוא הזה
+        </button>
+      </div>
+      <div class="iu-names">${esc(b.list.slice(0, 6).map(r => r.name).join(' · '))}${b.list.length > 6 ? ' · ועוד ' + (b.list.length - 6) : ''}</div>
+    </div>`).join('')
+    : `<div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.85rem;text-align:center;padding:18px 0;">
+         לא נמצא אף ייבוא מאקסל. כל המתכונים כאן נוצרו ידנית.
+       </div>`;
+
+  document.getElementById('import-undo-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeImportUndo() {
+  document.getElementById('import-undo-modal').classList.remove('open');
+  restoreScrollLock();
+}
+
+function nRecipes(n)    { return n === 1 ? 'מתכון אחד'  : n + ' מתכונים'; }
+function nIngredients(n) { return n === 1 ? 'מרכיב אחד' : n + ' מרכיבים'; }
+
+function undoImportBatch(sec) {
+  if (!kitchenReady()) return;
+  const batch = importBatches().find(b => b.sec === sec);
+  if (!batch) { alert('הייבוא הזה כבר לא קיים — רענני את הדף.'); return; }
+
+  const ids = new Set(batch.list.map(r => r.id));
+
+  // Ingredients the import invented for these recipes. Keep any that another
+  // recipe still uses, and any that has since been given a price — that one is
+  // Noy's now, whatever created it.
+  const survivors = RECIPES.filter(r => !ids.has(r.id));
+  const stillUsed = new Set();
+  survivors.forEach(r => (r.ingredients || []).forEach(i => { if (i && i.pantryId) stillUsed.add(i.pantryId); }));
+  const orphanPantry = PANTRY.filter(p =>
+    p && typeof p.id === 'string' && /^pi_\d+_\d+$/.test(p.id)
+    && Math.abs(Math.floor(+p.id.split('_')[1] / 1000) - sec) <= 2
+    && !stillUsed.has(p.id)
+    && !(+p.price > 0));
+
+  const msg = 'למחוק ' + nRecipes(batch.list.length) + (batch.list.length === 1 ? ' שיובא ב-' : ' שיובאו ב-') + batch.when.toLocaleString('he-IL') + '?'
+    + (orphanPantry.length ? '\n\nיימחק גם ' + nIngredients(orphanPantry.length) + ' שהייבוא הוסיף למזווה ואף מתכון אחר לא משתמש בו.' : '')
+    + '\n\nמתכונים ומרכיבים אחרים לא ייגעו. אי אפשר לבטל את הפעולה הזאת.';
+  if (!confirm(msg)) return;
+
+  // One atomic update naming exactly the keys that go — never a set() on a
+  // whole subtree, which is what destroyed the recipe book before.
+  const patch = {};
+  batch.list.forEach(r => {
+    patch['recipes/' + r.id]    = null;
+    patch['weeklyPlan/' + r.id] = null;
+  });
+  orphanPantry.forEach(p => { patch['pantry/' + p.id] = null; });
+
+  db.ref(`${ROOT}/kitchen`).update(patch)
+    .then(() => {
+      batch.list.forEach(r => {
+        const i = RECIPES.findIndex(x => x.id === r.id);
+        if (i !== -1) RECIPES.splice(i, 1);
+        delete WEEKLY_PLAN[r.id];
+      });
+      orphanPantry.forEach(p => {
+        const i = PANTRY.findIndex(x => x.id === p.id);
+        if (i !== -1) PANTRY.splice(i, 1);
+      });
+      renderRecipeGrid();
+      renderPantry();
+      openImportUndo();     // redraw the list without the batch just removed
+      alert('נמחק ' + nRecipes(batch.list.length)
+        + (orphanPantry.length ? ' ו' + nIngredients(orphanPantry.length) : '') + '.');
+    })
+    .catch(err => {
+      alert('המחיקה נכשלה — לא נמחק כלום. בדקי חיבור לאינטרנט ונסי שוב.');
       fbError(err);
     });
 }
