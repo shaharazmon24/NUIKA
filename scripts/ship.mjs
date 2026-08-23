@@ -26,9 +26,36 @@ const message = process.argv.slice(2).join(' ').trim();
 try {
   const branch = git('rev-parse --abbrev-ref HEAD');
 
+  // A clean tree does not mean there is nothing to send. After resolving a
+  // conflict the merge is already committed, and this used to report "nothing
+  // to send" and stop — leaving the merge sitting on one machine only, which is
+  // the single worst moment for work to go missing.
   if (!git('status --porcelain')) {
+    let ahead = '0';
+    try { ahead = git(`rev-list --count origin/${branch}..HEAD`, true); } catch {}
+
+    if (ahead === '0') {
+      say('\n' + line);
+      say('  אין שינויים לשלוח.');
+      say(line);
+      process.exit(0);
+    }
+
+    say(`\nיש ${ahead} שינויים ששמורים אבל לא נשלחו. שולחת אותם.\n`);
+    try {
+      run('node scripts/validate.mjs');
+    } catch {
+      say('\n' + line);
+      say('  משהו בקוד שבור — לא שלחתי כלום.');
+      say('  תגידי לקלוד: "תקן את מה שהבדיקה מצאה"');
+      say(line);
+      process.exit(1);
+    }
+    run(`git pull --rebase origin ${branch}`);
+    run(`git push origin ${branch}`);
     say('\n' + line);
-    say('  אין שינויים לשלוח.');
+    say('  ✓ נשלח. תוך כדקה השינוי יהיה באתר.');
+    say('     nuika.co.il');
     say(line);
     process.exit(0);
   }
