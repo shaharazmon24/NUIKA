@@ -10,7 +10,7 @@
        machines, and "which version am I looking at?" had no answer before this
        existed. `node scripts/status.mjs` compares this value across your
        machine, GitHub, and the live site. -->
-  <meta name="nuika-version" content="2026-08-23T11:09:27.444Z|51c728d" />
+  <meta name="nuika-version" content="2026-08-23T15:49:59.855Z|b4e99b2" />
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
@@ -33,7 +33,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Hebrew:wght@200;300;400;500;600;700&family=Noto+Sans+Hebrew:wght@200;300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Hebrew:wght@200;300;400;500;600;700&family=Noto+Sans+Hebrew:wght@200;300;400;500;600;700&family=Amatic+SC:wght@400;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -206,6 +206,39 @@
     }
     .ord-btn:hover:not(:disabled) { background: #EFE1C7; border-color: #BD4D30; }
     .ord-btn:disabled { opacity: 0.3; cursor: default; }
+
+    /* Hero: two arched photos with the name between them. The arch is the
+       shape the whole page is built around — it repeats the oven mouth. */
+    .hero-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(16px, 4vw, 52px);
+    }
+    .hero-arch {
+      margin: 0;
+      flex: 0 0 auto;
+      width: clamp(128px, 21vw, 208px);
+      /* Matches the exported crop, so the box is the right height before the
+         photo arrives and the name does not jump on load. */
+      aspect-ratio: 620 / 900;
+      border-radius: 999px 999px 14px 14px;
+      overflow: hidden;
+      background: #EFE1C7;
+      box-shadow: 0 10px 30px rgba(44, 24, 16, 0.10);
+    }
+    .hero-arch img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    /* Under ~640px three columns will not fit, so the name takes its own line
+       above and the two arches sit side by side beneath it. */
+    @media (max-width: 639px) {
+      .hero-name { order: -1; flex-basis: 100%; }
+      .hero-arch { width: clamp(130px, 40vw, 170px); }
+    }
     .edit-modal-box {
       background: #FDFAF4;
       border-radius: 24px 24px 0 0;
@@ -1612,6 +1645,31 @@
     }
 
     /* ── Recipe import from a spreadsheet ── */
+    #import-undo-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 2160;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(44,24,16,0.45);
+      overflow-y: auto;
+    }
+    #import-undo-modal.open { display: flex; }
+    .iu-batch {
+      background: #FDFAF4;
+      border: 1.5px solid #E5D9C5;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+    .iu-names {
+      font-family: 'Noto Sans Hebrew', sans-serif;
+      font-size: 0.76rem; color: #9B8B75;
+      margin-top: 4px; line-height: 1.5;
+    }
+
     #recipe-import-modal {
       position: fixed;
       inset: 0;
@@ -1790,8 +1848,27 @@
 
 <!-- ============ HERO ============ -->
 <section class="max-w-5xl mx-auto px-4 text-center" style="padding-top:clamp(2.5rem,6vw,4.5rem);padding-bottom:clamp(1.5rem,3vw,2.5rem);">
-  <h1 class="font-serif font-bold text-earth" style="font-size:clamp(2rem,5.5vw,3.5rem);line-height:1.15;letter-spacing:-0.01em;" lang-content="he">נואיקה</h1>
-  <h1 class="font-serif font-bold text-earth" style="font-size:clamp(2rem,5.5vw,3.5rem);line-height:1.15;letter-spacing:-0.01em;" lang-content="en">Nuika</h1>
+  <div class="hero-row">
+    <figure class="hero-arch">
+      <img src="images/hero-sandwich.jpg" width="620" height="900" alt="כריך פוקצ'ה עם עלים ירוקים" />
+    </figure>
+
+    <div class="hero-name">
+      <h1 class="text-earth" style="font-family:'Amatic SC',cursive;font-weight:700;font-size:clamp(3.1rem,8.4vw,5.5rem);line-height:1.05;letter-spacing:0.02em;margin:0;" lang-content="he">נואיקה</h1>
+      <h1 class="text-earth" style="font-family:'Amatic SC',cursive;font-weight:700;font-size:clamp(3.1rem,8.4vw,5.5rem);line-height:1.05;letter-spacing:0.02em;margin:0;" lang-content="en">Nuika</h1>
+
+      <p style="font-family:'Amatic SC',cursive;font-weight:700;color:#7A6650;font-size:clamp(1.45rem,3.9vw,2.35rem);line-height:1.3;letter-spacing:0.015em;margin-top:0.35rem;" lang-content="he">
+        מאפייה ארטיזנלית עונתית<br />באיסוף עצמי מרחובות
+      </p>
+      <p style="font-family:'Amatic SC',cursive;font-weight:700;color:#7A6650;font-size:clamp(1.45rem,3.9vw,2.35rem);line-height:1.3;letter-spacing:0.015em;margin-top:0.35rem;" lang-content="en">
+        Seasonal artisan bakery<br />Self pickup from Rehovot
+      </p>
+    </div>
+
+    <figure class="hero-arch">
+      <img src="images/hero-loaf.jpg" width="620" height="900" alt="כיכר מחמצת בציפוי שומשום בשקית נייר" />
+    </figure>
+  </div>
 </section>
 
 <!-- ============ DIVIDER ============ -->
@@ -2431,6 +2508,10 @@
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             ייבוא מאקסל
           </button>
+          <button class="k-add-btn" onclick="openImportUndo()" style="background:#F0E9D8;color:#B45032;border:1.5px solid #D5C9B5;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+            ביטול ייבוא
+          </button>
           <button class="k-add-btn" onclick="openRecipeEditor(null)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             מתכון חדש
@@ -2692,6 +2773,21 @@
      Hebrew handwriting and phone photos of recipe sheets do not read reliably,
      and a costing built on a misread number is worse than no costing. Copying
      the cells is two seconds and is exact. -->
+<div id="import-undo-modal" onclick="if(event.target===this)closeImportUndo()">
+  <div class="k-modal-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <h3 style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.25rem;font-weight:700;margin:0;">ביטול ייבוא מאקסל</h3>
+      <button onclick="closeImportUndo()" aria-label="סגירה" style="background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;margin:0 0 14px;">
+      כל ייבוא מקובץ אקסל מופיע כאן בשורה נפרדת. מחיקה מסירה רק את המתכונים שנכנסו באותו ייבוא — מתכונים שיצרת בעצמך לא ייגעו.
+    </p>
+    <div id="iu-list"></div>
+  </div>
+</div>
+
 <div id="recipe-import-modal" onclick="if(event.target===this)closeRecipeImport()">
   <div class="k-modal-card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
@@ -3773,8 +3869,8 @@ function renderProducts() {
 
       <!-- Info -->
       <div style="padding:12px 14px 14px;">
-        <div class="font-serif font-bold text-ink leading-snug mb-1" style="font-size:0.92rem;" lang-content="he">${esc(p.nameHe)}</div>
-        <div class="font-serif font-bold text-ink leading-snug mb-1" style="font-size:0.92rem;" lang-content="en">${esc(p.nameEn)}</div>
+        <div class="text-ink mb-1" style="font-family:'Amatic SC',cursive;font-weight:700;font-size:1.42rem;line-height:1.1;letter-spacing:0.01em;" lang-content="he">${esc(p.nameHe)}</div>
+        <div class="text-ink mb-1" style="font-family:'Amatic SC',cursive;font-weight:700;font-size:1.42rem;line-height:1.1;letter-spacing:0.01em;" lang-content="en">${esc(p.nameEn)}</div>
         <p style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.75rem;line-height:1.5;color:#6B5D4E;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" lang-content="he">${esc(p.descHe)}</p>
         <p style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.75rem;line-height:1.5;color:#6B5D4E;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" lang-content="en">${esc(p.descEn)}</p>
         ${stockHtml}
@@ -7596,8 +7692,126 @@ function commitMultiRecipeImport() {
     });
 }
 
+// ─── UNDO AN EXCEL IMPORT ───────────────────────────
+// A bulk import stamps every recipe it creates with 'rec_<batch>_<n>'. A
+// recipe made by hand, or imported one at a time, is 'rec_<time>' with no
+// trailing index — so the two can never be confused, and only whole batches
+// are ever offered for removal.
+const IMPORT_BATCH_RE = /^rec_(\d+)_(\d+)$/;
+
+function importBatches() {
+  const groups = new Map();
+  RECIPES.forEach(r => {
+    const m = r && typeof r.id === 'string' && r.id.match(IMPORT_BATCH_RE);
+    if (!m) return;
+    // Recipes in one batch are stamped a few milliseconds apart, so round to
+    // the second. Two separate imports one second apart is not a real case.
+    const key = Math.floor(+m[1] / 1000);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(r);
+  });
+  return [...groups.entries()]
+    .map(([sec, list]) => ({ sec, when: new Date(sec * 1000), list }))
+    .sort((a, b) => b.sec - a.sec);
+}
+
+function openImportUndo() {
+  if (!kitchenReady()) return;
+  const batches = importBatches();
+  const host = document.getElementById('iu-list');
+
+  host.innerHTML = batches.length ? batches.map(b => `
+    <div class="iu-batch">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <div style="min-width:0;">
+          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#2C1810;font-size:0.92rem;">
+            ${b.list.length === 1 ? 'מתכון אחד' : b.list.length + ' מתכונים'}
+          </div>
+          <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.74rem;color:#9B8B75;">
+            ${b.list.length === 1 ? 'יובא' : 'יובאו'} ב-${esc(b.when.toLocaleString('he-IL'))}
+          </div>
+        </div>
+        <button onclick="undoImportBatch(${b.sec})" class="btn-status" style="flex-shrink:0;border-color:#E0A79A;color:#B45032;">
+          מחיקת הייבוא הזה
+        </button>
+      </div>
+      <div class="iu-names">${esc(b.list.slice(0, 6).map(r => r.name).join(' · '))}${b.list.length > 6 ? ' · ועוד ' + (b.list.length - 6) : ''}</div>
+    </div>`).join('')
+    : `<div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.85rem;text-align:center;padding:18px 0;">
+         לא נמצא אף ייבוא מאקסל. כל המתכונים כאן נוצרו ידנית.
+       </div>`;
+
+  document.getElementById('import-undo-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeImportUndo() {
+  document.getElementById('import-undo-modal').classList.remove('open');
+  restoreScrollLock();
+}
+
+function nRecipes(n)    { return n === 1 ? 'מתכון אחד'  : n + ' מתכונים'; }
+function nIngredients(n) { return n === 1 ? 'מרכיב אחד' : n + ' מרכיבים'; }
+
+function undoImportBatch(sec) {
+  if (!kitchenReady()) return;
+  const batch = importBatches().find(b => b.sec === sec);
+  if (!batch) { alert('הייבוא הזה כבר לא קיים — רענני את הדף.'); return; }
+
+  const ids = new Set(batch.list.map(r => r.id));
+
+  // Ingredients the import invented for these recipes. Keep any that another
+  // recipe still uses, and any that has since been given a price — that one is
+  // Noy's now, whatever created it.
+  const survivors = RECIPES.filter(r => !ids.has(r.id));
+  const stillUsed = new Set();
+  survivors.forEach(r => (r.ingredients || []).forEach(i => { if (i && i.pantryId) stillUsed.add(i.pantryId); }));
+  const orphanPantry = PANTRY.filter(p =>
+    p && typeof p.id === 'string' && /^pi_\d+_\d+$/.test(p.id)
+    && Math.abs(Math.floor(+p.id.split('_')[1] / 1000) - sec) <= 2
+    && !stillUsed.has(p.id)
+    && !(+p.price > 0));
+
+  const msg = 'למחוק ' + nRecipes(batch.list.length) + (batch.list.length === 1 ? ' שיובא ב-' : ' שיובאו ב-') + batch.when.toLocaleString('he-IL') + '?'
+    + (orphanPantry.length ? '\n\nיימחק גם ' + nIngredients(orphanPantry.length) + ' שהייבוא הוסיף למזווה ואף מתכון אחר לא משתמש בו.' : '')
+    + '\n\nמתכונים ומרכיבים אחרים לא ייגעו. אי אפשר לבטל את הפעולה הזאת.';
+  if (!confirm(msg)) return;
+
+  // One atomic update naming exactly the keys that go — never a set() on a
+  // whole subtree, which is what destroyed the recipe book before.
+  const patch = {};
+  batch.list.forEach(r => {
+    patch['recipes/' + r.id]    = null;
+    patch['weeklyPlan/' + r.id] = null;
+  });
+  orphanPantry.forEach(p => { patch['pantry/' + p.id] = null; });
+
+  db.ref(`${ROOT}/kitchen`).update(patch)
+    .then(() => {
+      batch.list.forEach(r => {
+        const i = RECIPES.findIndex(x => x.id === r.id);
+        if (i !== -1) RECIPES.splice(i, 1);
+        delete WEEKLY_PLAN[r.id];
+      });
+      orphanPantry.forEach(p => {
+        const i = PANTRY.findIndex(x => x.id === p.id);
+        if (i !== -1) PANTRY.splice(i, 1);
+      });
+      renderRecipeGrid();
+      renderPantry();
+      openImportUndo();     // redraw the list without the batch just removed
+      alert('נמחק ' + nRecipes(batch.list.length)
+        + (orphanPantry.length ? ' ו' + nIngredients(orphanPantry.length) : '') + '.');
+    })
+    .catch(err => {
+      alert('המחיקה נכשלה — לא נמחק כלום. בדקי חיבור לאינטרנט ונסי שוב.');
+      fbError(err);
+    });
+}
+
 function openRecipeImport() {
   if (!kitchenReady()) return;
+  _riCols = {};
   ['ri-name', 'ri-price', 'ri-paste'].forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('ri-yield').value = '1';
   document.getElementById('ri-preview').innerHTML = '';
@@ -7637,31 +7851,147 @@ function normaliseIngName(s) {
     .toLowerCase();
 }
 
-function parseRecipePaste(text) {
-  const rows = [];
-  String(text || '').split(/\r?\n/).forEach((line, i) => {
-    if (!line.trim()) return;
-    // Tab first — that is what a spreadsheet copy uses, and ingredient names
-    // legitimately contain commas ("קמח, מלא").
-    let cells = line.includes('\t') ? line.split('\t') : line.split(/[;,]/);
-    if (cells.length < 2) {
-      // "קמח לבן 500" — a single cell with the number at the end.
-      const m = line.trim().match(/^(.*?)[\s]+([\d.,]+)\s*(?:גרם|ג'|גר|g)?$/);
-      cells = m ? [m[1], m[2]] : [line, ''];
-    }
-    const name = String(cells[0] || '').replace(/["']/g, '').trim();
-    const rawW = String(cells[1] || '').replace(/[^\d.,]/g, '').replace(',', '.');
-    const weightG = parseFloat(rawW);
+// A spreadsheet copy is a grid, not two columns. Noy's recipe sheets carry
+// extra columns between the ingredient and its weight — notes, supplier,
+// baker's percentages — so the weight is rarely the second cell. These read
+// the whole grid and work out which column is which, and every guess is shown
+// in the preview with a dropdown so she can correct it.
 
-    // A header row has a non-numeric second cell. Skip it, but only on the
-    // first line — a bad number further down is a mistake worth reporting.
-    if (i === 0 && !Number.isFinite(weightG)) return;
+const RI_HEAD = {
+  name:  ['מרכיב','מרכיבים','רכיב','רכיבים','חומר גלם','חומרי גלם','שם','שם מרכיב','חומר','ingredient','ingredients','name','item'],
+  grams: ['משקל','משקל בגרמים','גרם','גרמים','גר','גר׳',"גר'",'כמות','משקל גר','weight','grams','gram','g','qty','quantity'],
+  pct:   ['אחוז','אחוזים','אחוזי אופה','אחוז אופה','אחוזי האופה','%','אחוז %','baker','bakers','baker %',"baker's %",'percent','percentage','pct']
+};
+
+function riNorm(s) {
+  return String(s == null ? '' : s)
+    .replace(/["'׳״]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function riNum(cell) {
+  // 1,250 and 1.25 and "72%" and "‎350 ג" all have to survive.
+  const raw = String(cell == null ? '' : cell).replace(/[‎‏]/g, '').trim();
+  if (!raw) return NaN;
+  const cleaned = raw.replace(/[^\d.,-]/g, '');
+  if (!cleaned || !/\d/.test(cleaned)) return NaN;
+  // A comma is a thousands separator when three digits follow it, else decimal.
+  const norm = /,\d{3}(\D|$)/.test(cleaned) ? cleaned.replace(/,/g, '') : cleaned.replace(',', '.');
+  const n = parseFloat(norm);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+function riSplit(line) {
+  // Tab first — that is what a spreadsheet copy uses, and ingredient names
+  // legitimately contain commas ("קמח, מלא").
+  if (line.includes('\t')) return line.split('\t');
+  if (line.includes(';'))  return line.split(';');
+  if ((line.match(/,/g) || []).length >= 2) return line.split(',');
+  return [line];
+}
+
+// Reads the pasted text into a grid and works out which column holds what.
+function analysePaste(text) {
+  const lines = String(text || '').split(/\r?\n/).filter(l => l.trim());
+  if (!lines.length) return { grid: [], headers: [], detected: {}, hasHeader: false, width: 0 };
+
+  const grid = lines.map(riSplit);
+  const width = Math.max(...grid.map(r => r.length));
+  grid.forEach(r => { while (r.length < width) r.push(''); });
+
+  // A header row names at least one column and carries no weight-like number.
+  const first = grid[0].map(riNorm);
+  const headerHits = first.filter(c =>
+    RI_HEAD.name.includes(c) || RI_HEAD.grams.includes(c) || RI_HEAD.pct.includes(c) ||
+    c.includes('אחוז') || c.includes('משקל') || c.includes('מרכיב')).length;
+  const firstRowNumbers = grid[0].filter(c => Number.isFinite(riNum(c))).length;
+  const hasHeader = headerHits > 0 && firstRowNumbers <= 1;
+
+  const headers = hasHeader ? grid[0].map(c => String(c).trim()) : grid[0].map((_, i) => 'עמודה ' + (i + 1));
+  const body = hasHeader ? grid.slice(1) : grid;
+
+  const detected = { name: null, grams: null, pct: null };
+
+  if (hasHeader) {
+    first.forEach((h, i) => {
+      if (detected.name  === null && (RI_HEAD.name.includes(h)  || h.includes('מרכיב') || h.includes('חומר גלם'))) detected.name  = i;
+      if (detected.pct   === null && (RI_HEAD.pct.includes(h)   || h.includes('אחוז')  || h.includes('%')))         detected.pct   = i;
+      if (detected.grams === null && (RI_HEAD.grams.includes(h) || h.includes('משקל')  || h.includes('גרם')))       detected.grams = i;
+    });
+  }
+
+  // Per-column statistics, used to fill in whatever the header did not name.
+  const stats = [];
+  for (let c = 0; c < width; c++) {
+    const vals = body.map(r => riNum(r[c])).filter(Number.isFinite);
+    const texts = body.filter(r => String(r[c] || '').trim() && !Number.isFinite(riNum(r[c]))).length;
+    const sorted = vals.slice().sort((a, b) => a - b);
+    stats.push({
+      c, count: vals.length, texts,
+      max: sorted.length ? sorted[sorted.length - 1] : 0,
+      median: sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0,
+      has100: vals.some(v => Math.abs(v - 100) < 0.51),
+      numericShare: body.length ? vals.length / body.length : 0
+    });
+  }
+
+  if (detected.name === null) {
+    // The ingredient column is the one that is mostly words.
+    const best = stats.slice().sort((a, b) => b.texts - a.texts || a.c - b.c)[0];
+    if (best && best.texts) detected.name = best.c;
+  }
+
+  const numeric = stats
+    .filter(s => s.c !== detected.name && s.numericShare >= 0.5 && s.count)
+    .sort((a, b) => b.median - a.median);
+
+  if (detected.pct === null) {
+    // Baker's percentages are anchored on the flour at exactly 100.
+    const p = numeric.find(s => s.c !== detected.grams && s.has100 && s.max <= 400);
+    if (p) detected.pct = p.c;
+  }
+  if (detected.grams === null) {
+    // Whatever is left, the heavier column is the weight.
+    const g = numeric.find(s => s.c !== detected.pct);
+    if (g) detected.grams = g.c;
+  }
+  if (detected.pct === null && detected.grams !== null) {
+    const p = numeric.find(s => s.c !== detected.grams && s.max <= 400);
+    if (p) detected.pct = p.c;
+  }
+
+  return { grid, body, headers, detected, hasHeader, width, stats };
+}
+
+// Same contract as before: an array of rows. `override` lets the preview pin
+// columns Noy corrected by hand.
+function parseRecipePaste(text, override) {
+  const a = analysePaste(text);
+  if (!a.body || !a.body.length) return [];
+  const cols = Object.assign({}, a.detected, override || {});
+  if (cols.name === null || cols.name === undefined) cols.name = 0;
+
+  const rows = [];
+  a.body.forEach(cells => {
+    let name = String(cells[cols.name] == null ? '' : cells[cols.name]).replace(/["']/g, '').trim();
+    let weightG = cols.grams == null ? NaN : riNum(cells[cols.grams]);
+
+    // A one-column paste still has to work: "קמח לבן 500".
+    if (a.width === 1) {
+      const m = name.match(/^(.*?)[\s]+([\d.,]+)\s*(?:גרם|ג'|גר|g)?$/);
+      if (m) { name = m[1].trim(); weightG = riNum(m[2]); }
+    }
     if (!name) return;
+    // A stray header or a total line carries no usable weight and no match.
+    const pct = cols.pct == null ? NaN : riNum(cells[cols.pct]);
 
     const match = PANTRY.find(p => normaliseIngName(p.name) === normaliseIngName(name));
     rows.push({
       name,
       weightG: Number.isFinite(weightG) && weightG > 0 ? weightG : 0,
+      pastedPct: Number.isFinite(pct) ? pct : null,
       pantryId: match ? match.id : '',
       matched: !!match
     });
@@ -7669,10 +7999,60 @@ function parseRecipePaste(text) {
   return rows;
 }
 
+// Columns Noy corrected by hand. Kept outside the render so a correction
+// survives while she keeps editing the pasted text.
+let _riCols = {};
+
+function riSetCol(role, value) {
+  _riCols[role] = value === '' ? null : +value;
+  previewRecipeImport();
+}
+
+function riResetCols() {
+  _riCols = {};
+  previewRecipeImport();
+}
+
+// One dropdown per role, listing every column by its header and a sample of
+// what is actually in it — "משקל (500)" is far easier to pick than "column 3".
+function riColPicker(role, label, a, chosen, allowNone) {
+  const sample = i => {
+    const row = (a.body || []).find(r => String(r[i] || '').trim());
+    const v = row ? String(row[i]).trim() : '';
+    return v ? ' (' + (v.length > 12 ? v.slice(0, 12) + '…' : v) + ')' : '';
+  };
+  const opts = a.headers.map((h, i) =>
+    '<option value="' + i + '"' + (chosen === i ? ' selected' : '') + '>' + esc(h + sample(i)) + '</option>'
+  ).join('');
+  return '<label style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:130px;">'
+    + '<span style="font-family:\'Noto Sans Hebrew\',sans-serif;font-size:0.72rem;color:#9B8B75;font-weight:600;">' + label + '</span>'
+    + '<select class="field" style="padding:6px 8px;font-size:0.78rem;margin:0;" onchange="riSetCol(\'' + role + '\', this.value)">'
+    + (allowNone ? '<option value=""' + (chosen == null ? ' selected' : '') + '>— אין —</option>' : '')
+    + opts + '</select></label>';
+}
+
 function previewRecipeImport() {
   const box = document.getElementById('ri-preview');
-  const rows = parseRecipePaste(document.getElementById('ri-paste').value);
+  const text = document.getElementById('ri-paste').value;
+  const a = analysePaste(text);
+  const cols = Object.assign({}, a.detected, _riCols);
+  const rows = parseRecipePaste(text, _riCols);
+
   if (!rows.length) { box.innerHTML = ''; return; }
+
+  // Only worth showing for a real table. A two-column paste has nothing to pick.
+  const picker = a.width > 2 ? `
+    <div style="background:#FDFAF4;border:1px solid #E3D7C3;border-radius:12px;padding:10px 12px;margin-bottom:10px;">
+      <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.76rem;color:#6B5D4E;margin-bottom:7px;">
+        זיהיתי ${a.width} עמודות${a.hasHeader ? ' ושורת כותרות' : ''}. אם משהו לא נכון — פשוט תחליפי כאן:
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+        ${riColPicker('name',  'עמודת המרכיב',      a, cols.name,  false)}
+        ${riColPicker('grams', 'משקל בגרמים',        a, cols.grams, true)}
+        ${riColPicker('pct',   'אחוזי אופה',         a, cols.pct,   true)}
+        ${Object.keys(_riCols).length ? `<button onclick="riResetCols()" class="btn-status" style="flex:0 0 auto;">חזרה לזיהוי אוטומטי</button>` : ''}
+      </div>
+    </div>` : '';
 
   const noWeight  = rows.filter(r => !r.weightG);
   const unmatched = rows.filter(r => r.matched === false && r.weightG);
@@ -7683,20 +8063,24 @@ function previewRecipeImport() {
   });
 
   box.innerHTML = `
+    ${picker}
     <div style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:700;color:#2C1810;font-size:0.85rem;margin-bottom:6px;">
       ${rows.length} מרכיבים זוהו
     </div>
     ${rows.map(r => `
       <div class="ri-row">
         <span class="${r.matched ? '' : 'ri-unmatched'}">${esc(r.name)}${r.matched ? '' : ' — לא נמצא במזווה'}</span>
-        <span dir="ltr" class="${r.weightG ? '' : 'ri-unmatched'}">${r.weightG ? r.weightG + 'ג' : 'חסר משקל'}</span>
+        <span dir="ltr" style="white-space:nowrap;">
+          ${r.pastedPct !== null ? `<span style="color:#9B8B75;font-size:0.78rem;">${r.pastedPct}%</span>&nbsp;&nbsp;` : ''}
+          <span class="${r.weightG ? '' : 'ri-unmatched'}">${r.weightG ? r.weightG + 'ג' : 'חסר משקל'}</span>
+        </span>
       </div>`).join('')}
     <div style="margin-top:10px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.82rem;color:#6B5D4E;">
       עלות מרכיבים מזוהים: <b dir="ltr">₪${cost.toFixed(2)}</b>
       ${unknown ? `<span class="ri-unmatched"> · ${unknown} ללא מחיר</span>` : ''}
     </div>
     ${noWeight.length ? `<div class="ri-unmatched" style="margin-top:8px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;">
-      ${noWeight.length} שורות בלי משקל — הן לא ייובאו. אפשר לתקן ולהדביק שוב.</div>` : ''}
+      ${noWeight.length} שורות בלי משקל — הן לא ייובאו.${a.width > 2 ? ' אם כולן בלי משקל, כנראה נבחרה עמודה לא נכונה למעלה.' : ' אפשר לתקן ולהדביק שוב.'}</div>` : ''}
 
     ${unmatched.length ? `
       <div style="margin-top:14px;background:#FDFAF4;border:1px solid #E3D7C3;border-radius:12px;padding:12px;">
