@@ -2636,7 +2636,7 @@
             <tr>
               <th style="width:38%;">מרכיב</th>
               <th style="width:20%;text-align:center;">משקל (ג')</th>
-              <th style="width:14%;text-align:center;">% אופה</th>
+              <th style="width:14%;text-align:center;" title="אחוז מסך הקמח במתכון. אפשר להקליד כאן והמשקל יתעדכן.">% אופה</th>
               <th style="width:18%;text-align:left;">עלות</th>
               <th style="width:10%;"></th>
             </tr>
@@ -6689,9 +6689,15 @@ function addIngredientRow(ing) {
         oninput="recalcEditorCosts()" />
     </td>
     <td style="min-width:56px;text-align:center;">
-      <span class="ing-baker-pct" style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.75rem;color:#9B8B75;">
-        ${ing && ing.bakerPct ? ing.bakerPct+'%' : '—'}
-      </span>
+      <!-- Noy asked for this to be editable: she works in baker's percentages,
+           so typing 68 next to the water should move the water to 68% of the
+           flour, not the other way round. The weight stays the stored value;
+           this is a second way in to the same number. -->
+      <input type="text" inputmode="decimal" class="ing-baker-pct" placeholder="—"
+        value="${ing && ing.bakerPct ? ing.bakerPct : ''}" dir="ltr"
+        title="אחוז מסך הקמח. אפשר להקליד כאן והמשקל יתעדכן."
+        style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.75rem;color:#6B5D4E;background:#FBF7EF;border:1.5px solid #E5D9C5;border-radius:6px;padding:5px 4px;width:100%;text-align:center;"
+        oninput="applyBakerPct('${rowId}')" />
     </td>
     <!-- Clickable. An unpriced ingredient used to mean leaving the recipe,
          going to the pantry tab, finding the row and coming back — so it
@@ -8003,6 +8009,102 @@ function parseRecipePaste(text, override) {
 // survives while she keeps editing the pasted text.
 let _riCols = {};
 
+// The rows as they will be saved. The preview used to be a readout of a fresh
+// parse, and the save re-parsed the pasted text a second time, so there was
+// nowhere to correct a wrong weight except by editing the spreadsheet and
+// pasting again. Noy asked to fix it in place; these rows are what the save
+// now writes, so an edit here is the edit that lands.
+let _riRows = [];
+
+function riIsFlour(r) {
+  const item = r.pantryId ? PANTRY.find(x => x.id === r.pantryId) : null;
+  if (item) return (item.cat || '') === 'קמח';
+  return /קמח|סולת/.test(r.name || '');
+}
+function riFlourTotal() {
+  return _riRows.reduce((s, r) => s + (riIsFlour(r) ? (r.weightG || 0) : 0), 0);
+}
+
+// Weight edited: keep it, and let the percentages re-derive from it.
+function riEditWeight(i, el) {
+  const r = _riRows[i]; if (!r) return;
+  const v = parseFloat(String(el.value).replace(',', '.'));
+  r.weightG = Number.isFinite(v) && v > 0 ? v : 0;
+  riRefreshDerived(i);
+}
+
+// Percentage edited: same rule as the recipe card, the grams follow.
+function riEditPct(i, el) {
+  const r = _riRows[i]; if (!r) return;
+  const raw = String(el.value).replace(',', '.').trim();
+  if (raw === '') { r.pastedPct = null; return; }
+  const pct = parseFloat(raw);
+  if (!Number.isFinite(pct) || pct < 0) return;
+  r.pastedPct = pct;
+
+  const otherFlour = _riRows.reduce((s, x, j) =>
+    s + (j !== i && riIsFlour(x) ? (x.weightG || 0) : 0), 0);
+  let grams;
+  if (riIsFlour(r)) {
+    if (otherFlour <= 0 || pct >= 100) return;   // a lone flour is the baseline
+    grams = (pct * otherFlour) / (100 - pct);
+  } else {
+    if (otherFlour <= 0) return;
+    grams = (pct / 100) * otherFlour;
+  }
+  r.weightG = grams >= 100 ? Math.round(grams) : +grams.toFixed(1);
+  const wEl = document.querySelector('.ri-w[data-i="' + i + '"]');
+  if (wEl) wEl.value = r.weightG;
+  riRefreshDerived(i);
+}
+
+// Name edited: re-match against the pantry, then redraw, because the list of
+// "new ingredients to create" depends on it. Bound to change, not input, so it
+// fires on blur instead of stealing focus on every keystroke.
+function riEditName(i, el) {
+  const r = _riRows[i]; if (!r) return;
+  r.name = String(el.value).trim();
+  const m = PANTRY.find(x => normaliseIngName(x.name) === normaliseIngName(r.name));
+  r.pantryId = m ? m.id : '';
+  r.matched  = !!m;
+  renderRecipeImport();
+}
+
+function riDropRow(i) {
+  _riRows.splice(i, 1);
+  renderRecipeImport();
+}
+
+// Update everything that is computed from the rows without redrawing the
+// inputs, so the field being typed into keeps focus and the caret.
+function riRefreshDerived(skip) {
+  const flour = riFlourTotal();
+  _riRows.forEach((r, i) => {
+    if (i === skip) return;
+    const el = document.querySelector('.ri-p[data-i="' + i + '"]');
+    if (!el || document.activeElement === el) return;
+    const pct = flour > 0 ? (r.weightG / flour) * 100 : 0;
+    el.value = pct > 0 ? (pct >= 10 ? Math.round(pct) : +pct.toFixed(1)) : '';
+  });
+  const totals = document.getElementById('ri-totals');
+  if (totals) totals.innerHTML = riTotalsHtml();
+}
+
+function riTotalsHtml() {
+  let cost = 0, unknown = 0;
+  _riRows.forEach(r => {
+    if (!r.weightG) return;
+    const c = r.pantryId ? calcIngCost(r.weightG, r.pantryId) : null;
+    if (c === null) unknown++; else cost += c;
+  });
+  const withWeight = _riRows.filter(r => r.weightG > 0).length;
+  const noWeight   = _riRows.length - withWeight;
+  return `עלות מרכיבים מזוהים: <b dir="ltr">₪${cost.toFixed(2)}</b>`
+    + (unknown ? `<span class="ri-unmatched"> · ${unknown} ללא מחיר</span>` : '')
+    + `<span style="color:#9B8B75;"> · ${withWeight} מרכיבים יישמרו</span>`
+    + (noWeight ? `<span class="ri-unmatched"> · ${noWeight} בלי משקל, לא יישמרו</span>` : '');
+}
+
 function riSetCol(role, value) {
   _riCols[role] = value === '' ? null : +value;
   previewRecipeImport();
@@ -8031,12 +8133,19 @@ function riColPicker(role, label, a, chosen, allowNone) {
     + opts + '</select></label>';
 }
 
+// Re-reads the pasted text. Any hand corrections in the preview are replaced,
+// which is right: the text is the source and this only runs when it changes.
 function previewRecipeImport() {
+  _riRows = parseRecipePaste(document.getElementById('ri-paste').value, _riCols);
+  renderRecipeImport();
+}
+
+function renderRecipeImport() {
   const box = document.getElementById('ri-preview');
   const text = document.getElementById('ri-paste').value;
   const a = analysePaste(text);
   const cols = Object.assign({}, a.detected, _riCols);
-  const rows = parseRecipePaste(text, _riCols);
+  const rows = _riRows;
 
   if (!rows.length) { box.innerHTML = ''; return; }
 
@@ -8056,31 +8165,49 @@ function previewRecipeImport() {
 
   const noWeight  = rows.filter(r => !r.weightG);
   const unmatched = rows.filter(r => r.matched === false && r.weightG);
-  let cost = 0, unknown = 0;
-  rows.forEach(r => {
-    const c = r.pantryId ? calcIngCost(r.weightG, r.pantryId) : null;
-    if (c === null) unknown++; else cost += c;
-  });
+  const flour = riFlourTotal();
+  const fld = 'font-family:\'Noto Sans Hebrew\',sans-serif;font-size:0.78rem;color:#2C1810;background:#FBF7EF;border:1.5px solid #E5D9C5;border-radius:6px;padding:5px 7px;';
 
   box.innerHTML = `
     ${picker}
-    <div style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:700;color:#2C1810;font-size:0.85rem;margin-bottom:6px;">
-      ${rows.length} מרכיבים זוהו
+    <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px;">
+      <div style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:700;color:#2C1810;font-size:0.85rem;">
+        ${rows.length} מרכיבים זוהו
+      </div>
+      <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.74rem;color:#9B8B75;">
+        אפשר לתקן כאן לפני הייבוא
+      </div>
     </div>
-    ${rows.map(r => `
-      <div class="ri-row">
-        <span class="${r.matched ? '' : 'ri-unmatched'}">${esc(r.name)}${r.matched ? '' : ' — לא נמצא במזווה'}</span>
-        <span dir="ltr" style="white-space:nowrap;">
-          ${r.pastedPct !== null ? `<span style="color:#9B8B75;font-size:0.78rem;">${r.pastedPct}%</span>&nbsp;&nbsp;` : ''}
-          <span class="${r.weightG ? '' : 'ri-unmatched'}">${r.weightG ? r.weightG + 'ג' : 'חסר משקל'}</span>
-        </span>
-      </div>`).join('')}
-    <div style="margin-top:10px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.82rem;color:#6B5D4E;">
-      עלות מרכיבים מזוהים: <b dir="ltr">₪${cost.toFixed(2)}</b>
-      ${unknown ? `<span class="ri-unmatched"> · ${unknown} ללא מחיר</span>` : ''}
+    <div style="display:flex;gap:6px;padding:0 4px 4px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.7rem;color:#9B8B75;">
+      <span style="flex:1;">מרכיב</span>
+      <span style="width:74px;text-align:center;">משקל (ג')</span>
+      <span style="width:58px;text-align:center;">% אופה</span>
+      <span style="width:26px;"></span>
+    </div>
+    ${rows.map((r, i) => {
+      const pct = flour > 0 ? (r.weightG / flour) * 100 : 0;
+      const pctVal = pct > 0 ? (pct >= 10 ? Math.round(pct) : +pct.toFixed(1)) : '';
+      return `
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;">
+        <input type="text" value="${esc(r.name)}" data-i="${i}" onchange="riEditName(${i}, this)"
+          style="${fld}flex:1;min-width:0;${r.matched ? '' : 'border-color:#D8A08C;'}"
+          title="${r.matched ? 'מחובר למזווה' : 'לא נמצא במזווה'}" />
+        <input type="text" inputmode="decimal" dir="ltr" class="ri-w" data-i="${i}"
+          value="${r.weightG || ''}" placeholder="0" oninput="riEditWeight(${i}, this)"
+          style="${fld}width:74px;flex:0 0 auto;text-align:center;${r.weightG ? '' : 'border-color:#D8A08C;'}" />
+        <input type="text" inputmode="decimal" dir="ltr" class="ri-p" data-i="${i}"
+          value="${pctVal}" placeholder="—" oninput="riEditPct(${i}, this)"
+          title="אחוז מסך הקמח. הקלדה כאן משנה את המשקל."
+          style="${fld}width:58px;flex:0 0 auto;text-align:center;color:#6B5D4E;" />
+        <button onclick="riDropRow(${i})" title="הסרת השורה" aria-label="הסרת ${esc(r.name)}"
+          style="width:26px;height:28px;flex:0 0 auto;border:none;background:none;color:#B45032;cursor:pointer;font-size:1rem;line-height:1;">×</button>
+      </div>`;
+    }).join('')}
+    <div id="ri-totals" style="margin-top:10px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.82rem;color:#6B5D4E;">
+      ${riTotalsHtml()}
     </div>
     ${noWeight.length ? `<div class="ri-unmatched" style="margin-top:8px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;">
-      ${noWeight.length} שורות בלי משקל — הן לא ייובאו.${a.width > 2 ? ' אם כולן בלי משקל, כנראה נבחרה עמודה לא נכונה למעלה.' : ' אפשר לתקן ולהדביק שוב.'}</div>` : ''}
+      ${noWeight.length} שורות בלי משקל לא ייובאו. אפשר למלא אותן כאן.${a.width > 2 ? ' אם כולן ריקות, כנראה נבחרה עמודה לא נכונה למעלה.' : ''}</div>` : ''}
 
     ${unmatched.length ? `
       <div style="margin-top:14px;background:#FDFAF4;border:1px solid #E3D7C3;border-radius:12px;padding:12px;">
@@ -8115,8 +8242,12 @@ function commitRecipeImport() {
   const name = document.getElementById('ri-name').value.trim();
   if (!name) { alert('צריך שם למתכון.'); return; }
 
-  const rows = parseRecipePaste(document.getElementById('ri-paste').value).filter(r => r.weightG > 0);
-  if (!rows.length) { alert('לא זיהיתי מרכיבים עם משקל. צריך שתי עמודות: שם ומשקל בגרמים.'); return; }
+  // The edited rows, not a fresh parse of the pasted text. Re-parsing here is
+  // what threw away every correction Noy made in the preview.
+  const rows = _riRows
+    .filter(r => r.weightG > 0 && r.name)
+    .map(r => Object.assign({}, r));
+  if (!rows.length) { alert('לא זיהיתי מרכיבים עם משקל. צריך שם ומשקל בגרמים לכל מרכיב.'); return; }
 
   const yieldCount = parseInt(document.getElementById('ri-yield').value, 10) || 1;
   const priceRaw   = String(document.getElementById('ri-price').value).replace(',', '.');
@@ -8319,6 +8450,41 @@ function bakerPercents(ingredients) {
   });
 }
 
+// Typing a percentage sets the weight. Flour is the 100% baseline, so a flour
+// row is solved rather than multiplied: asking for a flour to be p% of the
+// total flour means p% of (the other flours + itself), which rearranges to
+// x = p * others / (100 - p).
+function applyBakerPct(rowId) {
+  const tr = document.getElementById(rowId);
+  if (!tr) return;
+  const pctEl = tr.querySelector('.ing-baker-pct');
+  const wEl   = tr.querySelector('.ing-weight');
+  if (!pctEl || !wEl) return;
+
+  const raw = String(pctEl.value).replace(',', '.').trim();
+  if (raw === '') return;                       // clearing the box is not an edit
+  const pct = parseFloat(raw);
+  if (!Number.isFinite(pct) || pct < 0) return;
+
+  const rows = [...document.querySelectorAll('#re-ing-tbody tr')];
+  const otherFlour = rows.reduce((sum, r) =>
+    sum + (r !== tr && isFlourRow(r) ? weightFromInput(r.querySelector('.ing-weight')) : 0), 0);
+
+  let grams;
+  if (isFlourRow(tr)) {
+    // A lone flour is the baseline by definition, so there is nothing to solve.
+    if (otherFlour <= 0 || pct >= 100) return;
+    grams = (pct * otherFlour) / (100 - pct);
+  } else {
+    const totalFlour = otherFlour + (isFlourRow(tr) ? weightFromInput(wEl) : 0);
+    if (totalFlour <= 0) return;                // no flour yet, nothing to be a % of
+    grams = (pct / 100) * totalFlour;
+  }
+
+  wEl.value = grams >= 100 ? Math.round(grams) : +grams.toFixed(1);
+  recalcEditorCosts();
+}
+
 function recalcEditorCosts() {
   const tbody = document.getElementById('re-ing-tbody');
   if (!tbody) return;
@@ -8368,9 +8534,11 @@ function recalcEditorCosts() {
     }
 
     const pctCell = tr.querySelector('.ing-baker-pct');
-    if (pctCell) {
+    // Never rewrite the box being typed in: "6" on its way to "68" would be
+    // recalculated into a weight and echoed back, fighting the keystrokes.
+    if (pctCell && document.activeElement !== pctCell) {
       const pct = totalFlourG > 0 ? (weightG / totalFlourG) * 100 : 0;
-      pctCell.textContent = pct > 0 ? (pct >= 10 ? Math.round(pct) : pct.toFixed(1)) + '%' : '—';
+      pctCell.value = pct > 0 ? (pct >= 10 ? Math.round(pct) : +pct.toFixed(1)) : '';
     }
   });
 
@@ -8436,14 +8604,12 @@ function saveRecipe() {
   // Collect ingredients
   const tbody = document.getElementById('re-ing-tbody');
   const ingredients = [];
-  // Carry each row's existing baker's % across the save instead of zeroing it.
-  const _prevRecipe = _editingRecipeId ? RECIPES.find(x => x.id === _editingRecipeId) : null;
   // A row that has a name but no usable weight used to be dropped in silence,
   // and the editor closed straight afterwards — so adding an ingredient looked
   // like it worked and simply did not. Say so instead, and keep the editor open
   // on the offending row.
   const rejected = [];
-  tbody.querySelectorAll('tr').forEach((tr, rowIndex) => {
+  tbody.querySelectorAll('tr').forEach(tr => {
     const ingName  = tr.querySelector('.ing-name')?.value.trim();
     // Accept the Hebrew-keyboard decimal comma: "0,5" parsed to 0 and the row
     // vanished with no explanation.
@@ -8451,13 +8617,12 @@ function saveRecipe() {
     const pantryId = tr.querySelector('.ing-pantry-id')?.value || '';
     if (ingName && !(weightG > 0)) rejected.push(ingName);
     if (ingName && weightG > 0) {
-      const prevIng = _prevRecipe && _prevRecipe.ingredients ? _prevRecipe.ingredients[rowIndex] : null;
       ingredients.push({
         id: 'ri_' + Date.now() + '_' + Math.random().toString(36).slice(2),
         name: ingName,
         pantryId,
         weightG,
-        bakerPct: (prevIng && prevIng.bakerPct) || 0
+        bakerPct: 0        // computed from the saved weights below
       });
     }
   });
@@ -8467,6 +8632,11 @@ function saveRecipe() {
           '\n\nתמלאי משקל, או תמחקי את השורה עם ה-✕.');
     return;
   }
+
+  // Baker's percentage is derived, never carried: it is each ingredient against
+  // the total flour in the very rows being saved.
+  const _pcts = bakerPercents(ingredients);
+  ingredients.forEach((ing, i) => { ing.bakerPct = _pcts[i] || 0; });
 
   const recipe = { name, category, yieldCount, yieldWeightG, sellingPrice, prepTimeMin, bakingTimeMin, bakingTempC, notes, ingredients };
 
