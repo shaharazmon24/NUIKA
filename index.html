@@ -6347,6 +6347,20 @@ function renderPantry() {
 }
 
 // ─── RENDER RECIPE GRID ──────────────────────────────────
+// When a recipe was added. Nothing recorded this until now, but every recipe
+// Noy has ever created carries the moment in its own id ("rec_" + Date.now()),
+// so the existing kitchen sorts correctly with no migration and nothing written
+// back to Firebase. New recipes also store it outright, so the order stops
+// depending on how the id happens to be shaped.
+// The three seeded recipes are "rec1".."rec3" and have no timestamp: they are
+// the oldest by definition and sink to the bottom, which is where they belong.
+function recipeCreatedAt(r) {
+  if (!r) return 0;
+  if (Number.isFinite(r.createdAt)) return r.createdAt;
+  const m = /^rec_(\d+)/.exec(r.id || '');
+  return m ? +m[1] : 0;
+}
+
 function renderRecipeGrid() {
   const grid = document.getElementById('recipe-grid');
   if (!grid) return;
@@ -6354,7 +6368,12 @@ function renderRecipeGrid() {
     grid.innerHTML = `<div class="k-empty" style="grid-column:1/-1;"><div class="k-empty-icon">📖</div>אין מתכונים עדיין<br><button class="k-add-btn" onclick="openRecipeEditor(null)" style="margin-top:12px;">הוסף מתכון ראשון</button></div>`;
     return;
   }
-  grid.innerHTML = RECIPES.map(r => {
+  // Newest at the top, as Noy asked. Sorted on a copy: RECIPES itself is read
+  // by the weekly plan and the shopping list, and quietly reordering the shared
+  // array underneath them is the kind of thing that surfaces somewhere else.
+  const ordered = RECIPES.slice().sort((a, b) => recipeCreatedAt(b) - recipeCreatedAt(a));
+
+  grid.innerHTML = ordered.map(r => {
     const cost = calcRecipeCost(r);
     const warn = cost.unknownCount > 0
       ? `<div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.68rem;color:#9B8B75;margin-top:2px;">${cost.unknownCount} מרכיב ללא מחיר</div>` : '';
@@ -6668,6 +6687,9 @@ function addIngredientRow(ing) {
 
   const tr = document.createElement('tr');
   tr.id = rowId;
+  // The percentage is the property that survives a rescale, so it is kept on
+  // the row rather than read back out of the rounded weight.
+  if (ing && Number.isFinite(ing.bakerPct) && ing.bakerPct > 0) tr.dataset.pct = ing.bakerPct;
   tr.innerHTML = `
     <td style="min-width:120px;">
       <input list="${dlId}" type="text" placeholder="שם מרכיב" class="ing-name"
@@ -6686,7 +6708,7 @@ function addIngredientRow(ing) {
       <input type="text" inputmode="decimal" placeholder="0" class="ing-weight"
         value="${ing ? ing.weightG : ''}" dir="ltr"
         style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#2C1810;background:#F5EFE3;border:1.5px solid #E5D9C5;border-radius:6px;padding:5px 7px;width:100%;text-align:center;"
-        oninput="recalcEditorCosts()" />
+        oninput="onIngWeightInput('${rowId}')" />
     </td>
     <td style="min-width:56px;text-align:center;">
       <!-- Noy asked for this to be editable: she works in baker's percentages,
@@ -7657,6 +7679,7 @@ function commitMultiRecipeImport() {
     rows.forEach(row => { if (!row.pantryId) row.pantryId = pantryFor(row.name).id; });
     const recipe = {
       id: 'rec_' + Date.now() + '_' + n,
+      createdAt: Date.now() + n,   // +n keeps a batch in the order it was listed
       name: r.name, category: r.category,
       yieldCount: r.yieldCount,
       yieldWeightG: Math.round(rows.reduce((s, x) => s + x.weightG, 0)),
@@ -8291,6 +8314,7 @@ function commitRecipeImport() {
 
   const recipe = {
     id: 'rec_' + Date.now(),
+    createdAt: Date.now(),
     name,
     category: document.getElementById('ri-category').value || 'אחר',
     yieldCount,
@@ -8450,6 +8474,35 @@ function bakerPercents(ingredients) {
   });
 }
 
+// Flour is the 100% baseline, so changing a flour weight rescales the whole
+// recipe: every non-flour ingredient keeps its baker's percentage and its grams
+// follow. Changing anything else is a local edit and only moves its own
+// percentage. This is the spreadsheet behaviour Noy asked for.
+function onIngWeightInput(rowId) {
+  const tr = document.getElementById(rowId);
+  if (!tr) { recalcEditorCosts(); return; }
+
+  if (isFlourRow(tr)) {
+    const rows = [...document.querySelectorAll('#re-ing-tbody tr')];
+    const flourTotal = rows.reduce((sum, r) =>
+      sum + (isFlourRow(r) ? weightFromInput(r.querySelector('.ing-weight')) : 0), 0);
+
+    // Mid-keystroke the box is empty and the total is 0. Rescaling to zero
+    // would empty the whole recipe, so wait until there is a real number.
+    if (flourTotal > 0) {
+      rows.forEach(r => {
+        if (r === tr || isFlourRow(r)) return;
+        const pct = parseFloat(r.dataset.pct);
+        if (!Number.isFinite(pct) || pct <= 0) return;
+        const wEl = r.querySelector('.ing-weight');
+        if (!wEl || document.activeElement === wEl) return;
+        wEl.value = +((pct / 100) * flourTotal).toFixed(1);
+      });
+    }
+  }
+  recalcEditorCosts();
+}
+
 // Typing a percentage sets the weight. Flour is the 100% baseline, so a flour
 // row is solved rather than multiplied: asking for a flour to be p% of the
 // total flour means p% of (the other flours + itself), which rearranges to
@@ -8481,7 +8534,8 @@ function applyBakerPct(rowId) {
     grams = (pct / 100) * totalFlour;
   }
 
-  wEl.value = grams >= 100 ? Math.round(grams) : +grams.toFixed(1);
+  wEl.value = +grams.toFixed(1);
+  tr.dataset.pct = pct;
   recalcEditorCosts();
 }
 
@@ -8534,11 +8588,17 @@ function recalcEditorCosts() {
     }
 
     const pctCell = tr.querySelector('.ing-baker-pct');
-    // Never rewrite the box being typed in: "6" on its way to "68" would be
-    // recalculated into a weight and echoed back, fighting the keystrokes.
-    if (pctCell && document.activeElement !== pctCell) {
-      const pct = totalFlourG > 0 ? (weightG / totalFlourG) * 100 : 0;
-      pctCell.value = pct > 0 ? (pct >= 10 ? Math.round(pct) : +pct.toFixed(1)) : '';
+    // Only recompute when there is flour to be a percentage of. Clearing the
+    // flour box for a moment used to blank every percentage on the recipe,
+    // which is what Noy saw as "it deleted all my baker's percentages".
+    if (totalFlourG > 0) {
+      const pct = (weightG / totalFlourG) * 100;
+      if (pct > 0) tr.dataset.pct = pct;       // full precision, for rescaling
+      // Never rewrite the box being typed in: "6" on its way to "68" would be
+      // recalculated into a weight and echoed back, fighting the keystrokes.
+      if (pctCell && document.activeElement !== pctCell) {
+        pctCell.value = pct > 0 ? (pct >= 10 ? Math.round(pct) : +pct.toFixed(1)) : '';
+      }
     }
   });
 
@@ -8649,7 +8709,7 @@ function saveRecipe() {
     if (idx !== -1) { RECIPES[idx] = { ...RECIPES[idx], ...recipe }; saved = RECIPES[idx]; }
     else            { saved = { id: _editingRecipeId, ...recipe }; RECIPES.push(saved); }
   } else {
-    saved = { id: 'rec_' + Date.now(), ...recipe };
+    saved = { id: 'rec_' + Date.now(), createdAt: Date.now(), ...recipe };
     RECIPES.push(saved);
   }
 
