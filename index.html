@@ -2616,17 +2616,22 @@
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
         <div>
           <label class="re-field-label">כמות יחידות</label>
-          <input type="number" id="re-yield-count" class="field" placeholder="1" min="1" dir="ltr" oninput="recalcEditorCosts()" />
+          <input type="number" id="re-yield-count" class="field" placeholder="1" min="1" dir="ltr"
+            title="שינוי כאן מגדיל או מקטין את כל המתכון, לפי המשקל ליחידה."
+            oninput="onYieldCountInput()" />
         </div>
         <div>
           <label class="re-field-label">משקל ליחידה (ג')</label>
-          <input type="number" id="re-yield-weight" class="field" placeholder="700" min="1" dir="ltr" />
+          <input type="number" id="re-yield-weight" class="field" placeholder="600" min="1" dir="ltr"
+            title="כמה גרם בצק בכל יחידה. לפי זה מחושב כמה יחידות יוצאות."
+            oninput="renderYieldHint()" />
         </div>
         <div>
           <label class="re-field-label">מחיר מכירה ₪</label>
           <input type="number" id="re-price" class="field" placeholder="35" min="0" dir="ltr" oninput="recalcEditorCosts()" />
         </div>
       </div>
+      <div id="re-yield-hint" style="margin:-8px 0 16px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.79rem;color:#6B5D4E;line-height:1.6;"></div>
 
       <!-- Section: ingredients -->
       <div class="re-section-label">מרכיבים</div>
@@ -6639,6 +6644,7 @@ function openRecipeEditor(recipeId) {
     document.getElementById('re-category').value     = 'לחם';
     document.getElementById('re-yield-count').value  = 1;
     document.getElementById('re-yield-weight').value = '';
+    const _h = document.getElementById('re-yield-hint'); if (_h) _h.textContent = '';
     document.getElementById('re-price').value        = '';
     document.getElementById('re-prep-time').value    = '';
     document.getElementById('re-bake-time').value    = '';
@@ -7682,7 +7688,7 @@ function commitMultiRecipeImport() {
       createdAt: Date.now() + n,   // +n keeps a batch in the order it was listed
       name: r.name, category: r.category,
       yieldCount: r.yieldCount,
-      yieldWeightG: Math.round(rows.reduce((s, x) => s + x.weightG, 0)),
+      yieldWeightG: Math.round(rows.reduce((s, x) => s + x.weightG, 0) / (r.yieldCount || 1)),
       sellingPrice: r.sellingPrice,
       prepTimeMin: 0, bakingTimeMin: 0, bakingTempC: 0, notes: '',
       ingredients: rows.map((x, i) => ({
@@ -8318,9 +8324,9 @@ function commitRecipeImport() {
     name,
     category: document.getElementById('ri-category').value || 'אחר',
     yieldCount,
-    // Sensible default: the batch weighs what went into it. Noy can correct it,
-    // and it is the number that makes "half a recipe" meaningful later.
-    yieldWeightG: Math.round(rows.reduce((s, r) => s + r.weightG, 0)),
+    // Per unit, not per batch: this field is the weight of one loaf or one cake
+    // everywhere else it is used, and it is what the unit count divides into.
+    yieldWeightG: Math.round(rows.reduce((s, r) => s + r.weightG, 0) / yieldCount),
     sellingPrice,
     prepTimeMin: 0, bakingTimeMin: 0, bakingTempC: 0, notes: '',
     ingredients: rows.map((r, i) => ({
@@ -8474,6 +8480,80 @@ function bakerPercents(ingredients) {
   });
 }
 
+// What the batch actually weighs: the sum of the rows, which is the only
+// honest source for "how many units come out".
+function doughTotalG() {
+  return [...document.querySelectorAll('#re-ing-tbody tr')]
+    .reduce((sum, tr) => sum + weightFromInput(tr.querySelector('.ing-weight')), 0);
+}
+
+function niceG(n) {
+  return (Math.round(n * 10) / 10).toLocaleString('he-IL');
+}
+
+// How many units of the wanted size this batch yields, and what is left over.
+// Noy's question, in one line: "כמה עוגות של 600 גרם יוצאות לי מהמתכון הזה".
+function renderYieldHint() {
+  const el = document.getElementById('re-yield-hint');
+  if (!el) return;
+  const total   = doughTotalG();
+  const perUnit = parseFloat(String(document.getElementById('re-yield-weight')?.value || '').replace(',', '.'));
+
+  if (!total) { el.textContent = ''; return; }
+  if (!Number.isFinite(perUnit) || perUnit <= 0) {
+    el.innerHTML = `סה״כ בצק <b dir="ltr">${niceG(total)}</b> גרם. `
+      + `<span style="color:#9B8B75;">תמלאי משקל ליחידה כדי לדעת כמה יחידות יוצאות.</span>`;
+    return;
+  }
+
+  const exact = total / perUnit;
+  const whole = Math.floor(exact + 1e-9);
+  const left  = total - whole * perUnit;
+
+  const unitPhrase = whole === 1
+    ? `יוצאת <b>יחידה אחת</b> של <b dir="ltr">${niceG(perUnit)}</b> גרם`
+    : `יוצאות <b dir="ltr">${whole}</b> יחידות של <b dir="ltr">${niceG(perUnit)}</b> גרם`;
+  el.innerHTML = `מהמתכון הזה ${unitPhrase}`
+    + (left > 0.5 ? `, ונשאר עודף של <b dir="ltr">${niceG(left)}</b> גרם` : ` בדיוק`)
+    + `. <span style="color:#9B8B75;">סה״כ בצק ${niceG(total)} גרם. אפשר לכתוב כמות יחידות אחרת והמתכון יתעדכן.</span>`;
+}
+
+// She types a unit count and the recipe moves to match it. Everything is
+// multiplied by the same factor, so every baker's percentage is untouched.
+function onYieldCountInput() {
+  const countEl = document.getElementById('re-yield-count');
+  const perUnit = parseFloat(String(document.getElementById('re-yield-weight')?.value || '').replace(',', '.'));
+  const count   = parseInt(countEl?.value, 10);
+  const total   = doughTotalG();
+
+  // Without a unit weight there is nothing to scale to, and mid-typing the box
+  // is empty. Either way, leave the ingredients alone.
+  if (Number.isFinite(count) && count > 0 && Number.isFinite(perUnit) && perUnit > 0 && total > 0) {
+    const factor = (count * perUnit) / total;
+    if (Number.isFinite(factor) && factor > 0 && Math.abs(factor - 1) > 1e-9) {
+      const round = g => g >= 100 ? Math.round(g) : +g.toFixed(1);
+      const cells = [];
+      document.querySelectorAll('#re-ing-tbody tr').forEach(tr => {
+        const wEl = tr.querySelector('.ing-weight');
+        if (!wEl || document.activeElement === wEl) return;
+        const w = weightFromInput(wEl);
+        if (w > 0) cells.push({ wEl, want: w * factor });
+      });
+      let sum = 0;
+      cells.forEach(c => { c.val = round(c.want); sum += c.val; });
+      // Give the rounding leftover to the largest ingredient: it is the one
+      // where a gram either way cannot matter.
+      const residue = (count * perUnit) - sum;
+      if (cells.length && Math.abs(residue) >= 0.05) {
+        const biggest = cells.reduce((a, b) => (b.want > a.want ? b : a));
+        biggest.val = +(biggest.val + residue).toFixed(1);
+      }
+      cells.forEach(c => { c.wEl.value = c.val; });
+    }
+  }
+  recalcEditorCosts();
+}
+
 // Flour is the 100% baseline, so changing a flour weight rescales the whole
 // recipe: every non-flour ingredient keeps its baker's percentage and its grams
 // follow. Changing anything else is a local edit and only moves its own
@@ -8620,6 +8700,8 @@ function recalcEditorCosts() {
   if (csFC && fc !== null) {
     csFC.style.color = fc <= 0.32 ? '#3A7A50' : fc <= 0.45 ? '#8B6800' : '#C4000A';
   }
+
+  renderYieldHint();
 }
 
 function updateScaleCalc() {
