@@ -2583,6 +2583,10 @@
     <div class="re-header">
       <h3 id="re-title" style="font-family:'Noto Serif Hebrew',serif;font-size:1.1rem;font-weight:700;color:#2C1810;margin:0;">מתכון חדש</h3>
       <div style="display:flex;gap:6px;align-items:center;">
+        <button onclick="printRecipe()" title="הדפסת המתכון" style="display:flex;align-items:center;gap:5px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.78rem;font-weight:600;color:#6B2E1E;background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:8px;padding:5px 10px;cursor:pointer;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          הדפס
+        </button>
         <button id="re-delete-btn" onclick="deleteRecipe()" style="display:none;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.78rem;font-weight:600;color:#C4000A;background:transparent;border:1.5px solid #F5B8B8;border-radius:8px;padding:5px 10px;cursor:pointer;">מחק</button>
         <button onclick="closeRecipeEditor()" style="background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -6595,6 +6599,67 @@ function generateShoppingList() {
   outputEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+// Prints the recipe sheet Noy actually bakes from: the ingredients and their
+// weights, nothing else. Costs, suppliers and baker's percentages stay on
+// screen — they are planning tools, not something to hold next to a mixer.
+//
+// It reads the open editor's inputs rather than the saved recipe, because the
+// whole point is to print the quantities she has just been adjusting, which
+// may not be saved yet.
+function printRecipe() {
+  const name  = (document.getElementById('re-name')?.value || '').trim() || 'מתכון';
+  const count = parseInt(document.getElementById('re-yield-count')?.value, 10) || 0;
+  const per   = parseFloat(String(document.getElementById('re-yield-weight')?.value || '').replace(',', '.')) || 0;
+
+  const rows = [...document.querySelectorAll('#re-ing-tbody tr')]
+    .map(tr => ({
+      name: (tr.querySelector('.ing-name')?.value || '').trim(),
+      weightG: weightFromInput(tr.querySelector('.ing-weight'))
+    }))
+    .filter(r => r.name);
+
+  if (!rows.length) { alert('אין מרכיבים להדפסה.'); return; }
+
+  const total = rows.reduce((s, r) => s + r.weightG, 0);
+  const date = new Date().toLocaleDateString('he-IL');
+
+  let area = document.getElementById('print-area');
+  if (!area) { area = document.createElement('div'); area.id = 'print-area'; document.body.appendChild(area); }
+
+  const yieldLine = count && per ? count + ' יחידות · ' + per + ' גרם ליחידה'
+                  : count        ? count + ' יחידות'
+                  : per          ? per + ' גרם ליחידה' : '';
+
+  area.innerHTML = `
+    <div style="font-family:'Noto Serif Hebrew',serif;max-width:420px;margin:0 auto;padding:24px;direction:rtl;">
+      <div style="text-align:center;margin-bottom:18px;">
+        <img src="logo.png.png" style="height:52px;mix-blend-mode:multiply;" alt="נואיקה" />
+        <h1 style="font-size:1.35rem;color:#6B2E1E;margin:8px 0 4px;">${esc(name)}</h1>
+        <p style="font-size:0.82rem;color:#9B8B75;margin:0;">${esc(yieldLine)}${yieldLine ? ' · ' : ''}${date}</p>
+      </div>
+
+      <table style="width:100%;border-collapse:collapse;">
+        <tr style="border-bottom:2px solid #6B2E1E;">
+          <th style="text-align:right;padding:6px 0;font-size:0.88rem;color:#6B2E1E;">מרכיב</th>
+          <th style="text-align:left;padding:6px 0;font-size:0.88rem;color:#6B2E1E;">משקל</th>
+        </tr>
+        ${rows.map(r => `
+          <tr style="border-bottom:1px solid #EFE1C7;">
+            <td style="padding:9px 0;font-size:1.02rem;">${esc(r.name)}</td>
+            <td style="padding:9px 0;font-size:1.02rem;font-weight:700;color:#6B2E1E;text-align:left;white-space:nowrap;">
+              ${r.weightG ? r.weightG + ' ג' : '—'}
+            </td>
+          </tr>`).join('')}
+        ${total ? `
+          <tr>
+            <td style="padding:10px 0 0;font-size:0.9rem;color:#8B7260;">סה"כ</td>
+            <td style="padding:10px 0 0;font-size:0.95rem;font-weight:700;color:#8B7260;text-align:left;white-space:nowrap;">${Math.round(total)} ג</td>
+          </tr>` : ''}
+      </table>
+    </div>`;
+
+  window.print();
+}
 function printShoppingList() {
   const content = document.getElementById('shopping-list-body')?.innerHTML || '';
   const w = window.open('', '_blank');
