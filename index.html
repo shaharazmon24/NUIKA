@@ -2620,15 +2620,22 @@
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
         <div>
           <label class="re-field-label">כמות יחידות</label>
+          <!-- The wheel blurs the field instead of stepping it. A focused number
+               input steps on the mouse wheel, and every step here resizes the
+               whole recipe, so scrolling past it silently changed a batch. -->
           <input type="number" id="re-yield-count" class="field" placeholder="1" min="1" dir="ltr"
             title="שינוי כאן מגדיל או מקטין את כל המתכון, לפי המשקל ליחידה."
+            onfocus="onYieldCountFocus()" onblur="onYieldCountBlur()" onwheel="this.blur()"
             oninput="onYieldCountInput()" />
         </div>
         <div>
           <label class="re-field-label">משקל ליחידה (ג')</label>
+          <!-- Recalculates everything, not just the hint: a new unit weight
+               changes how many units the batch makes, and the cost per unit is
+               divided by that count. -->
           <input type="number" id="re-yield-weight" class="field" placeholder="600" min="1" dir="ltr"
             title="כמה גרם בצק בכל יחידה. לפי זה מחושב כמה יחידות יוצאות."
-            oninput="renderYieldHint()" />
+            oninput="recalcEditorCosts()" />
         </div>
         <div>
           <label class="re-field-label">מחיר מכירה ₪</label>
@@ -8556,6 +8563,33 @@ function niceG(n) {
   return (Math.round(n * 10) / 10).toLocaleString('he-IL');
 }
 
+function yieldUnitWeight() {
+  return parseFloat(String(document.getElementById('re-yield-weight')?.value || '').replace(',', '.'));
+}
+
+// Whole units a batch makes. The field and the hint both use this one formula,
+// so they cannot disagree. The 0.06g allowance is the rounding the editor
+// itself writes, so a batch scaled to exactly 10 units is not read back as
+// "9 and a leftover".
+function unitsFromBatch(total, perUnit) {
+  return Math.floor((total + 0.06) / perUnit);
+}
+
+// Once there is a unit weight, the unit count is a fact about the batch, not a
+// second number to keep in step by hand. It used to stay whatever was stored:
+// Noy corrected the unit weight, the hint said the brioche made 4, the field
+// still said 1, and asking for 10 scaled from the 4 she could not see.
+// Left alone while she is typing in it, and never set below one unit.
+function syncYieldCount() {
+  const countEl = document.getElementById('re-yield-count');
+  if (!countEl || document.activeElement === countEl) return;
+  const perUnit = yieldUnitWeight();
+  const total = doughTotalG();
+  if (!Number.isFinite(perUnit) || perUnit <= 0 || total <= 0) return;
+  const whole = unitsFromBatch(total, perUnit);
+  if (whole >= 1 && countEl.value !== String(whole)) countEl.value = whole;
+}
+
 // How many units of the wanted size this batch yields, and what is left over.
 // Noy's question, in one line: "כמה עוגות של 600 גרם יוצאות לי מהמתכון הזה".
 function renderYieldHint() {
@@ -8571,9 +8605,8 @@ function renderYieldHint() {
     return;
   }
 
-  const exact = total / perUnit;
-  const whole = Math.floor(exact + 1e-9);
-  const left  = total - whole * perUnit;
+  const whole = unitsFromBatch(total, perUnit);
+  const left  = Math.max(0, total - whole * perUnit);
 
   const unitPhrase = whole === 1
     ? `יוצאת <b>יחידה אחת</b> של <b dir="ltr">${niceG(perUnit)}</b> גרם`
@@ -8583,25 +8616,52 @@ function renderYieldHint() {
     + `. <span style="color:#9B8B75;">סה״כ בצק ${niceG(total)} גרם. אפשר לכתוב כמות יחידות אחרת והמתכון יתעדכן.</span>`;
 }
 
+// The recipe as it stood when Noy stepped into the count field.
+//
+// The input event fires on every keystroke, so typing "10" is two edits: "1",
+// then "10". Each one used to scale from the weights the previous keystroke had
+// just rounded, so the "1" step rounded the recipe down to a single unit and the
+// "10" step multiplied that rounding by ten. On the chocolate brioche the yeast
+// came out 4% heavy and the orange zest 7%; on smaller units it reached 34%.
+// Every keystroke now scales from this snapshot, so the result is the same as
+// if the number had arrived in one go.
+let _yieldBase = null;
+
+function yieldSnapshot() {
+  return [...document.querySelectorAll('#re-ing-tbody tr')].map(tr => {
+    const wEl = tr.querySelector('.ing-weight');
+    return { wEl, w: wEl ? weightFromInput(wEl) : 0, raw: wEl ? wEl.value : '' };
+  });
+}
+function onYieldCountFocus() { _yieldBase = yieldSnapshot(); }
+function onYieldCountBlur()  { _yieldBase = null; recalcEditorCosts(); }
+
 // She types a unit count and the recipe moves to match it. Everything is
 // multiplied by the same factor, so every baker's percentage is untouched.
 function onYieldCountInput() {
   const countEl = document.getElementById('re-yield-count');
-  const perUnit = parseFloat(String(document.getElementById('re-yield-weight')?.value || '').replace(',', '.'));
+  const perUnit = yieldUnitWeight();
   const count   = parseInt(countEl?.value, 10);
-  const total   = doughTotalG();
+  // A row added or removed since the snapshot means it no longer describes
+  // the recipe on screen, so take a fresh one rather than write stale rows.
+  const rowsNow = document.querySelectorAll('#re-ing-tbody tr').length;
+  if (!_yieldBase || _yieldBase.length !== rowsNow) _yieldBase = yieldSnapshot();
+  const base  = _yieldBase;
+  const total = base.reduce((s, c) => s + c.w, 0);
 
   // Without a unit weight there is nothing to scale to, and mid-typing the box
   // is empty. Either way, leave the ingredients alone.
   if (Number.isFinite(count) && count > 0 && Number.isFinite(perUnit) && perUnit > 0 && total > 0) {
     const factor = (count * perUnit) / total;
-    if (Number.isFinite(factor) && factor > 0 && Math.abs(factor - 1) > 1e-9) {
+    if (Number.isFinite(factor) && Math.abs(factor - 1) < 1e-9) {
+      // Back to the size she started from: put her own numbers back exactly,
+      // rather than a rounded copy that would turn 266.4 into 266.
+      base.forEach(({ wEl, raw }) => { if (wEl && document.activeElement !== wEl) wEl.value = raw; });
+    } else if (Number.isFinite(factor) && factor > 0) {
       const round = g => g >= 100 ? Math.round(g) : +g.toFixed(1);
       const cells = [];
-      document.querySelectorAll('#re-ing-tbody tr').forEach(tr => {
-        const wEl = tr.querySelector('.ing-weight');
+      base.forEach(({ wEl, w }) => {
         if (!wEl || document.activeElement === wEl) return;
-        const w = weightFromInput(wEl);
         if (w > 0) cells.push({ wEl, want: w * factor });
       });
       let sum = 0;
@@ -8616,6 +8676,9 @@ function onYieldCountInput() {
       cells.forEach(c => { c.wEl.value = c.val; });
     }
   }
+  // Only a focused edit owns a snapshot. A call from anywhere else must not
+  // leave one behind to be written over rows that change afterwards.
+  if (document.activeElement !== countEl) _yieldBase = null;
   recalcEditorCosts();
 }
 
@@ -8687,6 +8750,9 @@ function applyBakerPct(rowId) {
 function recalcEditorCosts() {
   const tbody = document.getElementById('re-ing-tbody');
   if (!tbody) return;
+
+  // Before the cost per unit is read off the count field below.
+  syncYieldCount();
 
   let totalCost = 0;
   let unknownCount = 0;
