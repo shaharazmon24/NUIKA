@@ -296,6 +296,27 @@ if (want('design')) {
     if (!declared) fail('site.js does not declare a width for the logo — it will render at its natural 1915px');
     else if (Number(declared[1]) < 130) fail(`site.js renders the full logo at ${declared[1]}px — the floor is 130px`);
     else pass(`the full logo is rendered at ${declared[1]}px, at or above its 130px floor`);
+
+    for (const [needle, why] of [
+      ['nuika-lang',            'the chosen language is remembered per device'],
+      ['lang-content',          'the same attribute the shop already uses'],
+      ['IntersectionObserver',  'movements are released when they reach the screen'],
+      ['prefers-reduced-motion','reduced motion is honoured in script too, not only in CSS'],
+      ['is-in',                 'the release class the stylesheet waits for'],
+    ]) {
+      if (js.includes(needle)) pass(why);
+      else fail(`missing "${needle}" — ${why}`);
+    }
+
+    // The flip must set dir on <html>, or the whole page stays right-to-left
+    // while its words turn English.
+    // Two separate facts, not one chained expression: the code reaches
+    // documentElement, and something sets a "dir" attribute. Insisting the two
+    // appear adjacent would fail on `var root = document.documentElement`
+    // followed by `root.setAttribute('dir', ...)`, which is what site.js does.
+    if (/documentElement/.test(js) && /setAttribute\(\s*['"]dir['"]/.test(js))
+      pass('the language switch flips the document direction');
+    else fail('the language switch never sets document direction — English would stay RTL');
   }
 }
 

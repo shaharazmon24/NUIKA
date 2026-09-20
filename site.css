@@ -76,6 +76,11 @@ h2 { font-size: var(--t-sub); }
   display: inline-block;
 }
 
+/* Both languages live in the page and one of them is hidden, exactly as the
+   shop already does it. [hidden] needs the explicit rule because the elements
+   are inline and some resets override the browser default. */
+[lang-content][hidden] { display: none !important; }
+
 /* ---------- buttons ---------- */
 
 .btn {

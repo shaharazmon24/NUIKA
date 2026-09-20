@@ -81,6 +81,69 @@
     if (head) head.innerHTML = nuikaHeader(head.getAttribute('data-nuika-header'));
     var foot = document.querySelector('[data-nuika-footer]');
     if (foot) foot.innerHTML = nuikaFooter();
+
+    nuikaLang(readLang());
+    releaseMotion();
+  }
+
+  /* ---------- language ---------- */
+  /* The shop already toggles with lang-content="he" / "en" attributes. The new
+     pages use the same attribute so there is one idea to learn, not two. */
+
+  var LANG_KEY = 'nuika-lang';
+
+  function readLang() {
+    try { return localStorage.getItem(LANG_KEY) === 'en' ? 'en' : 'he'; }
+    catch (e) { return 'he'; }   /* private mode throws rather than returning null */
+  }
+
+  function nuikaLang(next) {
+    var lang = next === 'en' ? 'en' : 'he';
+    var root = document.documentElement;
+    root.setAttribute('lang', lang);
+    root.setAttribute('dir', lang === 'en' ? 'ltr' : 'rtl');
+
+    var nodes = document.querySelectorAll('[lang-content]');
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].hidden = nodes[i].getAttribute('lang-content') !== lang;
+    }
+
+    var btn = document.querySelector('[data-nuika-lang]');
+    if (btn) {
+      btn.textContent = lang === 'he' ? 'EN' : 'עב';
+      btn.setAttribute('aria-label', lang === 'he' ? 'Switch to English' : 'החלף לעברית');
+    }
+
+    try { localStorage.setItem(LANG_KEY, lang); } catch (e) { /* nothing to do */ }
+  }
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest && e.target.closest('[data-nuika-lang]');
+    if (btn) nuikaLang(readLang() === 'he' ? 'en' : 'he');
+  });
+
+  /* ---------- releasing the movements ---------- */
+  /* Someone who asked for less motion gets the final state immediately. The
+     CSS already renders it; this makes sure the script never undoes that. */
+
+  function releaseMotion() {
+    var targets = document.querySelectorAll('.rise, .fade, .reveal');
+    var quiet = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (quiet || !('IntersectionObserver' in window)) {
+      for (var i = 0; i < targets.length; i++) targets[i].classList.add('is-in');
+      return;
+    }
+
+    var seen = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('is-in');
+        seen.unobserve(entry.target);   /* one movement per element, never a loop */
+      });
+    }, { rootMargin: '0px 0px -12% 0px' });
+
+    for (var j = 0; j < targets.length; j++) seen.observe(targets[j]);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount);
@@ -88,4 +151,5 @@
 
   window.nuikaHeader = nuikaHeader;
   window.nuikaFooter = nuikaFooter;
+  window.nuikaLang = nuikaLang;
 })();
