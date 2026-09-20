@@ -31,3 +31,6 @@ jobs:
 
       - name: Check the design system
         run: node scripts/validate.mjs --design
+
+      - name: Check the new pages
+        run: node scripts/validate.mjs --pages

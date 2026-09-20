@@ -453,6 +453,56 @@ if (want('design')) {
   }
 }
 
+if (want('pages')) {
+  console.log('New pages:');
+
+  // Every page of the new site shares one skeleton. These are not style
+  // preferences: each line below is something that silently breaks the page
+  // for somebody if it is missing.
+  const PAGES = ['home.html', 'story.html', 'gallery.html', 'contact.html'];
+
+  for (const page of PAGES) {
+    const p = join(ROOT, page);
+    if (!existsSync(p)) { fail(`${page} is missing`); continue; }
+    const h = readFileSync(p, 'utf8');
+    const need = (re, why) => re.test(h) ? pass(`${page}: ${why}`) : fail(`${page}: ${why}`);
+
+    need(/<html[^>]+lang="he"/, 'starts in Hebrew, so the CSS hides English before any script runs');
+    need(/<html[^>]+dir="rtl"/, 'starts right-to-left');
+    need(/<link[^>]+href="\.\/site\.css"/, 'loads the shared stylesheet');
+    need(/<script[^>]+src="\.\/site\.js"/, 'loads the shared script');
+    need(/data-nuika-header=/, 'declares where the shared header goes');
+    need(/data-nuika-footer/, 'declares where the shared footer goes');
+    need(/fonts\.googleapis\.com/, 'loads Bellefair and Plex, or the page silently falls back to Times New Roman');
+    need(/<meta[^>]+viewport/, 'has a viewport, or a phone renders it at desktop width');
+    need(/<title>/, 'has a title');
+    need(/<meta[^>]+name="description"/, 'has a description for search results and link previews');
+
+    // A page that writes its own colour has left the design system, and the
+    // contrast guard no longer covers it.
+    const hex = [...h.matchAll(/(?:color|background)\s*:\s*(#[0-9A-Fa-f]{3,6})/g)].map(m => m[1]);
+    if (hex.length) fail(`${page}: writes raw colours (${[...new Set(hex)].join(', ')}) instead of using the tokens`);
+    else pass(`${page}: takes every colour from site.css`);
+
+    // The same rule site.css lives under. The English flip has to work by
+    // itself, in the page's own styles too.
+    const physical = /\b(?:margin|padding|border)-(?:left|right)\b|\btext-align\s*:\s*(?:left|right)\b/;
+    const bad = h.split('\n')
+      .map((line, i) => ({ line, n: i + 1 }))
+      .filter(({ line }) => physical.test(line) && !line.includes('rtl-ok'))
+      .map(({ n }) => n);
+    if (bad.length) fail(`${page}: physical left/right on line(s) ${bad.join(', ')} — use the -inline- form or mark the line /* rtl-ok */`);
+    else pass(`${page}: no physical left/right`);
+  }
+
+  // Until Plan 5 renames things, nothing may link the new pages from the shop.
+  // A customer who finds a half-built page has found a bug, not a preview.
+  const shop = readFileSync(join(ROOT, 'index.html'), 'utf8');
+  const leaked = PAGES.filter(p => shop.includes(p));
+  if (leaked.length) fail(`index.html links to ${leaked.join(', ')} — the new pages are not public yet`);
+  else pass('the shop links to none of the new pages');
+}
+
 if (failed) {
   console.error('\nValidation failed. Do not deploy this commit.');
   process.exit(1);
