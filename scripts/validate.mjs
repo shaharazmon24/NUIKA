@@ -145,7 +145,7 @@ if (want('design')) {
   console.log('Design system assets:');
 
   // The supplied logo is 2400x1400 but the drawing occupies only 1915x703 —
-  // a quarter of the file is empty margin. A browser measures the file, not
+  // 60% of the file's area is empty margin. A browser measures the file, not
   // the drawing, which is why the logo came out tiny everywhere it was used.
   // The cropped copy is what the site ships.
   const png = rel => {
@@ -167,6 +167,65 @@ if (want('design')) {
   else if (umbel === 'not-png') fail('images/umbel.png is not a PNG');
   else if (umbel.w === 348 && umbel.h === 701) pass('images/umbel.png is the 348x701 flower and stem');
   else fail(`images/umbel.png is ${umbel.w}x${umbel.h} — expected 348x701 (wrong crop? it must not carry a letter)`);
+
+  console.log('Design tokens:');
+  if (!existsSync(join(ROOT, 'site.css'))) {
+    fail('site.css is missing');
+  } else {
+    const css = readFileSync(join(ROOT, 'site.css'), 'utf8');
+    const token = name => {
+      const m = css.match(new RegExp('--' + name + '\\s*:\\s*(#[0-9A-Fa-f]{6})'));
+      return m ? m[1].toUpperCase() : null;
+    };
+
+    // These are not preferences. --terra is sampled from the pixels of Noy's
+    // logo; every other value was chosen so the pairs below clear their
+    // threshold. A shade's difference is what drops a button under the line.
+    const REQUIRED = {
+      wheat: '#EFE6D6', ink: '#3B2A24', cream: '#F6F0E4', muted: '#6B655C',
+      terra: '#B84830', 'terra-deep': '#AE472C',
+      butter: '#F0E2BA', sage: '#C3C8AE', crust: '#B8935E',
+    };
+    for (const [name, expected] of Object.entries(REQUIRED)) {
+      const got = token(name);
+      if (got === expected) pass(`--${name} is ${expected}`);
+      else fail(`--${name} is ${got || 'missing'} — expected ${expected}`);
+    }
+
+    // Assert the ratios rather than trusting the values, so a later "small
+    // tweak" to a colour fails here instead of on a customer's phone in sun.
+    const lin = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+    const lum = hex => {
+      const [r, g, b] = [1, 3, 5].map(i => lin(parseInt(hex.slice(i, i + 2), 16)));
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const ratio = (a, b) => {
+      const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+      return (hi + 0.05) / (lo + 0.05);
+    };
+
+    const PAIRS = [
+      ['ink',        'wheat',  4.5, 'body text on the page ground'],
+      ['muted',      'wheat',  4.5, 'secondary text on the page ground'],
+      ['cream',      'terra',  4.5, 'the label on the primary button'],
+      ['terra-deep', 'wheat',  4.5, 'a link inside a paragraph'],
+      ['cream',      'ink',    4.5, 'the footer and the dark button'],
+      ['ink',        'butter', 4.5, 'dates and labels'],
+      ['ink',        'sage',   4.5, 'the active filter'],
+    ];
+    for (const [fg, bg, min, why] of PAIRS) {
+      const a = token(fg), b = token(bg);
+      if (!a || !b) { fail(`cannot measure ${fg} on ${bg} — a token is missing`); continue; }
+      const r = ratio(a, b);
+      if (r >= min) pass(`${why}: ${r.toFixed(2)} (needs ${min})`);
+      else fail(`${why}: ${r.toFixed(2)} is below ${min} — ${fg} on ${bg}`);
+    }
+
+    // --crust measures 2.30 as text on --wheat. It is a surface, never a letter.
+    if (/color\s*:\s*var\(\s*--crust\s*\)/.test(css))
+      fail('--crust is used as a text colour; it measures 2.30 on --wheat and vanishes');
+    else pass('--crust is never used as a text colour');
+  }
 }
 
 if (failed) {

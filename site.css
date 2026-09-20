@@ -1,0 +1,36 @@
+/* NUIKA — the design system.
+   One file. Every page derives from it; no page defines its own colours.
+
+   The values below are not adjustable by taste. --terra is sampled from the
+   pixels of Noy's logo, and each other value was chosen so that the pairs in
+   `node scripts/validate.mjs --design` clear their contrast threshold. That
+   check is the reason this comment can be short: change a shade and CI will
+   tell you exactly which pair you broke. */
+
+:root {
+  /* ground and ink */
+  --wheat:  #EFE6D6;  /* the page ground */
+  --ink:    #3B2A24;  /* all text, and the footer's ground */
+  --cream:  #F6F0E4;  /* text on film, on --ink, and on --terra */
+  --muted:  #6B655C;  /* secondary text */
+
+  /* Noy's colour, in two values.
+     --terra is the logo's own pixel colour. Against --cream it carries 4.62,
+     which is enough for the primary button. A small link on --wheat needs
+     more than it has (4.23), so --terra-deep exists for that one job. */
+  --terra:      #B84830;
+  --terra-deep: #AE472C;
+
+  /* accents */
+  --butter: #F0E2BA;  /* dates, labels, the button that sits on film */
+  --sage:   #C3C8AE;  /* the active filter or tag */
+  --crust:  #B8935E;  /* SURFACE ONLY — as text on --wheat it measures 2.30 */
+}
+
+html { background: var(--wheat); }
+
+body {
+  margin: 0;
+  background: var(--wheat);
+  color: var(--ink);
+}
