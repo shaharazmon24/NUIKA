@@ -25,7 +25,7 @@
 
   var SOCIAL = [
     { href: 'https://www.instagram.com/nuika_bread/', he: 'אינסטגרם', en: 'Instagram' },
-    { href: 'https://wa.me/972500000000',            he: 'וואטסאפ',  en: 'WhatsApp' }
+    { href: 'https://wa.me/972547382282',             he: 'וואטסאפ',  en: 'WhatsApp' }
   ];
 
   function esc(s) {
@@ -51,7 +51,7 @@
   function nuikaHeader(active) {
     return '' +
       '<a class="nu-mark" href="./index.html" aria-label="NUIKA">' +
-        '<img src="./images/logo.png" alt="NUIKA" width="160" height="59">' +
+        '<span class="nu-mark__art"></span>' +
       '</a>' +
       '<nav class="nu-nav">' + navHTML(active) + '</nav>' +
       '<button class="nu-lang" type="button" data-nuika-lang></button>';
@@ -133,6 +133,12 @@
   /* Someone who asked for less motion gets the final state immediately. The
      CSS already renders it; this makes sure the script never undoes that. */
 
+  /* One observer, created lazily and reused across every releaseMotion() call
+     (mount() calls it once, nuikaRefresh() may call it many times after).
+     Reusing it is what keeps a later call from watching the same element
+     with a second, independent observer. */
+  var motionObserver = null;
+
   function releaseMotion() {
     var targets = document.querySelectorAll('.rise, .fade, .reveal');
     var quiet = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -142,21 +148,41 @@
       return;
     }
 
-    var seen = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (!entry.isIntersecting) return;
-        entry.target.classList.add('is-in');
-        seen.unobserve(entry.target);   /* one movement per element, never a loop */
-      });
-    }, { rootMargin: '0px 0px -12% 0px' });
+    if (!motionObserver) {
+      motionObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('is-in');
+          motionObserver.unobserve(entry.target);   /* one movement per element, never a loop */
+        });
+      }, { rootMargin: '0px 0px -12% 0px' });
+    }
 
-    for (var j = 0; j < targets.length; j++) seen.observe(targets[j]);
+    for (var j = 0; j < targets.length; j++) {
+      /* Already landed — leave it alone. Without this an element that was
+         already unobserved after animating in would get observe()'d again
+         and, since it is typically still on screen, would fire a second time. */
+      if (targets[j].classList.contains('is-in')) continue;
+      motionObserver.observe(targets[j]);   /* a no-op if already being watched */
+    }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount);
   else mount();
 
+  /* Anything that injects [lang-content] or .rise/.fade/.reveal markup after
+     load — the events board rendered from Firebase, for instance — must call
+     this afterwards, or the new markup shows both languages at once and any
+     motion class on it never releases. It never re-mounts the header or
+     footer; it only re-applies the language and re-scans for new movement
+     targets. */
+  function nuikaRefresh() {
+    nuikaLang(currentLang());
+    releaseMotion();
+  }
+
   window.nuikaHeader = nuikaHeader;
   window.nuikaFooter = nuikaFooter;
   window.nuikaLang = nuikaLang;
+  window.nuikaRefresh = nuikaRefresh;
 })();
