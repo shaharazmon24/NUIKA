@@ -147,7 +147,8 @@ h2 { font-size: var(--t-sub); }
     transition: none !important;
     scroll-behavior: auto !important;
   }
-  .rise, .fade, .reveal {
+  .rise, .fade, .reveal,
+  [dir="ltr"] .reveal {
     opacity: 1;
     transform: none;
     clip-path: none;

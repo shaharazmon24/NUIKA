@@ -545,14 +545,22 @@ node scripts/validate.mjs --design
 .reveal.is-in { clip-path: inset(0 0 0 0); }
 
 /* The final state, not a faster animation. Someone who asked for less motion
-   sees exactly the same page — just without the journey to it. */
+   sees exactly the same page — just without the journey to it.
+
+   The directional selector is repeated here on purpose. A media query adds no
+   specificity, so a bare `.reveal` (0,1,0) loses to `[dir="ltr"] .reveal`
+   (0,2,0) above, and an English reader who asked for less motion would be left
+   staring at a heading clipped to nothing, waiting for a script that is
+   deliberately not going to run. Matching the weight is the honest fix;
+   !important here would only hide the ordering problem. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation: none !important;
     transition: none !important;
     scroll-behavior: auto !important;
   }
-  .rise, .fade, .reveal {
+  .rise, .fade, .reveal,
+  [dir="ltr"] .reveal {
     opacity: 1;
     transform: none;
     clip-path: none;
@@ -570,11 +578,23 @@ node scripts/validate.mjs --design
 
 - [ ] **Step 5: לוודא בדפדפן שהמצב הסופי באמת נראה נכון**
 
-לכתוב קובץ בדיקה זמני **מחוץ לריפו**, בתיקיית ה-scratchpad, שמכיל את `site.css` ואת ארבעת הכפתורים ושלוש התנועות, ולפתוח אותו עם Playwright פעמיים: פעם רגילה ופעם עם `prefers-reduced-motion: reduce` (דרך `browser_emulate_media`). לאמת:
+לכתוב קובץ בדיקה זמני **מחוץ לריפו**, בתיקיית ה-scratchpad, שמכיל את `site.css` ואת ארבעת הכפתורים ושלוש התנועות, ולפתוח אותו עם Playwright. הערה מהביצוע: `file:///` נחסם, אז להגיש את התיקייה משרת סטטי מקומי ולפתוח דרך `http://localhost`.
 
-- `getComputedStyle(el).opacity === '1'` לשלושת האלמנטים במצב reduced motion, **בלי** `.is-in`
-- `outlineWidth` אינו `0px` על כפתור אחרי `Tab`
-- `.btn--primary` מקבל `rgb(184, 72, 48)` ו-`.btn--on-film` מקבל `rgb(246, 240, 228)`
+לאמת, **בלי** שאף אחד מוסיף `.is-in`:
+
+| מצב | `dir` | הציפייה |
+|---|---|---|
+| הפחתת תנועה | `rtl` | `.rise/.fade/.reveal` ב-`opacity: 1`, ו-`.reveal` ב-`clipPath: none` |
+| הפחתת תנועה | **`ltr`** | **אותו דבר בדיוק** |
+| רגיל | `rtl` | `.rise` ב-`opacity: 0`, `.reveal` ב-`inset(...)` |
+| רגיל | `ltr` | `.rise` ב-`opacity: 0`, `.reveal` ב-`inset(...)` |
+
+**השורה השנייה היא העיקר.** היא הבאג שנתפס כאן בפועל: `[dir="ltr"] .reveal` חזק
+יותר מהכלל שבתוך ה-media query, ולכן קורא אנגלית שביקש פחות תנועה קיבל כותרת
+חתוכה לאפס. שתי השורות האחרונות מוודאות שהתיקון לא סתם הפך הכל לגלוי תמיד.
+
+בנוסף: `outlineWidth` אינו `0px` על כפתור אחרי `Tab`, `.btn--primary` מקבל
+`rgb(184, 72, 48)`, ו-`.btn--on-film` מקבל `rgb(246, 240, 228)`.
 
 הקובץ הזמני **לא נכנס לריפו.**
 
