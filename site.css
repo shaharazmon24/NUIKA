@@ -76,21 +76,17 @@ h2 { font-size: var(--t-sub); }
   display: inline-block;
 }
 
-/* Both languages live in the page and one of them is hidden — the same idea
-   as the shop's own three-rule pattern (index.html, keyed off body.lang-en),
-   just keyed off html[lang="en"] instead, since nuikaLang() already sets that
-   attribute and a static page can carry lang="he" from the start. English is
-   hidden by CSS alone before any script runs; nuikaLang()'s own [hidden]
-   toggling only ever agrees with these rules, never fights them (a "hidden"
-   element is always also "none" here, and revert only ever applies to an
-   element these rules leave without the [hidden] attribute) — so no element
-   can end up stuck hidden by one mechanism in a way the toggle cannot undo.
-   No !important: after the Plan 5 cutover this stylesheet and the shop's own
-   will share a page, and !important here would outrank the shop's own
-   display: revert. */
-[lang-content="en"] { display: none; }
-html[lang="en"] [lang-content="he"] { display: none; }
-html[lang="en"] [lang-content="en"] { display: revert; }
+/* Both languages live in the page and one is hidden, the same idea the shop
+   already uses. Only the hidden state is ever declared: an element that should
+   be visible is simply not matched, so it keeps whatever display its own
+   classes give it — a .btn stays an inline-block pill rather than being
+   reverted back past the author origin.
+
+   The html prefix is not decoration. Without it these are (0,1,0) and lose to
+   .btn's own display rule further down the file, which put both languages of a
+   bilingual button on screen at once. */
+html:not([lang="en"]) [lang-content="en"] { display: none; }
+html[lang="en"]       [lang-content="he"] { display: none; }
 
 /* ---------- buttons ---------- */
 
