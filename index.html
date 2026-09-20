@@ -759,10 +759,21 @@
     ::-webkit-scrollbar-track { background: #EFE1C7; }
     ::-webkit-scrollbar-thumb { background: #BD4D30; border-radius: 3px; }
 
-    /* English toggle */
-    [lang-content="en"] { display: none; }
-    body.lang-en [lang-content="he"] { display: none; }
-    body.lang-en [lang-content="en"] { display: revert; }
+    /* English toggle.
+
+       Only the hidden state is ever declared. An element that should be
+       visible is simply not matched, so it keeps whatever display it already
+       has — a product description keeps its -webkit-box line clamp, a form
+       label keeps Tailwind's .block. The previous rule revealed with
+       `display: revert`, which threw those away.
+
+       !important is what beats an inline style, and that is not decoration
+       here: the clamped product descriptions carry `display:-webkit-box`
+       inline, so the old plain `display: none` lost to it and every card
+       rendered its description twice — once in Hebrew, once in English.
+       The five order-form labels leaked the same way, losing to .block. */
+    body:not(.lang-en) [lang-content="en"] { display: none !important; }
+    body.lang-en       [lang-content="he"] { display: none !important; }
 
     /* Qty controls inside cart */
     .qty-btn {
@@ -1798,7 +1809,11 @@
       <a href="https://www.instagram.com/nuika_bread" target="_blank" rel="noopener"
          class="flex items-center gap-1.5 text-muted hover:text-terracotta transition-colors font-sans text-sm cursor-pointer">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="0.5" fill="currentColor"/></svg>
-        @nuika_bread
+        <!-- The @ is a neutral character. Left loose in an RTL line it takes
+             the paragraph's direction and lands on the wrong side, so the
+             handle reads "nuika_bread@". Isolating the Latin run fixes it
+             without writing the letters backwards. -->
+        <span style="direction:ltr;unicode-bidi:isolate">@nuika_bread</span>
       </a>
     </div>
   </div>
@@ -3084,7 +3099,10 @@
     <div class="flex justify-center items-center gap-3">
       <a href="https://wa.me/972547382282" target="_blank" rel="noopener" style="font-family:'Noto Sans Hebrew',sans-serif;color:#8B7260;font-size:0.85rem;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#6B2E1E'" onmouseout="this.style.color='#8B7260'">054-7382282</a>
       <span style="color:#C4B89A;font-size:0.6rem;">●</span>
-      <a href="https://www.instagram.com/nuika_bread" target="_blank" rel="noopener" style="font-family:'Noto Sans Hebrew',sans-serif;color:#8B7260;font-size:0.85rem;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#BD4D30'" onmouseout="this.style.color='#8B7260'">nuika_bread@</a>
+      <!-- Written forwards, and isolated so it renders forwards. It used to be
+           typed backwards ("nuika_bread@") to make it look right on screen,
+           which meant copying it, or reading it aloud, gave the wrong handle. -->
+      <a href="https://www.instagram.com/nuika_bread" target="_blank" rel="noopener" style="font-family:'Noto Sans Hebrew',sans-serif;color:#8B7260;font-size:0.85rem;text-decoration:none;transition:color 0.2s;direction:ltr;unicode-bidi:isolate;display:inline-block;" onmouseover="this.style.color='#BD4D30'" onmouseout="this.style.color='#8B7260'">@nuika_bread</a>
     </div>
 
   </div>
