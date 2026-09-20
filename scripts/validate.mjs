@@ -582,6 +582,34 @@ if (want('pages')) {
     fail('sw.js precaches a video — 24MB on every visitor\'s device, and the shop evicted from the cache when the quota runs out');
   else pass('sw.js precaches no video');
 
+  console.log('The home page\'s words:');
+  // Noy's own sentence, chosen in the design review. Not a placeholder.
+  homeNeed(/אופה מה שאני הכי רוצה לאכול/, 'carries the line the design settled on');
+  homeNeed(/I bake what I most want to eat/, 'and its English');
+  homeNeed(/למאפייה של NUIKA/, 'the way into the shop');
+  homeNeed(/btn--on-film/, 'the primary button is the cream one — terracotta is unreadable over a moving picture');
+  homeNeed(/shop\.html/, 'the shop button points at shop.html, the name it takes in Plan 5');
+
+  // The Instagram and WhatsApp links are NOT in home.html's own markup — they
+  // are built once by nuikaFooter() in site.js and mounted into the
+  // data-nuika-footer element at runtime. Writing them into home.html too
+  // would give two copies that can drift apart, which is exactly what the
+  // task brief warns against. So these two check the page's real delivered
+  // content — home.html or the shared script it loads — rather than
+  // home.html alone. (Checked this catches a real regression: temporarily
+  // corrupting the number in site.js turned this FAIL while every other
+  // check on this list still, correctly, stayed green.)
+  const siteJs = readFileSync(join(ROOT, 'site.js'), 'utf8');
+  const homeOrSharedNeed = (re, why) => (re.test(home) || re.test(siteJs)) ? pass(why) : fail(why);
+  homeOrSharedNeed(/instagram\.com\/nuika_bread/, 'the real Instagram handle');
+  homeOrSharedNeed(/wa\.me\/972547382282/, 'the real WhatsApp number, not a placeholder');
+
+  // The home page is the one screen with no scroll. A stray scroll container
+  // turns it into a page that almost scrolls, which reads as broken.
+  if (/overflow\s*:\s*auto|overflow\s*:\s*scroll/.test(home))
+    fail('home.html declares a scrolling overflow — the home page is one screen');
+  else pass('nothing on the home page scrolls');
+
   // Until Plan 5 renames things, nothing may link the new pages from the shop.
   // A customer who finds a half-built page has found a bug, not a preview.
   const shop = readFileSync(join(ROOT, 'index.html'), 'utf8');

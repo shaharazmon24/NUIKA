@@ -50,6 +50,22 @@
        <main> the film's containing block and squeezed it into the middle row
        with the header and footer as bars above and below. */
     .hm-screen > :not(.hm-film) { position: relative; z-index: 2; }
+
+    .hm-mid {
+      align-self: end;
+      justify-self: center;
+      text-align: center;
+      color: var(--cream);
+      padding-inline: 20px;
+      padding-block-end: clamp(28px, 7vh, 72px);
+      display: grid;
+      gap: clamp(18px, 3vh, 34px);
+      justify-items: center;
+      max-inline-size: 22ch;
+    }
+
+    .hm-line { margin: 0; }
+    .hm-acts { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
   </style>
 </head>
 <body>
@@ -79,7 +95,24 @@
       })();
     </script>
     <header class="nu-header nu-header--on-film" data-nuika-header=""></header>
-    <main></main>
+    <main>
+      <div class="hm-mid rise">
+        <p class="hm-line u-giant">
+          <span lang-content="he">אופה מה שאני הכי רוצה לאכול</span>
+          <span lang-content="en">I bake what I most want to eat</span>
+        </p>
+        <div class="hm-acts">
+          <a class="btn btn--on-film" href="./shop.html">
+            <span lang-content="he">למאפייה של NUIKA</span>
+            <span lang-content="en">To the NUIKA bakery</span>
+          </a>
+          <a class="btn btn--ghost" href="./contact.html">
+            <span lang-content="he">דברו איתי</span>
+            <span lang-content="en">Talk to me</span>
+          </a>
+        </div>
+      </div>
+    </main>
     <footer class="nu-footer" data-nuika-footer></footer>
   </div>
   <script src="./site.js"></script>
