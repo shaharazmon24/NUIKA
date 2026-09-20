@@ -25,6 +25,21 @@
   --butter: #F0E2BA;  /* dates, labels, the button that sits on film */
   --sage:   #C3C8AE;  /* the active filter or tag */
   --crust:  #B8935E;  /* SURFACE ONLY — as text on --wheat it measures 2.30 */
+
+  /* Bellefair carries real Hebrew, not a synthetic slant, and that is what
+     gives the retro-Parisian note without looking like a template. It is also
+     thin, so it never sets running text: anything a visitor actually reads is
+     Plex. The two are loaded by each page's <head>, not by @import, which
+     would block rendering. */
+  --font-display: 'Bellefair', 'Times New Roman', serif;
+  --font-text:    'IBM Plex Sans Hebrew', 'Segoe UI', system-ui, sans-serif;
+
+  --t-giant: clamp(40px, 7vw, 64px);
+  --t-page:  clamp(30px, 5vw, 44px);
+  --t-sub:   clamp(20px, 3vw, 26px);
+  --t-body:  17px;
+  --t-small: 13px;
+  --t-label: 11px;
 }
 
 html { background: var(--wheat); }
@@ -33,4 +48,30 @@ body {
   margin: 0;
   background: var(--wheat);
   color: var(--ink);
+  font-family: var(--font-text);
+  font-size: var(--t-body);
+  font-weight: 300;
+  line-height: 1.9;
+}
+
+h1, h2, h3, .u-display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  line-height: 1.1;
+  margin: 0;
+}
+
+h1 { font-size: var(--t-page); }
+h2 { font-size: var(--t-sub); }
+
+.u-giant { font-family: var(--font-display); font-size: var(--t-giant); line-height: 1.05; }
+.u-small { font-size: var(--t-small); line-height: 1.7; color: var(--muted); }
+.u-label { font-size: var(--t-label); letter-spacing: .3em; color: var(--muted); }
+
+/* A Latin run inside a Hebrew sentence reverses without this: "@nuika_bread"
+   renders as "nuika_bread@". Every phone number, handle and URL gets it. */
+.ltr {
+  direction: ltr;
+  unicode-bidi: isolate;
+  display: inline-block;
 }

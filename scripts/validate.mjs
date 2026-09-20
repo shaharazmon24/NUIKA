@@ -225,6 +225,28 @@ if (want('design')) {
     if (/color\s*:\s*var\(\s*--crust\s*\)/.test(css))
       fail('--crust is used as a text colour; it measures 2.30 on --wheat and vanishes');
     else pass('--crust is never used as a text colour');
+
+    console.log('Typography and RTL:');
+    for (const t of ['font-display', 'font-text', 't-giant', 't-page', 't-sub', 't-body', 't-small', 't-label']) {
+      if (new RegExp('--' + t + '\\s*:').test(css)) pass(`--${t} is defined`);
+      else fail(`--${t} is missing`);
+    }
+
+    // The English flip has to happen by itself. One physical left/right is
+    // enough to strand a margin on the wrong side and force a second copy of
+    // the stylesheet to maintain. A genuine exception marks itself /* rtl-ok */.
+    const physical = /\b(?:margin|padding|border)-(?:left|right)\b|\btext-align\s*:\s*(?:left|right)\b/;
+    const offenders = css.split('\n')
+      .map((line, i) => ({ line, n: i + 1 }))
+      .filter(({ line }) => physical.test(line) && !line.includes('rtl-ok'))
+      .map(({ n }) => n);
+    if (offenders.length === 0) pass('no physical left/right — the English flip works by itself');
+    else fail(`site.css uses physical left/right on line(s) ${offenders.join(', ')} — use the -inline- form, or mark the line /* rtl-ok */`);
+
+    // A Latin run inside Hebrew reverses without this. "@nuika_bread" became
+    // "nuika_bread@" in a mockup, in exactly this way.
+    if (/unicode-bidi\s*:\s*isolate/.test(css)) pass('.ltr isolates Latin runs inside Hebrew');
+    else fail('no unicode-bidi:isolate rule — Latin runs inside Hebrew will reverse');
   }
 }
 
