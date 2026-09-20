@@ -329,6 +329,56 @@ if (want('design')) {
     else if (!mobileWidth) fail('the mobile block never sets a width for .nu-mark__art — it would fall back to the 160px desktop size, or worse, to nothing');
     else if (Number(mobileWidth[1]) < 130) fail(`the mobile override shrinks .nu-mark__art to ${mobileWidth[1]}px — below the 130px floor where the umbel's strokes vanish`);
     else pass(`the mobile override keeps .nu-mark__art at ${mobileWidth[1]}px, at or above its 130px floor`);
+
+    console.log('Bilingual language toggle:');
+    // Comments are prose and can say "html" or "display: revert" in passing —
+    // the comment right above the real rules does exactly that. Strip comments
+    // before pattern-matching, or a comment could satisfy a selector-shaped
+    // regex by accident and let a real regression through silently.
+    const cssNoComments = css.replace(/\/\*[\s\S]*?\*\//g, ' ');
+
+    // The bug this guards against: [lang-content="en"] { display: none; }
+    // alone is (0,1,0), the same specificity as .btn's own
+    // display:inline-block, and the later rule in the file wins — a bilingual
+    // .btn pair then shows both languages at once, permanently, on a Hebrew
+    // page. The html prefix is what raises this to (0,2,1), which beats .btn.
+    const enHideBodies = [...cssNoComments.matchAll(/\bhtml\b[^{}]*\[lang-content=["']en["']\][^{}]*\{([^}]*)\}/g)].map(m => m[1]);
+    if (enHideBodies.some(b => /display\s*:\s*none/.test(b)))
+      pass('an html-prefixed selector hides [lang-content="en"] — a bare attribute selector would tie with .btn and lose the cascade');
+    else
+      fail('no html-prefixed rule hides [lang-content="en"] with display:none — dropping the html prefix reintroduces the bug where a bilingual .btn shows both languages at once on a Hebrew page');
+
+    // The other half of the toggle: hiding the Hebrew copy once the page is English.
+    const heHideBodies = [...cssNoComments.matchAll(/html\[lang=["']en["']\][^{}]*\[lang-content=["']he["']\][^{}]*\{([^}]*)\}/g)].map(m => m[1]);
+    if (heHideBodies.some(b => /display\s*:\s*none/.test(b)))
+      pass('html[lang="en"] hides [lang-content="he"] — the Hebrew copy disappears once the page switches to English');
+    else
+      fail('no html[lang="en"] rule hides [lang-content="he"] with display:none — an English page would show the Hebrew copy alongside the English one');
+
+    // Any rule that targets [lang-content=...] at all, regardless of which
+    // language or how it is prefixed — !important and display:revert are
+    // both banned everywhere in this mechanism, not just on the two rules above.
+    const lcBodies = [...cssNoComments.matchAll(/\[lang-content=["'][a-z]+["']\][^{}]*\{([^}]*)\}/g)].map(m => m[1]);
+
+    const noImportant = lcBodies.length > 0 && lcBodies.every(b => !/!important/.test(b));
+    if (noImportant)
+      pass('no lang-content rule carries !important — after Plan 5 this stylesheet shares a page with the shop\'s own, and !important here would outrank it');
+    else
+      fail(lcBodies.length === 0
+        ? 'no lang-content rule exists in site.css — the bilingual hide mechanism is missing entirely'
+        : 'a lang-content rule carries !important — it would outrank the shop\'s own display rules once this stylesheet shares a page with index.html');
+
+    // display:revert rolls an element back past the author origin entirely —
+    // on an English page a .btn would lose its inline-block and collapse to
+    // plain inline. Only ever hide with display; a revealed element must keep
+    // whatever display its own classes already give it.
+    const noRevert = lcBodies.length > 0 && lcBodies.every(b => !/display\s*:\s*revert/.test(b));
+    if (noRevert)
+      pass('lang-content rules never use display:revert — a revealed element keeps its own class\'s display instead of being rolled back past the author origin');
+    else
+      fail(lcBodies.length === 0
+        ? 'no lang-content rule exists in site.css — the bilingual hide mechanism is missing entirely'
+        : 'a lang-content rule uses display:revert — on an English page a .btn would revert past its own inline-block rule and collapse to plain inline');
   }
 
   console.log('Shared chrome:');
@@ -377,6 +427,29 @@ if (want('design')) {
     if (/documentElement/.test(js) && /setAttribute\(\s*['"]dir['"]/.test(js))
       pass('the language switch flips the document direction');
     else fail('the language switch never sets document direction — English would stay RTL');
+
+    // nuikaRefresh is what a caller uses after injecting markup after load
+    // (e.g. a Firebase-backed board in a later plan). Nothing else in this
+    // file exercises dynamically-injected content, so deleting this function
+    // leaves every other check green. Requiring both the declaration and the
+    // window export — not just the bare word — matters: releaseMotion()'s own
+    // doc-comment above mentions "nuikaRefresh()" in passing, so a plain
+    // js.includes('nuikaRefresh') would stay green even after the real
+    // function and its export were deleted.
+    if (/function\s+nuikaRefresh\s*\(/.test(js) && /window\.nuikaRefresh\s*=/.test(js))
+      pass('nuikaRefresh exists — content injected after load has a way to re-apply language and release motion');
+    else
+      fail('nuikaRefresh is missing — content injected after load would render in both languages at once and never release its motion classes');
+
+    // The real number is already public on the live shop (index.html,
+    // OWNER_WHATSAPP). A placeholder here is a dead contact link on the
+    // bakery's own footer. Anchored to the actual wa.me link rather than a
+    // bare digit string, so a mention in a comment (e.g. a TODO) could not
+    // satisfy this while the real href stays a placeholder.
+    if (js.includes('wa.me/972547382282'))
+      pass('the real WhatsApp number is wired into the footer');
+    else
+      fail('site.js does not contain the real WhatsApp number 972547382282 — a placeholder here is a dead contact link on a bakery\'s own footer');
   }
 }
 
