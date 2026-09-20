@@ -485,19 +485,41 @@ if (want('pages')) {
     else pass(`${page}: takes every colour from site.css`);
 
     // The same rule site.css lives under. The English flip has to work by
-    // itself, in the page's own styles too. Widened beyond Task 1's original
-    // margin/padding/border/text-align set to also catch bare `left:`/`right:`
-    // positioning, `float: left/right`, and `background-position: left/right`
-    // — later pages position things, and none of those three shapes were
-    // caught before. `(?<![\w-])` keeps the bare-property branch from being
-    // fooled by a hyphen (it would otherwise re-match inside "border-left:",
-    // which the first branch already covers on its own). `direction: ltr`,
-    // `[dir="ltr"]` and `inset: 0` are all legitimate and contain neither
-    // "left" nor "right" as a word, so none of the five branches touch them.
-    const physical = /\b(?:margin|padding|border)-(?:left|right)\b|\btext-align\s*:\s*(?:left|right)\b|(?<![\w-])(?:left|right)\s*:|\bfloat\s*:\s*(?:left|right)\b|\bbackground-position\s*:\s*(?:left|right)\b/;
+    // itself, in the page's own styles too.
+    //
+    // The property forms (margin-left, padding-right, border-left,
+    // text-align:left/right) are unambiguous wherever they appear, so they
+    // are checked across the whole page. The bare `left:`/`right:`
+    // positioning form, `float:`, and `background-position:` are NOT
+    // unambiguous outside CSS — `const r = { left: rect.left, right:
+    // rect.right };` is ordinary JavaScript (and exactly the shape a later
+    // task's own browser-check code will contain), and the word "left" turns
+    // up in ordinary prose too. So those three are only looked for inside
+    // <style> blocks. `background-position` allows either keyword order
+    // (`top left`, `left center`, `top 10px right 20px`), so that branch
+    // looks for the word anywhere in the value, not right after the colon.
+    // `(?<![\w-])` keeps the bare-property branch from being fooled by a
+    // hyphen (it would otherwise re-match inside "border-left:", which the
+    // first branch already covers on its own). `direction: ltr`, `[dir="ltr"]`
+    // and `inset: 0` are all legitimate and contain neither "left" nor
+    // "right" as a word, so none of the branches touch them.
+    const styleLineRanges = [];
+    {
+      let openAt = null;
+      h.split('\n').forEach((line, i) => {
+        const n = i + 1;
+        if (openAt === null && /<style[^>]*>/.test(line)) openAt = n;
+        if (openAt !== null && /<\/style>/.test(line)) { styleLineRanges.push([openAt, n]); openAt = null; }
+      });
+    }
+    const inStyle = n => styleLineRanges.some(([s, e]) => n >= s && n <= e);
+
+    const propertyForm = /\b(?:margin|padding|border)-(?:left|right)\b|\btext-align\s*:\s*(?:left|right)\b/;
+    const positioningForm = /(?<![\w-])(?:left|right)\s*:|\bfloat\s*:\s*(?:left|right)\b|\bbackground-position\s*:[^;{}]*\b(?:left|right)\b/;
+
     const bad = h.split('\n')
       .map((line, i) => ({ line, n: i + 1 }))
-      .filter(({ line }) => physical.test(line) && !line.includes('rtl-ok'))
+      .filter(({ line, n }) => !line.includes('rtl-ok') && (propertyForm.test(line) || (inStyle(n) && positioningForm.test(line))))
       .map(({ n }) => n);
     if (bad.length) fail(`${page}: physical left/right on line(s) ${bad.join(', ')} — use the -inline- form or mark the line /* rtl-ok */`);
     else pass(`${page}: no physical left/right`);
@@ -507,9 +529,30 @@ if (want('pages')) {
   const home = readFileSync(join(ROOT, 'home.html'), 'utf8');
   const homeNeed = (re, why) => re.test(home) ? pass(why) : fail(why);
 
-  homeNeed(/media\/film-desktop\.mp4/, 'the desktop cut is referenced');
-  homeNeed(/media\/film-phone\.mp4/,   'the phone cut is referenced — the vertical re-edit, not the desktop one squeezed');
-  homeNeed(/poster=/,                  'a poster stands in before the film plays, and instead of it when it cannot');
+  // Presence is not enough. The failure that matters is the two <source>
+  // elements swapping media conditions: both files are still named, both
+  // filename checks still pass, and every phone downloads the wide cut and
+  // sees a fifth of the picture — with 52 hand-chosen crop windows silently
+  // thrown away. So check which source carries the condition, and that the
+  // conditional one comes first, because the browser takes the first match.
+  const phoneSrc = home.match(/<source[^>]*film-phone\.mp4[^>]*>/);
+  const deskSrc  = home.match(/<source[^>]*film-desktop\.mp4[^>]*>/);
+
+  if (!phoneSrc) fail('no <source> for the phone cut');
+  else if (!/media\s*=\s*["'][^"']*max-width:\s*720px/.test(phoneSrc[0]))
+    fail('the phone cut carries no max-width: 720px condition — every desktop would download the vertical re-edit, or no phone would get it');
+  else pass('the phone cut is behind a max-width: 720px condition');
+
+  if (!deskSrc) fail('no <source> for the desktop cut');
+  else if (/media\s*=/.test(deskSrc[0]))
+    fail('the desktop cut carries a media condition — if the two were swapped, phones get the wide cut and nothing says so');
+  else pass('the desktop cut is the unconditional fallback');
+
+  if (phoneSrc && deskSrc && home.indexOf(phoneSrc[0]) > home.indexOf(deskSrc[0]))
+    fail('the desktop <source> comes first, so it matches before the phone one is considered');
+  else pass('the conditional source comes first, as <source> order requires');
+
+  homeNeed(/poster\s*=\s*["']\.\/media\/film-poster\.jpg["']/, 'a real poster file, not an empty poster attribute');
   homeNeed(/film-poster-phone\.jpg/,   'phones get the phone-shaped poster — under reduced motion or a refused autoplay, the poster IS the page');
   homeNeed(/\bmuted\b/,                'muted, or no browser will autoplay it');
   homeNeed(/\bplaysinline\b/,          'plays inline, or iOS takes it fullscreen on its own');
@@ -526,12 +569,18 @@ if (want('pages')) {
   if (plays > 0 && plays === guarded) pass(`all ${plays} play() calls are guarded — iOS low power mode refuses autoplay outright`);
   else fail(`${plays - guarded} of ${plays} play() calls are unguarded — a refused autoplay throws and takes the rest of the script with it`);
 
-  // The film is 25MB across two files. A service worker that caches it fills a
-  // phone's storage quota and gets the whole cache evicted, shop included.
+  // sw.js precaches everything in ASSETS. The film is 24MB across two files;
+  // precaching it fills a phone's storage quota and gets the whole cache
+  // evicted — the shop with it. This check is about that list specifically.
+  //
+  // The separate question of the runtime cache-first branch storing the film
+  // as it streams is a Plan 5 item, recorded in the spec. It is not this
+  // check's job and this check does not claim to cover it.
   const sw = readFileSync(join(ROOT, 'sw.js'), 'utf8');
-  if (/\.mp4/.test(sw) && !/mp4[\s\S]{0,200}return/.test(sw))
-    fail('sw.js mentions .mp4 without skipping it — see the spec, this evicts the shop from the cache');
-  else pass('the service worker does not try to store the film');
+  const assets = sw.match(/const ASSETS = \[([\s\S]*?)\]/);
+  if (assets && /\.(?:mp4|webm|mov)\b/.test(assets[1]))
+    fail('sw.js precaches a video — 24MB on every visitor\'s device, and the shop evicted from the cache when the quota runs out');
+  else pass('sw.js precaches no video');
 
   // Until Plan 5 renames things, nothing may link the new pages from the shop.
   // A customer who finds a half-built page has found a bug, not a preview.
