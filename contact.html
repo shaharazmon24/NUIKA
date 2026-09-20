@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>דברו איתי — NUIKA</title>
+  <meta name="description" content="יצירת קשר עם נוי מ-NUIKA: הזמנה, אירוע, סדנה או שאלה — הודעת וואטסאפ שנפתחת אצלכם, בלי שום דבר שנשמר בדרך.">
+
+  <!-- Loaded here, not with @import, which would block rendering. Bellefair
+       carries real Hebrew; without this the page quietly falls back to Times. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bellefair&family=IBM+Plex+Sans+Hebrew:wght@200;300;400;500&display=swap">
+  <link rel="stylesheet" href="./site.css">
+
+  <style>
+    /* The contact page's own layout. Prefixed .ct- so nothing here can
+       collide with another page's styles. No server anywhere on this page:
+       the form composes a WhatsApp message and opens it on the visitor's own
+       device, so there is no second copy of a name and a phone number for
+       this stylesheet, or anything else, to have to protect. */
+
+    .ct-page {
+      max-inline-size: 1100px;
+      margin-inline: auto;
+      padding-inline: 24px;
+      padding-block: clamp(40px, 8vh, 88px) clamp(56px, 10vh, 120px);
+    }
+
+    .ct-head {
+      text-align: center;
+      display: grid;
+      gap: 12px;
+      justify-items: center;
+      margin-block-end: clamp(32px, 6vh, 56px);
+    }
+
+    .ct-head p { margin: 0; max-inline-size: 52ch; }
+
+    /* ---------- the two columns ---------- */
+    /* The form comes first in markup, so it takes the reading-start side —
+       the right in Hebrew, the left once English flips `dir` on <html> — and
+       the photo/links column follows it, with no explicit `order` anywhere.
+       Same technique story.html's split movement already relies on. */
+    .ct-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: clamp(40px, 6vh, 56px);
+      align-items: start;
+    }
+
+    @media (min-width: 721px) {
+      .ct-layout { grid-template-columns: 1fr 1fr; gap: 64px; }
+    }
+
+    /* ---------- the form ---------- */
+
+    .ct-form { display: grid; gap: 22px; margin: 0; }
+
+    .ct-field-group { display: grid; gap: 8px; }
+
+    .ct-label { font-size: var(--t-small); }
+
+    .ct-field {
+      /* site.css sets no global box-sizing reset, so this defaults to
+         content-box: width: 100% plus this field's own padding and border
+         would then render WIDER than its 100% — found on a real 375px
+         screen, where every field measured 5px past the edge on both
+         sides. border-box is what makes width:100% mean the field's actual
+         rendered width, padding and border included. */
+      box-sizing: border-box;
+      width: 100%;
+      font: inherit;
+      font-size: var(--t-body);
+      color: var(--ink);
+      background: var(--cream);
+      border: 1px solid rgba(59, 42, 36, .3);
+      border-radius: 4px;
+      padding: 12px 14px;
+    }
+
+    textarea.ct-field { resize: vertical; min-block-size: 120px; }
+
+    .ct-field:focus-visible { outline: 2px solid var(--terra-deep); outline-offset: 2px; }
+
+    /* A native radio group, not a styled-from-scratch control: Tab enters it
+       as one stop, arrow keys move between the four options, and nothing
+       here has to reinvent that. accent-color is the one line it takes to
+       make the dot read as NUIKA's own colour instead of the browser default —
+       a real token, not a new raw colour. */
+    .ct-subject { border: 0; padding: 0; margin: 0; }
+    .ct-subject .ct-label { display: block; margin-block-end: 8px; }
+
+    .ct-chips { display: flex; flex-wrap: wrap; gap: 12px 24px; padding: 0; margin: 0; list-style: none; }
+
+    .ct-chip { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: var(--t-small); }
+    .ct-chip input { accent-color: var(--terra); }
+    .ct-chip input:focus-visible { outline: 2px solid var(--terra-deep); outline-offset: 3px; }
+
+    /* A live region: screen-reader software announces the text the moment it
+       lands, without the visitor having to go looking for it. Empty by
+       default and never shown as an empty box. */
+    .ct-error { margin: 0; color: var(--terra-deep); font-size: var(--t-small); }
+    .ct-error:empty { display: none; }
+
+    .ct-actions { display: grid; gap: 14px; justify-items: start; margin-block-start: 6px; }
+
+    .ct-note { margin: 0; max-inline-size: 42ch; }
+
+    /* ---------- the photo and the direct links ---------- */
+
+    .ct-frame { position: relative; aspect-ratio: 4 / 5; overflow: clip; border-radius: 2px; margin: 0; }
+
+    .ct-frame-img {
+      position: absolute;
+      inset: 0;
+      inline-size: 100%;
+      block-size: 100%;
+      object-fit: cover;
+    }
+
+    .ct-frame-cap { margin-block-start: 10px; text-align: center; }
+
+    .ct-direct {
+      margin: clamp(24px, 4vh, 36px) 0 0;
+      padding-inline-start: 0;
+      list-style: none;
+      display: grid;
+      gap: 14px;
+      font-size: var(--t-small);
+    }
+
+    .ct-direct a.link { font-size: inherit; }
+  </style>
+</head>
+<body>
+  <header class="nu-header" data-nuika-header="contact"></header>
+
+  <main class="ct-page">
+    <div class="ct-head fade">
+      <h1>
+        <span lang-content="he">דברו איתי</span>
+        <span lang-content="en">Talk to me</span>
+      </h1>
+      <p class="u-small">
+        <span lang-content="he">הזמנה, אירוע, סדנה או סתם שאלה — כתבו כמה מילים, ותקבלו הודעה מוכנה לשליחה בוואטסאפ שלכם.</span>
+        <span lang-content="en">An order, an event, a workshop, or just a question — write a few words, and get a message ready to send from your own WhatsApp.</span>
+      </p>
+    </div>
+
+    <div class="ct-layout">
+      <form class="ct-form rise" id="ctForm" novalidate>
+        <div class="ct-field-group">
+          <label class="ct-label" for="ctName">
+            <span lang-content="he">שם מלא</span>
+            <span lang-content="en">Full name</span>
+          </label>
+          <input class="ct-field" type="text" id="ctName" name="name" maxlength="80" autocomplete="name" required>
+          <p class="ct-error" id="ctNameErr" role="alert"></p>
+        </div>
+
+        <div class="ct-field-group">
+          <label class="ct-label" for="ctPhone">
+            <span lang-content="he">טלפון</span>
+            <span lang-content="en">Phone</span>
+          </label>
+          <input class="ct-field" type="tel" id="ctPhone" name="phone" maxlength="25"
+                 dir="ltr" placeholder="05X-XXXXXXX" autocomplete="tel" required>
+          <p class="ct-error" id="ctPhoneErr" role="alert"></p>
+        </div>
+
+        <fieldset class="ct-subject">
+          <legend class="ct-label">
+            <span lang-content="he">נושא</span>
+            <span lang-content="en">Subject</span>
+          </legend>
+          <div class="ct-chips">
+            <label class="ct-chip">
+              <input type="radio" name="ctSubject" value="order" checked>
+              <span lang-content="he">הזמנה</span>
+              <span lang-content="en">Order</span>
+            </label>
+            <label class="ct-chip">
+              <input type="radio" name="ctSubject" value="event">
+              <span lang-content="he">אירוע</span>
+              <span lang-content="en">Event</span>
+            </label>
+            <label class="ct-chip">
+              <input type="radio" name="ctSubject" value="workshop">
+              <span lang-content="he">סדנה</span>
+              <span lang-content="en">Workshop</span>
+            </label>
+            <label class="ct-chip">
+              <input type="radio" name="ctSubject" value="question">
+              <span lang-content="he">שאלה</span>
+              <span lang-content="en">Question</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="ct-field-group">
+          <label class="ct-label" for="ctMessage">
+            <span lang-content="he">הודעה</span>
+            <span lang-content="en">Message</span>
+          </label>
+          <textarea class="ct-field" id="ctMessage" name="message" rows="5" maxlength="2000" required></textarea>
+          <p class="ct-error" id="ctMessageErr" role="alert"></p>
+        </div>
+
+        <div class="ct-actions">
+          <button type="submit" class="btn btn--primary">
+            <span lang-content="he">פתיחה בוואטסאפ</span>
+            <span lang-content="en">Open in WhatsApp</span>
+          </button>
+          <p class="ct-note u-small">
+            <span lang-content="he">ההודעה נפתחת אצלכם בוואטסאפ. שום דבר לא נשלח בלי שתלחצו.</span>
+            <span lang-content="en">The message opens in your own WhatsApp. Nothing is sent until you tap send.</span>
+          </p>
+        </div>
+      </form>
+
+      <aside class="ct-side">
+        <!-- A frame of Noy herself, not of the bread: this is the one page
+             that asks a visitor to talk to a person, so the photo alongside
+             the form gives that person a face. Cropped from the film's own
+             2.66:1 to a portrait 4:5 — the same trade the story page already
+             makes for a side-by-side photo (st-mv-media), as opposed to the
+             gallery's grid, where repeating that crop across many tiles is
+             exactly the mistake the phone cut of the film was rebuilt to
+             avoid. One photo beside a form is not that. -->
+        <figure class="ct-frame reveal">
+          <img class="ct-frame-img" src="./images/gallery/noy-portrait-flowers.jpg" alt="" loading="lazy">
+          <figcaption class="ct-frame-cap u-small">
+            <span lang-content="he">נוי, מבעד לפרחים</span>
+            <span lang-content="en">Noy, seen through the flowers</span>
+          </figcaption>
+        </figure>
+
+        <ul class="ct-direct">
+          <li>
+            <a class="link" href="https://wa.me/972547382282" target="_blank" rel="noopener">
+              <span lang-content="he">וואטסאפ: <span class="ltr">054-7382282</span></span>
+              <span lang-content="en">WhatsApp: 054-7382282</span>
+            </a>
+          </li>
+          <li>
+            <a class="link" href="https://www.instagram.com/nuika_bread/" target="_blank" rel="noopener">
+              <span lang-content="he">אינסטגרם: <span class="ltr">@nuika_bread</span></span>
+              <span lang-content="en">Instagram: @nuika_bread</span>
+            </a>
+          </li>
+          <li>
+            <span lang-content="he">איסוף מרחובות בימי שישי</span>
+            <span lang-content="en">Pickup from Rehovot on Fridays</span>
+          </li>
+        </ul>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="nu-footer" data-nuika-footer></footer>
+
+  <script src="./site.js"></script>
+  <script>
+    // The form composes one WhatsApp message on the visitor's own device and
+    // opens it there. Nothing on this page makes a network request of its
+    // own — this page has no server, and a second copy of a customer's name
+    // and phone number is a liability nobody asked for. Everything below
+    // either reads a field's .value (never innerHTML) or writes plain text
+    // back with .textContent (never innerHTML either), so there is nothing
+    // here for an esc() to have to guard.
+    (function () {
+      'use strict';
+
+      var SUBJECT_LABELS = {
+        order:    { he: 'הזמנה', en: 'Order' },
+        event:    { he: 'אירוע', en: 'Event' },
+        workshop: { he: 'סדנה',  en: 'Workshop' },
+        question: { he: 'שאלה',  en: 'Question' }
+      };
+
+      var MESSAGES = {
+        he: {
+          name:     'נא להזין שם.',
+          phone:    'נא להזין מספר טלפון.',
+          phoneBad: 'נא להזין מספר טלפון תקין.',
+          message:  'נא להזין הודעה.'
+        },
+        en: {
+          name:     'Please enter your name.',
+          phone:    'Please enter a phone number.',
+          phoneBad: 'Please enter a valid phone number.',
+          message:  'Please enter a message.'
+        }
+      };
+
+      function currentLang() {
+        return document.documentElement.getAttribute('lang') === 'en' ? 'en' : 'he';
+      }
+
+      var form     = document.getElementById('ctForm');
+      var nameEl   = document.getElementById('ctName');
+      var phoneEl  = document.getElementById('ctPhone');
+      var msgEl    = document.getElementById('ctMessage');
+      var nameErr  = document.getElementById('ctNameErr');
+      var phoneErr = document.getElementById('ctPhoneErr');
+      var msgErr   = document.getElementById('ctMessageErr');
+
+      function setError(el, text) { el.textContent = text || ''; }
+
+      // The shop's own fix, verbatim (index.html:4142-4146): anything
+      // non-numeric used to pass, producing a wa.me link addressed to nobody
+      // and an order Noy could not call back. The number typed here never
+      // becomes the wa.me address — that is always Noy's own, fixed below —
+      // but a number she cannot call back is still a dead lead, so it is
+      // checked before any message is composed.
+      function isValidPhone(raw) {
+        var digits = raw.replace(/\D/g, '');
+        return /^(0\d{8,9}|972\d{8,9})$/.test(digits);
+      }
+
+      // Shared by the submit handler and by the language toggle below: the
+      // same three fields, checked the same way, in whichever language is
+      // current at the moment it runs. Returns whether the form is valid;
+      // never composes or opens anything itself, so re-running it on a
+      // language switch cannot have that side effect.
+      function validateForm() {
+        var t = MESSAGES[currentLang()];
+        var name  = nameEl.value.trim();
+        var phone = phoneEl.value.trim();
+        var msg   = msgEl.value.trim();
+
+        var ok = true;
+        if (!name) { setError(nameErr, t.name); ok = false; } else { setError(nameErr, ''); }
+
+        if (!phone) { setError(phoneErr, t.phone); ok = false; }
+        else if (!isValidPhone(phone)) { setError(phoneErr, t.phoneBad); ok = false; }
+        else { setError(phoneErr, ''); }
+
+        if (!msg) { setError(msgErr, t.message); ok = false; } else { setError(msgErr, ''); }
+
+        return ok;
+      }
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!validateForm()) return;
+
+        var lang = currentLang();
+        var name  = nameEl.value.trim();
+        var phone = phoneEl.value.trim();
+        var msg   = msgEl.value.trim();
+        var subjectInput = form.querySelector('input[name="ctSubject"]:checked');
+        var subjectKey = subjectInput ? subjectInput.value : 'question';
+        var subjectLabel = (SUBJECT_LABELS[subjectKey] || SUBJECT_LABELS.question)[lang];
+
+        var lines = lang === 'en'
+          ? ['Hi Noy, this is ' + name + '.', 'Phone: ' + phone, 'Subject: ' + subjectLabel, '', msg]
+          : ['היי נוי, זאת ' + name + '.', 'טלפון: ' + phone, 'נושא: ' + subjectLabel, '', msg];
+
+        // The whole message is built as plain text first and encoded exactly
+        // once, whole. A line break or an "&" left unencoded in `msg` would
+        // otherwise end the query string early or break the URL outright —
+        // encodeURIComponent on the finished string is what stops either.
+        var text = lines.join('\n');
+        var url = 'https://wa.me/972547382282?text=' + encodeURIComponent(text);
+        window.open(url, '_blank', 'noopener');
+      });
+
+      // site.js's own toggle re-renders every [lang-content] span the
+      // instant it is clicked, but an error message already on screen is
+      // plain text set by this script, not a lang-content pair — without
+      // this it would stay frozen in whichever language it was first shown
+      // in. Only re-validates if the visitor has already tried to submit at
+      // least once (some error is already showing); otherwise a first
+      // language switch would invent errors for fields nobody has touched
+      // yet. Registered after site.js's own listener, since ./site.js loads
+      // first, so document.lang has already flipped by the time this reads
+      // it — the same ordering gallery.html relies on for the same reason.
+      document.addEventListener('click', function (e) {
+        if (!e.target.closest('[data-nuika-lang]')) return;
+        if (nameErr.textContent || phoneErr.textContent || msgErr.textContent) validateForm();
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -746,6 +746,70 @@ if (want('pages')) {
     else
       fail('the #glLb element is missing role="dialog" and/or aria-modal="true" on itself — a screen reader would not announce it as a modal dialog even if those strings appear elsewhere in the file');
   }
+
+  console.log('Contact:');
+  // Same reason as story.html and gallery.html above: readFileSync unguarded
+  // would throw ENOENT and crash the whole process before contact.html
+  // exists — exactly the moment Step 2 of the brief asks this to be run, to
+  // confirm it fails. existsSync + an empty-string fallback keeps every
+  // ctNeed(...) below a safe .test() against '' (which simply fails), so
+  // this line reports the missing file and every line after it reports its
+  // own FAIL too, instead of a crash hiding them all.
+  const contactPath = join(ROOT, 'contact.html');
+  if (!existsSync(contactPath)) fail('contact.html is missing');
+  const ct = existsSync(contactPath) ? readFileSync(contactPath, 'utf8') : '';
+
+  // Every check below runs against this comment-stripped copy, not the raw
+  // file. Proven necessary, not theoretical: FOUR of the six checks here
+  // stayed green while deliberately wrong — the real wa.me number, the real
+  // Instagram handle, the real encodeURIComponent( call, and the real
+  // unescaped-innerHTML guard — each time by keeping the WRONG behaviour in
+  // the code and leaving the RIGHT word sitting only in a nearby comment
+  // (see task-6-report.md for all four, run one at a time and reverted).
+  // HTML comments are stripped first — a non-greedy span from <!-- to the
+  // nearest -->, which is what a real comment is — then whole lines whose
+  // trimmed text opens with `//` are dropped (a JS line comment). Neither
+  // pass touches real content: no line of HTML or CSS in this file starts
+  // with `//`, and a "https://" URL always sits inside an attribute, never
+  // inside `<!-- -->`.
+  const ctCode = ct
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .split('\n')
+    .filter(line => !/^\s*\/\//.test(line))
+    .join('\n');
+  const ctNeed = (re, why) => re.test(ctCode) ? pass(why) : fail(why);
+
+  ctNeed(/wa\.me\/972547382282/, 'the real WhatsApp number');
+  // Anchored to the real mechanism, not the bare word: encodeURIComponent(
+  // called within 60 characters of the "text=" query parameter it is
+  // supposed to encode, the same distance-anchoring style already used
+  // elsewhere in this file rather than a bare substring.
+  ctNeed(/text=[^;]{0,60}encodeURIComponent\s*\(/, 'the message is encoded, or a line break or an ampersand truncates it');
+  ctNeed(/instagram\.com\/nuika_bread/, 'the Instagram handle');
+
+  // The form composes a message and hands it to WhatsApp. It must not post
+  // anywhere: there is no server, and a second copy of a customer's name and
+  // phone number is a liability nobody asked for.
+  //
+  // The brief's own check here only scans the <form ...> tag itself. Proven
+  // incomplete by deliberately adding formaction="https://evil.example/…" to
+  // the submit BUTTON instead — the original check stayed green, because a
+  // button's formaction overrides the form's own (here, absent) action at
+  // submit time regardless of what the <form> tag carries (see
+  // task-6-report.md). This page's own submit handler calls
+  // e.preventDefault() before anything else and never depends on that for
+  // safety, but the check should catch the attribute either way, so it is
+  // extended rather than trusted as originally written.
+  if (/<form[^>]+action=/.test(ctCode)) fail('the form has an action — it must not submit anywhere');
+  else if (/\bformaction\s*=/.test(ctCode)) fail('a control carries formaction — it would submit the form there no matter what the <form> tag itself says');
+  else pass('the form submits nowhere; it composes a WhatsApp message');
+  if (/fetch\s*\(|XMLHttpRequest/.test(ctCode)) fail('contact.html sends a request somewhere');
+  else pass('contact.html sends nothing');
+
+  // Same exposure the shop's admin panel was hardened against.
+  if (/innerHTML/.test(ctCode) && !/esc\(/.test(ctCode))
+    fail('contact.html writes innerHTML without escaping');
+  else pass('no unescaped innerHTML');
 }
 
 if (failed) {
