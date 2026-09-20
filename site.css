@@ -154,3 +154,98 @@ h2 { font-size: var(--t-sub); }
     clip-path: none;
   }
 }
+
+/* ---------- shared chrome ---------- */
+/* Laid out here because the header and footer belong to every page. A page's
+   own layout stays in that page's stylesheet, under its own class prefix. */
+
+.nu-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 18px 28px;
+  border-block-end: 1px solid rgba(59, 42, 36, .13);
+}
+
+.nu-mark { flex: 0 0 auto; display: block; line-height: 0; }
+.nu-mark img { display: block; width: 160px; height: auto; }
+
+/* Centred no matter how wide the items are, with the mark and the language
+   button pinned to the two ends. Absolute so the nav's own width cannot pull
+   the centre off true. */
+.nu-nav {
+  position: absolute;
+  inset-inline: 0;
+  display: flex;
+  justify-content: center;
+  gap: 26px;
+  pointer-events: none;
+}
+
+.nu-nav__item {
+  pointer-events: auto;
+  font-size: var(--t-small);
+  color: inherit;
+  text-decoration: none;
+  padding-block-end: 2px;
+  border-block-end: 1px solid transparent;
+}
+
+.nu-nav__item.is-current { border-block-end-color: var(--terra); }
+
+.nu-lang {
+  margin-inline-start: auto;
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: var(--t-label);
+  background: transparent;
+  color: inherit;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 4px 13px;
+  cursor: pointer;
+  opacity: .75;
+}
+
+/* The header sits on the film on the home page, where it needs no rule under
+   it and its own ink colour. A page opts in by adding this class. */
+.nu-header--on-film { color: var(--cream); border-block-end: 0; }
+
+.nu-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 22px;
+  padding: 40px 28px;
+  background: var(--ink);
+  color: var(--cream);
+}
+
+/* Drawn as a mask rather than an image, so the one file serves both grounds:
+   cream here, terracotta on a light page. No second copy to keep in step. */
+.nu-mark--foot {
+  width: 150px;
+  height: 55px;
+  background: var(--cream);
+  -webkit-mask: url(./images/logo.png) center / contain no-repeat;
+          mask: url(./images/logo.png) center / contain no-repeat;
+}
+
+.nu-soc-row { display: flex; gap: 18px; }
+.nu-soc { color: inherit; font-size: var(--t-small); text-decoration: none; opacity: .85; }
+.nu-fine { margin: 0; font-size: var(--t-label); letter-spacing: .04em; opacity: .6; }
+
+.nu-to-shop {
+  color: inherit;
+  font-size: var(--t-small);
+  text-decoration: none;
+  border-block-end: 1px solid currentColor;
+}
+
+@media (max-width: 720px) {
+  .nu-header { flex-wrap: wrap; gap: 14px; padding: 14px 18px; }
+  .nu-mark img { width: 130px; }   /* the floor, never below it */
+  .nu-nav { position: static; order: 3; width: 100%; gap: 16px; flex-wrap: wrap; }
+  .nu-footer { justify-content: center; text-align: center; padding: 32px 18px; }
+}

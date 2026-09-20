@@ -269,6 +269,34 @@ if (want('design')) {
       pass('reduced motion switches animation and transition off, not shortens them');
     else fail('the prefers-reduced-motion block must set animation:none and transition:none');
   }
+
+  console.log('Shared chrome:');
+  if (!existsSync(join(ROOT, 'site.js'))) {
+    fail('site.js is missing');
+  } else {
+    const js = readFileSync(join(ROOT, 'site.js'), 'utf8');
+    try { new Function(js); pass(`site.js parses (${js.split('\n').length} lines)`); }
+    catch (err) { fail(`site.js syntax error: ${err.message}`); }
+
+    for (const [needle, why] of [
+      ['nuikaHeader',          'the header is built in one place'],
+      ['nuikaFooter',          'the footer is built in one place'],
+      ['data-nuika-header',    'pages mark where the header goes'],
+      ['data-nuika-footer',    'pages mark where the footer goes'],
+      ['images/logo.png',      'the header uses the cropped wordmark'],
+      ['shop.html',            'the shop is reachable from every page'],
+    ]) {
+      if (js.includes(needle)) pass(why);
+      else fail(`missing "${needle}" — ${why}`);
+    }
+
+    // Below 130px wide the finest strokes of the umbel fade out. The header
+    // must not shrink the full wordmark past that; it uses images/umbel.png.
+    const declared = js.match(/images\/logo\.png[\s\S]{0,80}?width="(\d+)"/);
+    if (!declared) fail('site.js does not declare a width for the logo — it will render at its natural 1915px');
+    else if (Number(declared[1]) < 130) fail(`site.js renders the full logo at ${declared[1]}px — the floor is 130px`);
+    else pass(`the full logo is rendered at ${declared[1]}px, at or above its 130px floor`);
+  }
 }
 
 if (failed) {
