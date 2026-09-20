@@ -291,7 +291,7 @@ if (want('design')) {
     }
 
     // Below 130px wide the finest strokes of the umbel fade out. The header
-    // must not shrink the full wordmark past that; it uses images/umbel.png.
+    // must not shrink the full wordmark past that; it uses images/logo.png.
     const declared = js.match(/images\/logo\.png[\s\S]{0,80}?width="(\d+)"/);
     if (!declared) fail('site.js does not declare a width for the logo — it will render at its natural 1915px');
     else if (Number(declared[1]) < 130) fail(`site.js renders the full logo at ${declared[1]}px — the floor is 130px`);

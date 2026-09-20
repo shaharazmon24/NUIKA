@@ -12,6 +12,10 @@
 (function () {
   'use strict';
 
+  /* Every value below reaches innerHTML, so every value below goes through
+     esc(). These are hardcoded today; if they ever become admin-editable,
+     esc() stops an attribute breakout but NOT a javascript: URL — that would
+     need the scheme checked as well. */
   var NAV = [
     { key: 'story',   href: './story.html',   he: 'הסיפור',    en: 'Story' },
     { key: 'gallery', href: './gallery.html', he: 'גלריה',     en: 'Gallery' },
@@ -34,7 +38,7 @@
     return NAV.map(function (item) {
       var current = item.key === active;
       return '<a class="nu-nav__item' + (current ? ' is-current' : '') + '"' +
-             ' href="' + item.href + '"' + (current ? ' aria-current="page"' : '') + '>' +
+             ' href="' + esc(item.href) + '"' + (current ? ' aria-current="page"' : '') + '>' +
              '<span lang-content="he">' + esc(item.he) + '</span>' +
              '<span lang-content="en">' + esc(item.en) + '</span>' +
              '</a>';
@@ -55,7 +59,7 @@
 
   function nuikaFooter() {
     var links = SOCIAL.map(function (s) {
-      return '<a class="nu-soc" href="' + s.href + '" target="_blank" rel="noopener">' +
+      return '<a class="nu-soc" href="' + esc(s.href) + '" target="_blank" rel="noopener">' +
              '<span lang-content="he">' + esc(s.he) + '</span>' +
              '<span lang-content="en">' + esc(s.en) + '</span></a>';
     }).join('');
