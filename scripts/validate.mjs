@@ -587,26 +587,42 @@ if (want('pages')) {
   homeNeed(/אופה מה שאני הכי רוצה לאכול/, 'carries the line the design settled on');
   homeNeed(/I bake what I most want to eat/, 'and its English');
   homeNeed(/למאפייה של NUIKA/, 'the way into the shop');
-  homeNeed(/btn--on-film/, 'the primary button is the cream one — terracotta is unreadable over a moving picture');
-  homeNeed(/shop\.html/, 'the shop button points at shop.html, the name it takes in Plan 5');
 
-  // The Instagram and WhatsApp links are NOT in home.html's own markup — they
-  // are built once by nuikaFooter() in site.js and mounted into the
-  // data-nuika-footer element at runtime. Writing them into home.html too
-  // would give two copies that can drift apart, which is exactly what the
-  // task brief warns against. So these two check the page's real delivered
-  // content — home.html or the shared script it loads — rather than
-  // home.html alone. (Checked this catches a real regression: temporarily
-  // corrupting the number in site.js turned this FAIL while every other
-  // check on this list still, correctly, stayed green.)
-  const inEither = (re, why) => (re.test(home) || re.test(readFileSync(join(ROOT, 'site.js'), 'utf8')))
-    ? pass(why) : fail(`${why} — looked in home.html and site.js`);
-  inEither(/instagram\.com\/nuika_bread/, 'the real Instagram handle');
-  inEither(/wa\.me\/972547382282/, 'the real WhatsApp number, not a placeholder');
+  // Presence is not attachment. Swapping the two buttons' classes and hrefs
+  // leaves every string in the file, so substring checks stay green while the
+  // primary call to action becomes a transparent ghost pointing at the wrong
+  // page. Check the element that actually carries each one.
+  const shopLink = home.match(/<a[^>]*href="\.\/shop\.html"[^>]*>/);
+  if (!shopLink) fail('no link to shop.html');
+  else if (!/btn--on-film/.test(shopLink[0]))
+    fail('the shop link is not the cream on-film button — anything else is unreadable over a moving picture');
+  else pass('the shop link is the cream on-film button');
+
+  const contactLink = home.match(/<a[^>]*href="\.\/contact\.html"[^>]*>/);
+  if (!contactLink) fail('no link to contact.html');
+  else if (!/btn--ghost/.test(contactLink[0]))
+    fail('the contact link is not the ghost button');
+  else pass('the contact link is the ghost button');
+
+  // These live in site.js's footer builder and nowhere else. Two copies drift,
+  // which is the entire reason this page does not write its own — so require
+  // them in site.js AND require home.html not to have grown a copy. An OR of
+  // the two files passes happily while a stale duplicate sits on the page.
+  const siteJs = readFileSync(join(ROOT, 'site.js'), 'utf8');
+  const onlyInSiteJs = (re, what) => {
+    if (!re.test(siteJs)) fail(`${what} is missing from site.js, where the footer builds it`);
+    else if (re.test(home)) fail(`${what} also appears in home.html — a second copy that will drift from the footer's`);
+    else pass(`${what} lives in site.js only`);
+  };
+  onlyInSiteJs(/instagram\.com\/nuika_bread/, 'the Instagram handle');
+  onlyInSiteJs(/wa\.me\/972547382282/, 'the WhatsApp number');
 
   // The home page is the one screen with no scroll. A stray scroll container
-  // turns it into a page that almost scrolls, which reads as broken.
-  if (/overflow\s*:\s*auto|overflow\s*:\s*scroll/.test(home))
+  // turns it into a page that almost scrolls, which reads as broken. The
+  // longhand forms (overflow-y in particular) are the more likely way a
+  // stray scroll container actually shows up, and the original pattern
+  // missed them entirely.
+  if (/overflow(?:-[xy])?\s*:\s*(?:auto|scroll)/.test(home))
     fail('home.html declares a scrolling overflow — the home page is one screen');
   else pass('nothing on the home page scrolls');
 
