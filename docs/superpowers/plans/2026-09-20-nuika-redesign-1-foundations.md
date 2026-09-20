@@ -68,7 +68,7 @@ if (want('design')) {
   console.log('Design system assets:');
 
   // The supplied logo is 2400x1400 but the drawing occupies only 1915x703 —
-  // a quarter of the file is empty margin. A browser measures the file, not
+  // 60% of the file's area is empty margin. A browser measures the file, not
   // the drawing, which is why the logo came out tiny everywhere it was used.
   // The cropped copy is what the site ships.
   const png = rel => {
