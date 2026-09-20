@@ -3,3 +3,21 @@ package-lock.json
 .pages-config-backup.json
 .DS_Store
 Thumbs.db
+
+# raw video/audio footage and intermediate editing files — too large for git
+marketing/videos/*/source/
+marketing/videos/*/work/
+
+# Camera originals for the site redesign: a 1 GB film and 67 full-resolution
+# stills (~1.6 GB). ship.mjs stages with `git add -A`, and GitHub rejects any
+# file over 100 MB, so one publish with these unignored breaks pushing for both
+# machines. Only the compressed web versions made from them get committed.
+Film/
+SNAP SHOT/
+INSTAGRAM/
+
+# Design mockups from the brainstorming companion. Working material, not site.
+.superpowers/
+
+# Playwright verification output (screenshots, page snapshots). Not site content.
+.playwright-mcp/
