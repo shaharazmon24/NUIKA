@@ -426,8 +426,14 @@ git commit -m "עמוד הבית: הסרט במסך מלא, עם הגרסה הנ
   homeNeed(/למאפייה של NUIKA/, 'the way into the shop');
   homeNeed(/btn--on-film/, 'the primary button is the cream one — terracotta is unreadable over a moving picture');
   homeNeed(/shop\.html/, 'the shop button points at shop.html, the name it takes in Plan 5');
-  homeNeed(/instagram\.com\/nuika_bread/, 'the real Instagram handle');
-  homeNeed(/wa\.me\/972547382282/, 'the real WhatsApp number, not a placeholder');
+  // These live in site.js, because nuikaFooter() builds the social row and
+  // this page must not write a second copy that can drift. So look in both —
+  // an earlier version looked only at home.html and therefore could never
+  // pass while also obeying the instruction not to duplicate them.
+  const inEither = (re, why) => (re.test(home) || re.test(readFileSync(join(ROOT, 'site.js'), 'utf8')))
+    ? pass(why) : fail(`${why} — looked in home.html and site.js`);
+  inEither(/instagram\.com\/nuika_bread/, 'the real Instagram handle');
+  inEither(/wa\.me\/972547382282/, 'the real WhatsApp number, not a placeholder');
 
   // The home page is the one screen with no scroll. A stray scroll container
   // turns it into a page that almost scrolls, which reads as broken.
@@ -470,9 +476,19 @@ node scripts/validate.mjs --pages
 ב-`<style>`:
 
 ```css
+    /* <main> is the 1fr row of .hm-screen's grid, and it has to be a grid
+       itself for anything inside it to anchor to its bottom. `align-self: end`
+       on a child of a plain block container does nothing — which is exactly
+       what went wrong here first time round: the sentence sat flush under the
+       header instead of over the film near the bottom, where the design puts
+       it. Caught by measuring the rect, not by reading. */
+    .hm-screen > main {
+      display: grid;
+      align-content: end;
+      justify-items: center;
+    }
+
     .hm-mid {
-      align-self: end;
-      justify-self: center;
       text-align: center;
       color: var(--cream);
       padding-inline: 20px;
