@@ -54,8 +54,8 @@
 - Modify: `.github/workflows/validate.yml`
 
 **Interfaces:**
-- Consumes: `logo.png.png` בשורש (2400×1400), ו-`.superpowers/brainstorm/357-1789848861/content/umbel.png` (419×750)
-- Produces: `images/logo.png` ברוחב 1915 וגובה 703 · `images/umbel.png` · שלב הרצה `node scripts/validate.mjs --design`
+- Consumes: `logo.png.png` בשורש (2400×1400) — **הקובץ היחיד שנדרש.** שני הנכסים נחתכים ממנו, כך שאין תלות בקבצים ש-git מתעלם מהם ותיקיית עבודה נפרדת לא חסרה כלום
+- Produces: `images/logo.png` (1915×703) · `images/umbel.png` (348×701) · שלב הרצה `node scripts/validate.mjs --design`
 
 ---
 
@@ -88,7 +88,8 @@ if (want('design')) {
   const umbel = png('images/umbel.png');
   if (!umbel) fail('images/umbel.png is missing — the mark used below 130px');
   else if (umbel === 'not-png') fail('images/umbel.png is not a PNG');
-  else pass(`images/umbel.png is ${umbel.w}x${umbel.h}`);
+  else if (umbel.w === 348 && umbel.h === 701) pass('images/umbel.png is the 348x701 flower and stem');
+  else fail(`images/umbel.png is ${umbel.w}x${umbel.h} — expected 348x701 (wrong crop? it must not carry a letter)`);
 }
 ```
 
@@ -104,10 +105,12 @@ node scripts/validate.mjs --design
 
 ```bash
 ffmpeg -nostdin -loglevel error -i logo.png.png -vf "crop=1915:703:238:341" -y images/logo.png
-cp ".superpowers/brainstorm/357-1789848861/content/umbel.png" images/umbel.png
+ffmpeg -nostdin -loglevel error -i logo.png.png -vf "crop=348:701:1089:341"  -y images/umbel.png
 ```
 
-המספרים `1915:703:238:341` הם תיבת הדיו שנמדדה בקובץ המקורי. אין לנחש אותם מחדש.
+שתי קבוצות המספרים הן תיבות דיו **שנמדדו** בקובץ המקורי — `1915:703:238:341` לסימן
+המילולי המלא, ו-`348:701:1089:341` לפרח ולגבעול שלו לבדם. **אין לנחש אותן מחדש
+ואין לעגל.** חיתוך רחב יותר של הפרח גורר איתו את הרגל של האות `k`, שיושבת מימינו.
 
 - [ ] **Step 4: להריץ ולוודא שעוברת**
 
@@ -115,7 +118,10 @@ cp ".superpowers/brainstorm/357-1789848861/content/umbel.png" images/umbel.png
 node scripts/validate.mjs --design
 ```
 
-צפוי: `ok    images/logo.png is the cropped 1915x703 wordmark` ו-`ok    images/umbel.png is 419x750`.
+צפוי: `ok    images/logo.png is the cropped 1915x703 wordmark` ו-`ok    images/umbel.png is the 348x701 flower and stem`.
+
+ולהסתכל על שני הקבצים בפועל: הסימן המילולי צריך להיות `nuika` בלי שוליים, והפרח
+צריך להיות פרח וגבעול **בלי שום שבר של אות** בצד.
 
 - [ ] **Step 5: לחבר ל-CI**
 
