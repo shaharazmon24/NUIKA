@@ -22,14 +22,78 @@
       display: grid;
       grid-template-rows: auto 1fr auto;
     }
+
+    .hm-film {
+      position: absolute;
+      inset: 0;
+      inline-size: 100%;
+      block-size: 100%;
+      object-fit: cover;
+      z-index: 0;
+    }
+
+    /* The film is bright and the text sits on it. Without this the words are
+       unreadable wherever a shot happens to be pale — and half of them are. */
+    .hm-screen::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background:
+        linear-gradient(to bottom, rgba(59, 42, 36, .45), rgba(59, 42, 36, .12) 38%, rgba(59, 42, 36, .68));
+      pointer-events: none;
+    }
+
+    .hm-screen > * { position: relative; z-index: 2; }
   </style>
 </head>
 <body>
   <div class="hm-screen">
     <header class="nu-header nu-header--on-film" data-nuika-header=""></header>
-    <main></main>
+    <main>
+    <!-- Two cuts, not one file scaled. A phone frame keeps about a fifth of
+         the picture's width, so the phone cut is a real vertical re-edit with
+         its own window on each of the film's 52 shots. `media` picks between
+         them before either is fetched, so only one is ever downloaded. -->
+    <video class="hm-film" id="hm-film"
+           muted playsinline preload="metadata"
+           poster="./media/film-poster.jpg"
+           aria-hidden="true">
+      <source src="./media/film-phone.mp4"   type="video/mp4" media="(max-width: 720px)">
+      <source src="./media/film-desktop.mp4" type="video/mp4">
+    </video>
+    </main>
     <footer class="nu-footer" data-nuika-footer></footer>
   </div>
   <script src="./site.js"></script>
+  <script>
+    // The film is decoration. Everything below is about not making it a cost
+    // to somebody who did not ask for it.
+    (function () {
+      var film = document.getElementById('hm-film');
+      if (!film) return;
+
+      var quiet = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var thrifty = navigator.connection && navigator.connection.saveData;
+
+      if (quiet || thrifty) {
+        // The poster already shows. Do not fetch 10-14MB to replace it.
+        film.removeAttribute('preload');
+        film.setAttribute('preload', 'none');
+        return;
+      }
+
+      film.play().catch(function () {
+        // iOS in low power mode refuses autoplay outright. The poster is
+        // already on screen and stays; there is nothing to recover from.
+      });
+
+      // A film playing to nobody is somebody's data and somebody's battery.
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden) film.pause();
+        else film.play().catch(function () {});
+      });
+    })();
+  </script>
 </body>
 </html>

@@ -485,8 +485,16 @@ if (want('pages')) {
     else pass(`${page}: takes every colour from site.css`);
 
     // The same rule site.css lives under. The English flip has to work by
-    // itself, in the page's own styles too.
-    const physical = /\b(?:margin|padding|border)-(?:left|right)\b|\btext-align\s*:\s*(?:left|right)\b/;
+    // itself, in the page's own styles too. Widened beyond Task 1's original
+    // margin/padding/border/text-align set to also catch bare `left:`/`right:`
+    // positioning, `float: left/right`, and `background-position: left/right`
+    // — later pages position things, and none of those three shapes were
+    // caught before. `(?<![\w-])` keeps the bare-property branch from being
+    // fooled by a hyphen (it would otherwise re-match inside "border-left:",
+    // which the first branch already covers on its own). `direction: ltr`,
+    // `[dir="ltr"]` and `inset: 0` are all legitimate and contain neither
+    // "left" nor "right" as a word, so none of the five branches touch them.
+    const physical = /\b(?:margin|padding|border)-(?:left|right)\b|\btext-align\s*:\s*(?:left|right)\b|(?<![\w-])(?:left|right)\s*:|\bfloat\s*:\s*(?:left|right)\b|\bbackground-position\s*:\s*(?:left|right)\b/;
     const bad = h.split('\n')
       .map((line, i) => ({ line, n: i + 1 }))
       .filter(({ line }) => physical.test(line) && !line.includes('rtl-ok'))
@@ -494,6 +502,27 @@ if (want('pages')) {
     if (bad.length) fail(`${page}: physical left/right on line(s) ${bad.join(', ')} — use the -inline- form or mark the line /* rtl-ok */`);
     else pass(`${page}: no physical left/right`);
   }
+
+  console.log('The home page and its film:');
+  const home = readFileSync(join(ROOT, 'home.html'), 'utf8');
+  const homeNeed = (re, why) => re.test(home) ? pass(why) : fail(why);
+
+  homeNeed(/media\/film-desktop\.mp4/, 'the desktop cut is referenced');
+  homeNeed(/media\/film-phone\.mp4/,   'the phone cut is referenced — the vertical re-edit, not the desktop one squeezed');
+  homeNeed(/poster=/,                  'a poster stands in before the film plays, and instead of it when it cannot');
+  homeNeed(/\bmuted\b/,                'muted, or no browser will autoplay it');
+  homeNeed(/\bplaysinline\b/,          'plays inline, or iOS takes it fullscreen on its own');
+  homeNeed(/visibilitychange/,         'pauses when the tab is not being looked at, rather than burning a stranger\'s data in the background');
+  homeNeed(/saveData/,                 'honours Save-Data');
+  homeNeed(/prefers-reduced-motion/,   'honours reduced motion');
+  homeNeed(/\.play\(\)[\s\S]{0,120}catch/, 'survives a refused autoplay instead of throwing — iOS low power mode refuses');
+
+  // The film is 25MB across two files. A service worker that caches it fills a
+  // phone's storage quota and gets the whole cache evicted, shop included.
+  const sw = readFileSync(join(ROOT, 'sw.js'), 'utf8');
+  if (/\.mp4/.test(sw) && !/mp4[\s\S]{0,200}return/.test(sw))
+    fail('sw.js mentions .mp4 without skipping it — see the spec, this evicts the shop from the cache');
+  else pass('the service worker does not try to store the film');
 
   // Until Plan 5 renames things, nothing may link the new pages from the shop.
   // A customer who finds a half-built page has found a bug, not a preview.
