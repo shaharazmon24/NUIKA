@@ -685,6 +685,35 @@ if (want('pages')) {
   const moves = (story.match(/class="[^"]*st-move/g) || []).length;
   if (moves === 4) pass('four movements, as the design settled');
   else fail(`the story has ${moves} movements, not 4`);
+
+  console.log('The gallery:');
+  // Same reason as story.html above: readFileSync unguarded would throw
+  // ENOENT and crash the whole process before gallery.html exists, which is
+  // exactly the moment this is first run. existsSync + an empty-string
+  // fallback keeps every galNeed(...) below a safe .test() against '' (which
+  // simply fails), so this line reports the missing file and every line
+  // after it reports its own FAIL too, instead of a crash hiding them all.
+  const galleryPath = join(ROOT, 'gallery.html');
+  if (!existsSync(galleryPath)) fail('gallery.html is missing');
+  const gal = existsSync(galleryPath) ? readFileSync(galleryPath, 'utf8') : '';
+  const galNeed = (re, why) => re.test(gal) ? pass(why) : fail(why);
+
+  galNeed(/gallery\.json/, 'reads the manifest instead of hardcoding the list');
+  galNeed(/\.thumb\b|thumb\]/, 'the grid loads thumbnails — 24 full images is 2MB for a page of small squares');
+  galNeed(/alt\s*=|\.alt\b/, 'every image carries its alt text');
+  galNeed(/nuikaRefresh/, 'calls nuikaRefresh after injecting, or the injected markup shows both languages at once');
+  galNeed(/loading\s*=\s*["']lazy|loading:\s*["']lazy/, 'images below the fold load lazily');
+
+  // Every frame in the gallery is 2.66:1, straight off the film. A tall tile
+  // keeps about a third of that width — the same failure the phone cut of the
+  // film was rebuilt to avoid.
+  if (/aspect-ratio\s*:\s*[0-9.]+\s*\/\s*[0-9.]+/.test(gal)) {
+    const ratios = [...gal.matchAll(/aspect-ratio\s*:\s*([0-9.]+)\s*\/\s*([0-9.]+)/g)]
+      .map(m => +m[1] / +m[2]);
+    const tall = ratios.filter(r => r < 0.9);
+    if (tall.length) fail(`the grid has ${tall.length} tile shape(s) taller than wide — a 2.66:1 frame loses two thirds of its width in one`);
+    else pass('no tile is taller than it is wide');
+  } else pass('tile shapes are not declared as portrait aspect ratios');
 }
 
 if (failed) {

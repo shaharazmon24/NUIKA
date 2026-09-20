@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>גלריה — NUIKA</title>
+  <meta name="description" content="גלריית תמונות מהמטבח של NUIKA: לחמים, מתוקים ורגעים מתוך הסרט.">
+
+  <!-- Loaded here, not with @import, which would block rendering. Bellefair
+       carries real Hebrew; without this the page quietly falls back to Times. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bellefair&family=IBM+Plex+Sans+Hebrew:wght@200;300;400;500&display=swap">
+  <link rel="stylesheet" href="./site.css">
+
+  <style>
+    /* The gallery page's own layout. Prefixed .gl- so nothing here can
+       collide with another page's styles. */
+
+    .gl-page {
+      max-inline-size: 1200px;
+      margin-inline: auto;
+      padding-inline: 24px;
+      padding-block: clamp(40px, 8vh, 88px) clamp(56px, 10vh, 120px);
+    }
+
+    .gl-head {
+      text-align: center;
+      display: grid;
+      gap: 12px;
+      justify-items: center;
+      margin-block-end: clamp(28px, 5vh, 52px);
+    }
+
+    /* ---------- filters ---------- */
+    /* Hidden in markup by default. Script only reveals this once it knows,
+       from the manifest itself, that more than one tag is actually present
+       — buildFilters() below. A single shared tag would make the row a
+       button that does nothing, so it stays out entirely rather than render
+       and do nothing. */
+    .gl-filters {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-block-end: clamp(28px, 5vh, 48px);
+    }
+
+    .gl-filter {
+      font: inherit;
+      font-size: var(--t-small);
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid var(--ink);
+      border-radius: 999px;
+      padding: 8px 22px;
+      cursor: pointer;
+      opacity: .65;
+      transition: background-color .18s ease, opacity .18s ease, border-color .18s ease;
+    }
+
+    .gl-filter.is-active { background: var(--sage); border-color: var(--sage); opacity: 1; }
+
+    .gl-filter:focus-visible { outline: 2px solid var(--terra-deep); outline-offset: 3px; }
+
+    /* ---------- grid ---------- */
+    /* Every frame here is 2.66:1, straight off the film. A tall tile keeps
+       about a third of that width — the same failure the phone cut of the
+       film was rebuilt to avoid — so this grid only ever offers two shapes:
+       square (one column) and wide (two columns), on a fixed row height.
+       Never a span that comes out taller than it is wide. `dense` backfills
+       the gaps a wide tile leaves in the row above it, rather than leaving
+       a hole where the grid's default sparse placement would skip a cell. */
+    .gl-grid {
+      display: grid;
+      grid-auto-flow: dense;
+      grid-template-columns: repeat(2, 1fr);
+      grid-auto-rows: clamp(150px, 34vw, 190px);
+      gap: 10px;
+    }
+
+    @media (min-width: 721px) {
+      .gl-grid { grid-template-columns: repeat(4, 1fr); grid-auto-rows: clamp(160px, 15vw, 230px); gap: 16px; }
+    }
+
+    .gl-tile {
+      position: relative;
+      display: block;
+      inline-size: 100%;
+      block-size: 100%;
+      grid-column: span 1;
+      aspect-ratio: 1 / 1;
+      padding: 0;
+      border: 0;
+      border-radius: 2px;
+      overflow: clip;
+      cursor: pointer;
+      background: var(--wheat);
+    }
+
+    /* Every fourth tile runs wide instead of square — the mix of shapes the
+       brief asks for, never the other way around. */
+    .gl-tile--wide { grid-column: span 2; aspect-ratio: 2 / 1; }
+
+    .gl-tile[hidden] { display: none; }
+
+    .gl-thumb {
+      position: absolute;
+      inset: 0;
+      inline-size: 100%;
+      block-size: 100%;
+      object-fit: cover;
+      transition: transform .5s ease;
+    }
+
+    .gl-tile:hover .gl-thumb,
+    .gl-tile:focus-visible .gl-thumb { transform: scale(1.05); }
+
+    .gl-tile:focus-visible { outline: 2px solid var(--terra-deep); outline-offset: 3px; }
+
+    /* ---------- enlarged view ---------- */
+    .gl-lb {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: clamp(8px, 3vw, 28px);
+      padding: clamp(16px, 5vw, 40px);
+      /* --ink at high opacity — the same veil colour home.html and story.html
+         already use over their photos, not a new raw colour. */
+      background: rgba(59, 42, 36, .92);
+    }
+
+    .gl-lb[hidden] { display: none; }
+
+    .gl-lb-figure {
+      grid-column: 2;
+      display: grid;
+      gap: 16px;
+      justify-items: center;
+      max-inline-size: 100%;
+      max-block-size: 100%;
+      margin: 0;
+    }
+
+    .gl-lb-img {
+      max-inline-size: 100%;
+      max-block-size: 70svb;
+      object-fit: contain;
+      border-radius: 2px;
+    }
+
+    .gl-lb-desc {
+      margin: 0;
+      max-inline-size: 60ch;
+      text-align: center;
+      color: var(--cream);
+      font-size: var(--t-small);
+    }
+
+    /* Grid columns 1 and 3 of a 3-column grid are direction-aware: under the
+       page's own dir="rtl" that is already in force, column 1 sits on the
+       visual right (where "previous" belongs when reading moves
+       right-to-left) and column 3 on the visual left ("next", the direction
+       reading moves toward). Switching to English flips both automatically,
+       with no separate rule and nothing physical declared here at all. */
+    .gl-lb-arrow {
+      font: inherit;
+      font-family: var(--font-display);
+      font-size: clamp(28px, 5vw, 44px);
+      line-height: 1;
+      background: transparent;
+      color: var(--cream);
+      border: 0;
+      padding: 10px;
+      cursor: pointer;
+      opacity: .8;
+    }
+
+    .gl-lb-arrow:hover { opacity: 1; }
+    .gl-lb-arrow:focus-visible { outline: 2px solid var(--cream); outline-offset: 3px; }
+
+    .gl-lb-prev { grid-column: 1; }
+    .gl-lb-next { grid-column: 3; }
+
+    .gl-lb-close {
+      position: absolute;
+      inset-block-start: clamp(10px, 3vw, 24px);
+      inset-inline-end: clamp(10px, 3vw, 24px);
+      font: inherit;
+      font-size: 28px;
+      line-height: 1;
+      background: transparent;
+      color: var(--cream);
+      border: 0;
+      cursor: pointer;
+      opacity: .8;
+      padding: 6px 10px;
+    }
+
+    .gl-lb-close:hover { opacity: 1; }
+    .gl-lb-close:focus-visible { outline: 2px solid var(--cream); outline-offset: 3px; }
+  </style>
+</head>
+<body>
+  <header class="nu-header" data-nuika-header="gallery"></header>
+
+  <main class="gl-page">
+    <div class="gl-head">
+      <h1>
+        <span lang-content="he">גלריה</span>
+        <span lang-content="en">Gallery</span>
+      </h1>
+    </div>
+
+    <div class="gl-filters" id="glFilters" hidden></div>
+
+    <div class="gl-grid" id="glGrid"></div>
+  </main>
+
+  <footer class="nu-footer" data-nuika-footer></footer>
+
+  <div class="gl-lb" id="glLb" hidden role="dialog" aria-modal="true">
+    <button type="button" class="gl-lb-arrow gl-lb-prev" id="glLbPrev">‹</button>
+    <figure class="gl-lb-figure">
+      <img class="gl-lb-img" id="glLbImg" src="" alt="">
+      <figcaption class="gl-lb-desc" id="glLbDesc"></figcaption>
+    </figure>
+    <button type="button" class="gl-lb-arrow gl-lb-next" id="glLbNext">›</button>
+    <button type="button" class="gl-lb-close" id="glLbClose">×</button>
+  </div>
+
+  <script src="./site.js"></script>
+  <script>
+    // The gallery grid and its enlarged view. The manifest is fetched, not
+    // hardcoded, so a new photo shoot only ever means editing gallery.json —
+    // this file never changes for that.
+    (function () {
+      'use strict';
+
+      var LABELS = {
+        bread:   { he: 'לחמים',   en: 'Breads' },
+        sweet:   { he: 'מתוקים',  en: 'Sweets' },
+        kitchen: { he: 'מהמטבח',  en: 'From the kitchen' }
+      };
+
+      var ARIA = {
+        prev:   { he: 'התמונה הקודמת',  en: 'Previous image' },
+        next:   { he: 'התמונה הבאה',    en: 'Next image' },
+        close:  { he: 'סגירה',          en: 'Close' },
+        dialog: { he: 'תצוגה מוגדלת',   en: 'Enlarged view' }
+      };
+
+      // Every value below can reach innerHTML. gallery.json is a checked-in,
+      // trusted file today, but this project has a documented history of
+      // unescaped data reaching innerHTML, and the manifest will grow — so
+      // it is escaped like any other data would be, the same function
+      // site.js already uses for the same reason.
+      function esc(s) {
+        return String(s).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+
+      function currentLang() {
+        return document.documentElement.getAttribute('lang') === 'en' ? 'en' : 'he';
+      }
+
+      var grid      = document.getElementById('glGrid');
+      var filterRow = document.getElementById('glFilters');
+      var lb        = document.getElementById('glLb');
+      var lbImg     = document.getElementById('glLbImg');
+      var lbDesc    = document.getElementById('glLbDesc');
+      var lbPrev    = document.getElementById('glLbPrev');
+      var lbNext    = document.getElementById('glLbNext');
+      var lbClose   = document.getElementById('glLbClose');
+
+      var entries     = [];   // the full manifest, in file order
+      var visible     = [];   // indices into entries that pass the active filter
+      var activeTag   = 'all';
+      var lbPos       = -1;   // position inside `visible` currently shown, -1 when closed
+      var lastFocused = null;
+
+      fetch('./images/gallery/gallery.json')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          entries = data || [];
+          renderGrid();
+          buildFilters();
+          applyFilter('all');
+          // The grid and the filter row were both just injected after
+          // mount() already ran its one-time pass. Without this they show
+          // every [lang-content] span in both languages at once, forever.
+          window.nuikaRefresh();
+        })
+        .catch(function (err) {
+          console.error('gallery: could not load gallery.json', err);
+        });
+
+      function tileHTML(entry, index) {
+        var wide = index % 4 === 0 ? ' gl-tile--wide' : '';
+        var alt = (entry.alt && entry.alt[currentLang()]) || '';
+        return '<button type="button" class="gl-tile' + wide + '" data-index="' + index + '">' +
+          '<img class="gl-thumb" src="' + esc('./images/gallery/' + entry.thumb) + '"' +
+          ' alt="' + esc(alt) + '" loading="lazy">' +
+          '</button>';
+      }
+
+      function renderGrid() {
+        grid.innerHTML = entries.map(tileHTML).join('');
+      }
+
+      // Alt text is an attribute, not text content, so the site-wide
+      // lang-content mechanism (which only hides/shows elements) cannot
+      // translate it. This walks the already-rendered tiles and updates
+      // each one directly — a property assignment, not innerHTML, so no
+      // escaping here (escaping a value already being assigned as a DOM
+      // property would corrupt it, not protect anything).
+      function updateThumbAlts() {
+        var lang = currentLang();
+        var imgs = grid.querySelectorAll('.gl-thumb');
+        for (var i = 0; i < imgs.length; i++) {
+          var tile = imgs[i].closest('.gl-tile');
+          var entry = entries[Number(tile.getAttribute('data-index'))];
+          imgs[i].alt = (entry.alt && entry.alt[lang]) || '';
+        }
+      }
+
+      function buildFilters() {
+        var seen = [];
+        for (var i = 0; i < entries.length; i++) {
+          var tag = entries[i] && entries[i].tag;
+          if (tag && seen.indexOf(tag) === -1) seen.push(tag);
+        }
+
+        // One shared tag (or none) — nothing to filter, so the row does not
+        // render at all rather than show a single button that does nothing.
+        if (seen.length < 2) return;
+
+        var html = '<button type="button" class="gl-filter is-active" data-tag="all">' +
+          '<span lang-content="he">הכל</span><span lang-content="en">All</span></button>';
+
+        for (var j = 0; j < seen.length; j++) {
+          var label = LABELS[seen[j]] || { he: seen[j], en: seen[j] };
+          html += '<button type="button" class="gl-filter" data-tag="' + esc(seen[j]) + '">' +
+            '<span lang-content="he">' + esc(label.he) + '</span>' +
+            '<span lang-content="en">' + esc(label.en) + '</span></button>';
+        }
+
+        filterRow.innerHTML = html;
+        filterRow.hidden = false;
+      }
+
+      function applyFilter(tag) {
+        activeTag = tag;
+        visible = [];
+        for (var i = 0; i < entries.length; i++) {
+          if (tag === 'all' || entries[i].tag === tag) visible.push(i);
+        }
+
+        var tiles = grid.querySelectorAll('.gl-tile');
+        for (var t = 0; t < tiles.length; t++) {
+          var idx = Number(tiles[t].getAttribute('data-index'));
+          tiles[t].hidden = !(tag === 'all' || entries[idx].tag === tag);
+        }
+
+        var buttons = filterRow.querySelectorAll('.gl-filter');
+        for (var b = 0; b < buttons.length; b++) {
+          var isActive = buttons[b].getAttribute('data-tag') === tag;
+          buttons[b].classList.toggle('is-active', isActive);
+        }
+      }
+
+      filterRow.addEventListener('click', function (e) {
+        var btn = e.target.closest('.gl-filter');
+        if (!btn) return;
+        applyFilter(btn.getAttribute('data-tag'));
+      });
+
+      grid.addEventListener('click', function (e) {
+        var tile = e.target.closest('.gl-tile');
+        if (!tile) return;
+        var index = Number(tile.getAttribute('data-index'));
+        var pos = visible.indexOf(index);
+        if (pos === -1) return;
+        lastFocused = tile;
+        openLightbox(pos);
+      });
+
+      function applyLangToLightboxChrome() {
+        var lang = currentLang();
+        lbPrev.setAttribute('aria-label', ARIA.prev[lang]);
+        lbNext.setAttribute('aria-label', ARIA.next[lang]);
+        lbClose.setAttribute('aria-label', ARIA.close[lang]);
+        lb.setAttribute('aria-label', ARIA.dialog[lang]);
+      }
+
+      function renderLightboxImage() {
+        var entry = entries[visible[lbPos]];
+        var alt = (entry.alt && entry.alt[currentLang()]) || '';
+        // Property assignments, not innerHTML — the grid loads thumbnails,
+        // but the enlarged view is the one place that loads the full image.
+        lbImg.src = './images/gallery/' + entry.file;
+        lbImg.alt = alt;
+        lbDesc.textContent = alt;
+      }
+
+      function openLightbox(pos) {
+        lbPos = pos;
+        applyLangToLightboxChrome();
+        renderLightboxImage();
+        lb.hidden = false;
+        document.addEventListener('keydown', onLbKeydown);
+        lbClose.focus();
+      }
+
+      function closeLightbox() {
+        lb.hidden = true;
+        lbPos = -1;
+        document.removeEventListener('keydown', onLbKeydown);
+        if (lastFocused) lastFocused.focus();
+      }
+
+      // Wraps at both ends: from the last image "next" goes back to the
+      // first, and from the first "previous" goes to the last. Chosen over
+      // stopping because the arrows move through the CURRENTLY FILTERED set
+      // — as few as 8 images under one tag — where hitting a dead end on
+      // every other click would be the more surprising choice, and because
+      // it removes any need for a disabled-arrow state to keep in sync with
+      // whichever filter happens to be active.
+      function step(delta) {
+        if (lbPos === -1 || visible.length === 0) return;
+        lbPos = (lbPos + delta + visible.length) % visible.length;
+        renderLightboxImage();
+      }
+
+      lbPrev.addEventListener('click', function () { step(-1); });
+      lbNext.addEventListener('click', function () { step(1); });
+      lbClose.addEventListener('click', closeLightbox);
+
+      // Clicking the dark surround (not the image, caption or a button)
+      // closes it too — only when the click lands on the dialog element
+      // itself, never on a descendant it bubbled up from.
+      lb.addEventListener('click', function (e) {
+        if (e.target === lb) closeLightbox();
+      });
+
+      function onLbKeydown(e) {
+        if (e.key === 'Escape') closeLightbox();
+      }
+
+      // The site-wide toggle (site.js) flips every [lang-content] span the
+      // instant it is clicked, including the filter buttons built above.
+      // What it cannot reach is anything living in a plain attribute: the
+      // grid's alt text and, if it is open, the enlarged view's image and
+      // caption. This runs after site.js's own handler (registered first,
+      // since ./site.js is loaded before this block), so document.lang has
+      // already flipped by the time this reads it.
+      document.addEventListener('click', function (e) {
+        if (!e.target.closest('[data-nuika-lang]')) return;
+        updateThumbAlts();
+        if (!lb.hidden) { applyLangToLightboxChrome(); renderLightboxImage(); }
+      });
+    })();
+  </script>
+</body>
+</html>
