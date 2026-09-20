@@ -728,6 +728,24 @@ if (want('pages')) {
     if (tall.length) fail(`the grid has ${tall.length} tile shape(s) taller than wide — a 2.66:1 frame loses two thirds of its width in one`);
     else pass('no tile is taller than it is wide');
   } else pass('tile shapes are not declared as portrait aspect ratios');
+
+  // Anchored to the lightbox's own opening tag (found by its id), not to
+  // role="dialog" / aria-modal="true" appearing anywhere in the file — the
+  // gallery.json and alt checks above were both found vacuous that same way,
+  // so this one is written the way those two were fixed, not the way they
+  // were first written. A comment mentioning "dialog", or the attributes
+  // sitting on some other element, must not satisfy it.
+  const lbTag = gal.match(/<[a-z]+\b[^>]*\bid=["']glLb["'][^>]*>/i);
+  if (!lbTag) {
+    fail('no element with id="glLb" — the enlarged view container is missing');
+  } else {
+    const hasDialogRole = /\brole\s*=\s*["']dialog["']/.test(lbTag[0]);
+    const hasAriaModal = /\baria-modal\s*=\s*["']true["']/.test(lbTag[0]);
+    if (hasDialogRole && hasAriaModal)
+      pass('the enlarged view element itself carries role="dialog" and aria-modal="true"');
+    else
+      fail('the #glLb element is missing role="dialog" and/or aria-modal="true" on itself — a screen reader would not announce it as a modal dialog even if those strings appear elsewhere in the file');
+  }
 }
 
 if (failed) {

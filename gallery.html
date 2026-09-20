@@ -282,6 +282,7 @@
       var activeTag   = 'all';
       var lbPos       = -1;   // position inside `visible` currently shown, -1 when closed
       var lastFocused = null;
+      var savedScroll = null; // {x, y} of the page behind the lightbox, restored on close
 
       fetch('./images/gallery/gallery.json')
         .then(function (r) { return r.json(); })
@@ -394,7 +395,6 @@
         lbPrev.setAttribute('aria-label', ARIA.prev[lang]);
         lbNext.setAttribute('aria-label', ARIA.next[lang]);
         lbClose.setAttribute('aria-label', ARIA.close[lang]);
-        lb.setAttribute('aria-label', ARIA.dialog[lang]);
       }
 
       function renderLightboxImage() {
@@ -405,22 +405,52 @@
         lbImg.src = './images/gallery/' + entry.file;
         lbImg.alt = alt;
         lbDesc.textContent = alt;
+        // The dialog names the image actually showing, for someone who
+        // cannot see it — a static "gallery" label would not tell a screen
+        // reader user which of 24 photos they just landed on, and would go
+        // stale the moment an arrow moves to the next one. ARIA.dialog is
+        // only a fallback for the (real but rare) empty-alt case.
+        lb.setAttribute('aria-label', alt || ARIA.dialog[currentLang()]);
       }
+
+      // Elements the trap below cycles between, in DOM order. The figure
+      // (image + caption) carries no focusable element of its own, so it is
+      // never in this list.
+      var LB_FOCUSABLE = [lbPrev, lbNext, lbClose];
 
       function openLightbox(pos) {
         lbPos = pos;
         applyLangToLightboxChrome();
         renderLightboxImage();
+        savedScroll = { x: window.scrollX, y: window.scrollY };
+        // The lightbox is a fixed overlay, which does not by itself stop the
+        // page underneath from scrolling — a wheel turn or a keyboard
+        // PageDown still moves it, invisibly, behind an overlay that always
+        // fills the viewport. Locked on both html and body: in standards
+        // mode the scrolling element is <html>, but body is included too as
+        // a defensive belt-and-suspenders (costs nothing, and covers any
+        // browser quirk that disagrees about which element scrolls).
+        document.documentElement.style.overflow = 'hidden';
+        document.body.style.overflow = 'hidden';
         lb.hidden = false;
         document.addEventListener('keydown', onLbKeydown);
-        lbClose.focus();
+        // preventScroll matters on both ends: without it, focusing an
+        // element the browser considers "out of view" silently scrolls the
+        // page to bring it into view first — which on close overwrote the
+        // scrollTo restoration below with wherever the opening tile happens
+        // to sit, undoing it a line later. Found by measuring scrollY after
+        // close, not by reading: it came back changed, not restored.
+        lbClose.focus({ preventScroll: true });
       }
 
       function closeLightbox() {
         lb.hidden = true;
         lbPos = -1;
         document.removeEventListener('keydown', onLbKeydown);
-        if (lastFocused) lastFocused.focus();
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+        if (savedScroll) { window.scrollTo(savedScroll.x, savedScroll.y); savedScroll = null; }
+        if (lastFocused) lastFocused.focus({ preventScroll: true });
       }
 
       // Wraps at both ends: from the last image "next" goes back to the
@@ -447,8 +477,34 @@
         if (e.target === lb) closeLightbox();
       });
 
+      // Traps focus inside the lightbox while it is open. Without this, Tab
+      // walks out into the grid behind it — still there, still interactive,
+      // and invisible under the overlay, which leaves a keyboard user tabbing
+      // through a page they cannot see with no way to tell where they are.
+      //
+      // No hidden sentinel elements: the three focusable controls
+      // (LB_FOCUSABLE, in DOM order) are already contiguous with nothing
+      // else focusable between them, so the browser's own Tab/Shift+Tab
+      // already moves correctly *within* the group on its own. The only two
+      // moments that need catching are the group's own boundaries — forward
+      // Tab off the last control, and Shift+Tab off the first — which would
+      // otherwise escape to whatever is next in the whole document (past the
+      // lightbox there is nothing, so the browser chrome; before it, the
+      // footer's last link, sitting right behind the overlay).
       function onLbKeydown(e) {
-        if (e.key === 'Escape') closeLightbox();
+        if (e.key === 'Escape') { closeLightbox(); return; }
+        if (e.key !== 'Tab') return;
+
+        var first = LB_FOCUSABLE[0];
+        var last = LB_FOCUSABLE[LB_FOCUSABLE.length - 1];
+
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
       }
 
       // The site-wide toggle (site.js) flips every [lang-content] span the
