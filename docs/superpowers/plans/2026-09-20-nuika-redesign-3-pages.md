@@ -274,6 +274,18 @@ node scripts/validate.mjs --pages
       <source src="./media/film-phone.mp4"   type="video/mp4" media="(max-width: 720px)">
       <source src="./media/film-desktop.mp4" type="video/mp4">
     </video>
+    <script>
+      // The poster is not a placeholder. For anyone whose browser refuses to
+      // autoplay, or who asked for less data, it IS the page — so a phone gets
+      // the phone-shaped frame, not the 2.66:1 one cropped to a sliver.
+      // This sits right after the element on purpose: it runs during parsing,
+      // before the browser paints, so there is no flash of the wrong poster.
+      (function () {
+        var v = document.getElementById('hm-film');
+        if (v && window.matchMedia('(max-width: 720px)').matches)
+          v.poster = './media/film-poster-phone.jpg';
+      })();
+    </script>
 ```
 
 ב-`<style>`:
@@ -300,8 +312,28 @@ node scripts/validate.mjs --pages
       pointer-events: none;
     }
 
-    .hm-screen > * { position: relative; z-index: 2; }
+    /* The film is absolutely positioned against .hm-screen, so it must be
+       excluded here — giving it `position: relative` as well would make its
+       own nearest positioned ancestor wrong. An earlier version of this rule
+       applied to every child, which made <main> the film's containing block:
+       the film shrank into the middle grid row and the header and footer
+       became opaque bars above and below it, which is the opposite of the
+       page. Caught in the browser, not by reading. */
+    .hm-screen > :not(.hm-film) { position: relative; z-index: 2; }
 ```
+
+**והווידאו הוא ילד ישיר של `.hm-screen`, לפני הכותרת** — לא בתוך `<main>`:
+
+```html
+  <div class="hm-screen">
+    <video class="hm-film" id="hm-film" …>…</video>
+    <header class="nu-header nu-header--on-film" data-nuika-header=""></header>
+    <main></main>
+    <footer class="nu-footer" data-nuika-footer></footer>
+  </div>
+```
+
+אלמנט ממוקם אבסולוטית יוצא מהזרימה, אז הוא לא ייצר שורה רביעית ברשת.
 
 ולפני `</body>`, אחרי `site.js`:
 
