@@ -599,10 +599,10 @@ if (want('pages')) {
   // home.html alone. (Checked this catches a real regression: temporarily
   // corrupting the number in site.js turned this FAIL while every other
   // check on this list still, correctly, stayed green.)
-  const siteJs = readFileSync(join(ROOT, 'site.js'), 'utf8');
-  const homeOrSharedNeed = (re, why) => (re.test(home) || re.test(siteJs)) ? pass(why) : fail(why);
-  homeOrSharedNeed(/instagram\.com\/nuika_bread/, 'the real Instagram handle');
-  homeOrSharedNeed(/wa\.me\/972547382282/, 'the real WhatsApp number, not a placeholder');
+  const inEither = (re, why) => (re.test(home) || re.test(readFileSync(join(ROOT, 'site.js'), 'utf8')))
+    ? pass(why) : fail(`${why} — looked in home.html and site.js`);
+  inEither(/instagram\.com\/nuika_bread/, 'the real Instagram handle');
+  inEither(/wa\.me\/972547382282/, 'the real WhatsApp number, not a placeholder');
 
   // The home page is the one screen with no scroll. A stray scroll container
   // turns it into a page that almost scrolls, which reads as broken.

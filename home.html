@@ -51,9 +51,17 @@
        with the header and footer as bars above and below. */
     .hm-screen > :not(.hm-film) { position: relative; z-index: 2; }
 
+    /* <main> is the 1fr row of .hm-screen. It needs to be a grid itself for
+       the block below to anchor to the bottom of it — `align-self: end` on a
+       child of a plain block container does nothing at all, which is what was
+       wrong here: the sentence sat flush under the header instead. */
+    .hm-screen > main {
+      display: grid;
+      align-content: end;
+      justify-items: center;
+    }
+
     .hm-mid {
-      align-self: end;
-      justify-self: center;
       text-align: center;
       color: var(--cream);
       padding-inline: 20px;
@@ -61,10 +69,21 @@
       display: grid;
       gap: clamp(18px, 3vh, 34px);
       justify-items: center;
-      max-inline-size: 22ch;
     }
 
-    .hm-line { margin: 0; }
+    /* The cap that keeps the headline from running the full width of a wide
+       screen belongs here, in `ch` units of THIS element's own font — the
+       giant display type (u-giant, --t-giant) that actually renders the
+       sentence — not on .hm-mid, which only inherits the small 17px body
+       font. A cap measured in the wrong font's `ch` is a fixed pixel width
+       that does not grow when --t-giant does (40px at 375 wide, 64px at
+       1280), so the same box holds fewer of the bigger glyphs on a wide
+       screen and wraps into MORE, choppier lines exactly where there is the
+       most room — measured: 22ch anchored to the body font gave Hebrew
+       2/3/4 lines and English 3/4/5 lines at 375/768/1280. Anchored here
+       instead, at 16ch, both languages measure exactly 2 lines at 375, 768
+       and 1280 — see task-3-report.md for the full measurement tables. */
+    .hm-line { margin: 0; max-inline-size: 16ch; }
     .hm-acts { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
   </style>
 </head>
