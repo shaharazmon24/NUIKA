@@ -222,7 +222,11 @@ if (want('design')) {
     }
 
     // --crust measures 2.30 as text on --wheat. It is a surface, never a letter.
-    if (/color\s*:\s*var\(\s*--crust\s*\)/.test(css))
+    // Anchored so a bare `color:` trips it but `background-color:` and
+    // `border-color:` — its intended uses — do not: unanchored, the text
+    // "color: var(--crust)" is a substring of both, so the old pattern fired
+    // on the intended uses too.
+    if (/(?<![\w-])color\s*:\s*var\(\s*--crust\s*\)/.test(css))
       fail('--crust is used as a text colour; it measures 2.30 on --wheat and vanishes');
     else pass('--crust is never used as a text colour');
 
@@ -257,17 +261,74 @@ if (want('design')) {
     }
 
     // Without a visible focus ring, anyone navigating by keyboard cannot tell
-    // where they are. It is not decoration.
-    if (/:focus-visible/.test(css) && /outline-offset/.test(css))
-      pass('a keyboard focus ring is defined');
-    else fail('no :focus-visible outline — keyboard users lose their place');
+    // where they are. It is not decoration. Scoped to the declarations actually
+    // inside a :focus-visible rule, and requiring a real width and colour on
+    // `outline` — checking for :focus-visible and outline-offset independently
+    // used to stay green even after both `outline: 2px solid …` declarations
+    // were replaced with `outline: none`.
+    const focusBlocks = [...css.matchAll(/:focus-visible[^{]*\{([^}]*)\}/g)].map(m => m[1]).join('\n');
+    const hasFocusOffset = /outline-offset\s*:\s*\d/.test(focusBlocks);
+    const hasFocusOutline = /outline\s*:\s*\d+(?:\.\d+)?(?:px|em|rem)\s+\S+\s+\S+/.test(focusBlocks);
+    if (focusBlocks && hasFocusOffset && hasFocusOutline)
+      pass('a keyboard focus ring is defined with a real width and colour');
+    else fail('no :focus-visible rule declares both a real outline (width + colour, not "none") and outline-offset — keyboard users lose their place');
 
-    // Reduced motion must render the FINAL state, not a faster animation.
+    // Reduced motion must render the FINAL state, not a faster animation. Four
+    // independent assertions: deleting the whole
+    // `.rise, .fade, .reveal, [dir="ltr"] .reveal { opacity: 1; … }` rule used
+    // to leave this check green, and so did deleting only the `[dir="ltr"]`
+    // selector from it — the exact regression this branch found in a browser
+    // and fixed, which is why it gets its own line here.
     const rm = css.match(/@media\s*\(\s*prefers-reduced-motion\s*:\s*reduce\s*\)\s*\{([\s\S]*?)\n\}/);
-    if (!rm) fail('no prefers-reduced-motion block');
-    else if (/animation\s*:\s*none/.test(rm[1]) && /transition\s*:\s*none/.test(rm[1]))
-      pass('reduced motion switches animation and transition off, not shortens them');
-    else fail('the prefers-reduced-motion block must set animation:none and transition:none');
+    if (!rm) {
+      fail('no prefers-reduced-motion block');
+    } else {
+      const block = rm[1];
+      if (/animation\s*:\s*none/.test(block) && /transition\s*:\s*none/.test(block))
+        pass('reduced motion switches animation and transition off, not shortens them');
+      else fail('the prefers-reduced-motion block must set animation:none and transition:none');
+
+      if (/opacity\s*:\s*1/.test(block))
+        pass('reduced motion sets opacity:1 — .rise and .fade land visible, not stuck at 0');
+      else fail('the prefers-reduced-motion block never sets opacity:1 — .rise and .fade would stay invisible forever with motion off');
+
+      if (/clip-path\s*:\s*none/.test(block))
+        pass('reduced motion sets clip-path:none — .reveal lands fully uncovered');
+      else fail('the prefers-reduced-motion block never sets clip-path:none — .reveal would stay clipped shut forever with motion off');
+
+      if (/\[dir=["']ltr["']\]/.test(block))
+        pass('the reduced-motion final state also covers the [dir="ltr"] .reveal override');
+      else fail('the prefers-reduced-motion block never mentions [dir="ltr"] — an English page would keep .reveal clipped shut even with motion off');
+    }
+
+    console.log('Header mark:');
+    // After F1 the header's wordmark is a CSS mask (.nu-mark__art), not an
+    // <img width="…">, so what used to be read out of site.js is checked here
+    // instead. Anchored to a line start so it reads the base rule, never the
+    // "on-film" override two-class selector further down that shares the name.
+    const artRule = css.match(/^\.nu-mark__art\s*\{([^}]*)\}/m);
+    if (!artRule) {
+      fail('.nu-mark__art is not defined in site.css — the header would show no mark at all');
+    } else {
+      const artBody = artRule[1];
+      if (/url\(\s*\.\/images\/logo\.png\s*\)/.test(artBody))
+        pass('.nu-mark__art masks the cropped wordmark (images/logo.png)');
+      else fail('.nu-mark__art does not mask images/logo.png — the header mark would be blank');
+
+      // Below 130px wide the finest strokes of the umbel fade out.
+      const artWidth = artBody.match(/width\s*:\s*(\d+)px/);
+      if (!artWidth) fail('.nu-mark__art has no declared width — it renders at 0×0, invisible');
+      else if (Number(artWidth[1]) < 130) fail(`.nu-mark__art is ${artWidth[1]}px wide — below its 130px floor, where the umbel's strokes vanish`);
+      else pass(`.nu-mark__art is rendered at ${artWidth[1]}px, at or above its 130px floor`);
+    }
+
+    const mobile = css.match(/@media\s*\(\s*max-width:\s*720px\s*\)\s*\{([\s\S]*?)\n\}/);
+    const mobileArt = mobile && mobile[1].match(/\.nu-mark__art\s*\{([^}]*)\}/);
+    const mobileWidth = mobileArt && mobileArt[1].match(/width\s*:\s*(\d+)px/);
+    if (!mobile) fail('no @media (max-width: 720px) block — cannot verify the mobile logo floor');
+    else if (!mobileWidth) fail('the mobile block never sets a width for .nu-mark__art — it would fall back to the 160px desktop size, or worse, to nothing');
+    else if (Number(mobileWidth[1]) < 130) fail(`the mobile override shrinks .nu-mark__art to ${mobileWidth[1]}px — below the 130px floor where the umbel's strokes vanish`);
+    else pass(`the mobile override keeps .nu-mark__art at ${mobileWidth[1]}px, at or above its 130px floor`);
   }
 
   console.log('Shared chrome:');
@@ -283,19 +344,17 @@ if (want('design')) {
       ['nuikaFooter',          'the footer is built in one place'],
       ['data-nuika-header',    'pages mark where the header goes'],
       ['data-nuika-footer',    'pages mark where the footer goes'],
-      ['images/logo.png',      'the header uses the cropped wordmark'],
+      ['nu-mark__art',         'the header renders the mask element the wordmark needs'],
       ['shop.html',            'the shop is reachable from every page'],
     ]) {
       if (js.includes(needle)) pass(why);
       else fail(`missing "${needle}" — ${why}`);
     }
 
-    // Below 130px wide the finest strokes of the umbel fade out. The header
-    // must not shrink the full wordmark past that; it uses images/logo.png.
-    const declared = js.match(/images\/logo\.png[\s\S]{0,80}?width="(\d+)"/);
-    if (!declared) fail('site.js does not declare a width for the logo — it will render at its natural 1915px');
-    else if (Number(declared[1]) < 130) fail(`site.js renders the full logo at ${declared[1]}px — the floor is 130px`);
-    else pass(`the full logo is rendered at ${declared[1]}px, at or above its 130px floor`);
+    // The logo itself — the mask URL and the 130px floor, on both the base
+    // rule and the mobile override — is asserted against site.css under
+    // "Header mark" above. Since F1, site.js carries no width or image
+    // reference at all; the mark is pure CSS.
 
     for (const [needle, why] of [
       ['LANG_KEY',              'the language key is defined once, not spelled out at each use'],
