@@ -75,3 +75,81 @@ h2 { font-size: var(--t-sub); }
   unicode-bidi: isolate;
   display: inline-block;
 }
+
+/* ---------- buttons ---------- */
+
+.btn {
+  display: inline-block;
+  font: inherit;
+  font-size: var(--t-small);
+  line-height: 1;
+  padding: 14px 28px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color .18s ease, color .18s ease, border-color .18s ease;
+}
+
+.btn--primary { background: var(--terra); color: var(--cream); }
+.btn--outline { background: transparent; color: var(--ink); border-color: var(--ink); }
+
+/* On film the primary is solid cream, not terracotta. A full light colour is
+   the only thing that stays readable over a picture that changes every second. */
+.btn--on-film { background: var(--cream); color: var(--ink); }
+.btn--ghost   { background: transparent; color: var(--cream); border-color: rgba(246, 240, 228, .6); }
+
+.link {
+  color: var(--terra-deep);
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+}
+
+/* The ring is how a keyboard user knows where they are. */
+.btn:focus-visible,
+.link:focus-visible {
+  outline: 2px solid var(--terra-deep);
+  outline-offset: 3px;
+}
+
+.btn--on-film:focus-visible,
+.btn--ghost:focus-visible {
+  outline: 2px solid var(--cream);
+  outline-offset: 3px;
+}
+
+/* ---------- motion ---------- */
+/* Three movements for the whole site. A site that breathes is one where a
+   single thing moves at a time, always in the same language. Each starts in
+   its hidden state and is released by adding .is-in — site.js does that with
+   an IntersectionObserver. */
+
+.rise   { opacity: 0; transform: translateY(14px); transition: opacity .6s cubic-bezier(.22,.61,.36,1), transform .6s cubic-bezier(.22,.61,.36,1); }
+.fade   { opacity: 0; transition: opacity .9s ease; }
+.reveal { clip-path: inset(0 0 0 100%); transition: clip-path .6s cubic-bezier(.65,0,.35,1); }
+
+/* The reveal follows the reading direction, so it uncovers right-to-left in
+   Hebrew and left-to-right in English rather than running backwards.
+   This matches on the attribute rather than :dir(), which Chrome only shipped
+   in 120 and Safari in 16.4 — site.js sets dir on <html> explicitly, so the
+   attribute is always there and every browser understands it. */
+[dir="ltr"] .reveal { clip-path: inset(0 100% 0 0); }
+
+.rise.is-in   { opacity: 1; transform: none; }
+.fade.is-in   { opacity: 1; }
+.reveal.is-in { clip-path: inset(0 0 0 0); }
+
+/* The final state, not a faster animation. Someone who asked for less motion
+   sees exactly the same page — just without the journey to it. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  .rise, .fade, .reveal {
+    opacity: 1;
+    transform: none;
+    clip-path: none;
+  }
+}

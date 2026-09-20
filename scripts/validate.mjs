@@ -247,6 +247,27 @@ if (want('design')) {
     // "nuika_bread@" in a mockup, in exactly this way.
     if (/unicode-bidi\s*:\s*isolate/.test(css)) pass('.ltr isolates Latin runs inside Hebrew');
     else fail('no unicode-bidi:isolate rule — Latin runs inside Hebrew will reverse');
+
+    console.log('Components and motion:');
+    for (const cls of ['.btn', '.btn--primary', '.btn--outline', '.btn--on-film', '.btn--ghost', '.link',
+                       '.rise', '.fade', '.reveal']) {
+      if (css.includes(cls + ' ') || css.includes(cls + ',') || css.includes(cls + '{') || css.includes(cls + ':'))
+        pass(`${cls} is defined`);
+      else fail(`${cls} is missing`);
+    }
+
+    // Without a visible focus ring, anyone navigating by keyboard cannot tell
+    // where they are. It is not decoration.
+    if (/:focus-visible/.test(css) && /outline-offset/.test(css))
+      pass('a keyboard focus ring is defined');
+    else fail('no :focus-visible outline — keyboard users lose their place');
+
+    // Reduced motion must render the FINAL state, not a faster animation.
+    const rm = css.match(/@media\s*\(\s*prefers-reduced-motion\s*:\s*reduce\s*\)\s*\{([\s\S]*?)\n\}/);
+    if (!rm) fail('no prefers-reduced-motion block');
+    else if (/animation\s*:\s*none/.test(rm[1]) && /transition\s*:\s*none/.test(rm[1]))
+      pass('reduced motion switches animation and transition off, not shortens them');
+    else fail('the prefers-reduced-motion block must set animation:none and transition:none');
   }
 }
 
