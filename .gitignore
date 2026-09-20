@@ -21,3 +21,7 @@ INSTAGRAM/
 
 # Playwright verification output (screenshots, page snapshots). Not site content.
 .playwright-mcp/
+
+# Isolated worktrees. ship.mjs stages with `git add -A`, so an unignored one
+# would commit an entire second copy of the repo into the repo.
+.claude/worktrees/
