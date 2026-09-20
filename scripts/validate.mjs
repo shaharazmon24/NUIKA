@@ -298,11 +298,12 @@ if (want('design')) {
     else pass(`the full logo is rendered at ${declared[1]}px, at or above its 130px floor`);
 
     for (const [needle, why] of [
-      ['nuika-lang',            'the chosen language is remembered per device'],
-      ['lang-content',          'the same attribute the shop already uses'],
+      ['LANG_KEY',              'the language key is defined once, not spelled out at each use'],
+      ['nuikaLang(',            'the switch is a real function, not just markup that looks bilingual'],
       ['IntersectionObserver',  'movements are released when they reach the screen'],
       ['prefers-reduced-motion','reduced motion is honoured in script too, not only in CSS'],
       ['is-in',                 'the release class the stylesheet waits for'],
+      ["'nuika-lang'",          'the stored key is exactly nuika-lang — renaming it silently drops every saved preference'],
     ]) {
       if (js.includes(needle)) pass(why);
       else fail(`missing "${needle}" — ${why}`);

@@ -97,6 +97,13 @@
     catch (e) { return 'he'; }   /* private mode throws rather than returning null */
   }
 
+  /* The live language comes from the document, never from storage. A failed
+     write must cost the visitor their preference on the NEXT visit, not the
+     ability to switch at all on this one. */
+  function currentLang() {
+    return document.documentElement.getAttribute('lang') === 'en' ? 'en' : 'he';
+  }
+
   function nuikaLang(next) {
     var lang = next === 'en' ? 'en' : 'he';
     var root = document.documentElement;
@@ -119,7 +126,7 @@
 
   document.addEventListener('click', function (e) {
     var btn = e.target.closest && e.target.closest('[data-nuika-lang]');
-    if (btn) nuikaLang(readLang() === 'he' ? 'en' : 'he');
+    if (btn) nuikaLang(currentLang() === 'he' ? 'en' : 'he');
   });
 
   /* ---------- releasing the movements ---------- */
