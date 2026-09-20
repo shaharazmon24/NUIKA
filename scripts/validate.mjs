@@ -510,12 +510,21 @@ if (want('pages')) {
   homeNeed(/media\/film-desktop\.mp4/, 'the desktop cut is referenced');
   homeNeed(/media\/film-phone\.mp4/,   'the phone cut is referenced — the vertical re-edit, not the desktop one squeezed');
   homeNeed(/poster=/,                  'a poster stands in before the film plays, and instead of it when it cannot');
+  homeNeed(/film-poster-phone\.jpg/,   'phones get the phone-shaped poster — under reduced motion or a refused autoplay, the poster IS the page');
   homeNeed(/\bmuted\b/,                'muted, or no browser will autoplay it');
   homeNeed(/\bplaysinline\b/,          'plays inline, or iOS takes it fullscreen on its own');
   homeNeed(/visibilitychange/,         'pauses when the tab is not being looked at, rather than burning a stranger\'s data in the background');
   homeNeed(/saveData/,                 'honours Save-Data');
   homeNeed(/prefers-reduced-motion/,   'honours reduced motion');
-  homeNeed(/\.play\(\)[\s\S]{0,120}catch/, 'survives a refused autoplay instead of throwing — iOS low power mode refuses');
+
+  // Counts, not just "does one exist": two play() calls exist (the initial
+  // autoplay attempt and the resume-on-visible branch), and a bare existence
+  // test is satisfied by either one alone, leaving the other free to throw on
+  // a refused autoplay and take the rest of the script with it.
+  const plays = (home.match(/\.play\(\)/g) || []).length;
+  const guarded = (home.match(/\.play\(\)[\s\S]{0,140}?catch/g) || []).length;
+  if (plays > 0 && plays === guarded) pass(`all ${plays} play() calls are guarded — iOS low power mode refuses autoplay outright`);
+  else fail(`${plays - guarded} of ${plays} play() calls are unguarded — a refused autoplay throws and takes the rest of the script with it`);
 
   // The film is 25MB across two files. A service worker that caches it fills a
   // phone's storage quota and gets the whole cache evicted, shop included.

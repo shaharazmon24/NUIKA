@@ -44,17 +44,23 @@
       pointer-events: none;
     }
 
-    .hm-screen > * { position: relative; z-index: 2; }
+    /* The film is absolutely positioned against .hm-screen, so it must not be
+       given `position: relative` here too, and the three rows that sit ON it
+       must be. An earlier version applied this to every child, which made
+       <main> the film's containing block and squeezed it into the middle row
+       with the header and footer as bars above and below. */
+    .hm-screen > :not(.hm-film) { position: relative; z-index: 2; }
   </style>
 </head>
 <body>
   <div class="hm-screen">
-    <header class="nu-header nu-header--on-film" data-nuika-header=""></header>
-    <main>
     <!-- Two cuts, not one file scaled. A phone frame keeps about a fifth of
          the picture's width, so the phone cut is a real vertical re-edit with
          its own window on each of the film's 52 shots. `media` picks between
-         them before either is fetched, so only one is ever downloaded. -->
+         them before either is fetched, so only one is ever downloaded. A
+         direct child of .hm-screen, not of <main>: absolutely positioned
+         against the screen so it fills it, with the header/main/footer laid
+         on top of it — see the .hm-screen > :not(.hm-film) rule above. -->
     <video class="hm-film" id="hm-film"
            muted playsinline preload="metadata"
            poster="./media/film-poster.jpg"
@@ -62,7 +68,18 @@
       <source src="./media/film-phone.mp4"   type="video/mp4" media="(max-width: 720px)">
       <source src="./media/film-desktop.mp4" type="video/mp4">
     </video>
-    </main>
+    <script>
+      // The poster is not a placeholder. For anyone whose browser refuses to
+      // autoplay, or who asked for less data, it is the page. So a phone gets
+      // the phone-shaped frame, not the wide one cropped to a sliver.
+      (function () {
+        var v = document.getElementById('hm-film');
+        if (v && window.matchMedia('(max-width: 720px)').matches)
+          v.poster = './media/film-poster-phone.jpg';
+      })();
+    </script>
+    <header class="nu-header nu-header--on-film" data-nuika-header=""></header>
+    <main></main>
     <footer class="nu-footer" data-nuika-footer></footer>
   </div>
   <script src="./site.js"></script>
