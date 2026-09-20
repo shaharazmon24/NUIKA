@@ -698,9 +698,23 @@ if (want('pages')) {
   const gal = existsSync(galleryPath) ? readFileSync(galleryPath, 'utf8') : '';
   const galNeed = (re, why) => re.test(gal) ? pass(why) : fail(why);
 
-  galNeed(/gallery\.json/, 'reads the manifest instead of hardcoding the list');
+  // Anchored to an actual fetch() call, not just the bare substring
+  // "gallery.json" — the page's own error-log string ("could not load
+  // gallery.json") and a doc comment both contain that substring too, so the
+  // unanchored version stayed green even after the real fetch() target was
+  // changed to a different file. Found by deliberately breaking it: see
+  // task-5-report.md.
+  galNeed(/fetch\(\s*["'][^"']*gallery\.json["']/, 'reads the manifest instead of hardcoding the list');
   galNeed(/\.thumb\b|thumb\]/, 'the grid loads thumbnails — 24 full images is 2MB for a page of small squares');
-  galNeed(/alt\s*=|\.alt\b/, 'every image carries its alt text');
+  // `alt\s*=` with no left boundary and no requirement that a quote follows
+  // stayed green after every real alt="..." and .alt property access in the
+  // file was renamed away, because of an entirely unrelated local variable
+  // this page happens to declare: `var alt = (entry.alt && ...)`. `\s*=`
+  // matches its ` = ` just fine, and nothing anchored the other side. Adding
+  // \b before "alt" and requiring a quote after "=" (real attribute syntax,
+  // not a bare JS assignment) fixes both: found by deliberately breaking it,
+  // see task-5-report.md.
+  galNeed(/\balt\s*=\s*["']|\.alt\b/, 'every image carries its alt text');
   galNeed(/nuikaRefresh/, 'calls nuikaRefresh after injecting, or the injected markup shows both languages at once');
   galNeed(/loading\s*=\s*["']lazy|loading:\s*["']lazy/, 'images below the fold load lazily');
 
