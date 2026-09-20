@@ -28,3 +28,6 @@ jobs:
 
       - name: Check referenced files exist
         run: node scripts/validate.mjs --assets
+
+      - name: Check the design system
+        run: node scripts/validate.mjs --design

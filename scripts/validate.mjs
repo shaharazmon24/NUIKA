@@ -141,6 +141,34 @@ if (want('assets')) {
   }
 }
 
+if (want('design')) {
+  console.log('Design system assets:');
+
+  // The supplied logo is 2400x1400 but the drawing occupies only 1915x703 —
+  // a quarter of the file is empty margin. A browser measures the file, not
+  // the drawing, which is why the logo came out tiny everywhere it was used.
+  // The cropped copy is what the site ships.
+  const png = rel => {
+    const p = join(ROOT, rel);
+    if (!existsSync(p)) return null;
+    const buf = readFileSync(p);
+    if (buf.slice(0, 8).toString('hex') !== '89504e470d0a1a0a') return 'not-png';
+    return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) };
+  };
+
+  const logo = png('images/logo.png');
+  if (!logo) fail('images/logo.png is missing — the cropped wordmark the site ships');
+  else if (logo === 'not-png') fail('images/logo.png is not a PNG');
+  else if (logo.w === 1915 && logo.h === 703) pass('images/logo.png is the cropped 1915x703 wordmark');
+  else fail(`images/logo.png is ${logo.w}x${logo.h} — expected 1915x703 (margins not cropped?)`);
+
+  const umbel = png('images/umbel.png');
+  if (!umbel) fail('images/umbel.png is missing — the mark used below 130px');
+  else if (umbel === 'not-png') fail('images/umbel.png is not a PNG');
+  else if (umbel.w === 348 && umbel.h === 701) pass('images/umbel.png is the 348x701 flower and stem');
+  else fail(`images/umbel.png is ${umbel.w}x${umbel.h} — expected 348x701 (wrong crop? it must not carry a letter)`);
+}
+
 if (failed) {
   console.error('\nValidation failed. Do not deploy this commit.');
   process.exit(1);
