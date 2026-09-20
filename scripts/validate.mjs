@@ -592,13 +592,19 @@ if (want('pages')) {
   // leaves every string in the file, so substring checks stay green while the
   // primary call to action becomes a transparent ghost pointing at the wrong
   // page. Check the element that actually carries each one.
-  const shopLink = home.match(/<a[^>]*href="\.\/shop\.html"[^>]*>/);
+  // Hardened per Task 3's ledger (two carried-in findings, both fixed here):
+  // the match hardcoded double quotes, so href='./shop.html' false-failed;
+  // and it required the href to be exactly "./shop.html", so a fragment or
+  // query like "./shop.html#top" false-failed too. Both proven against a
+  // real, temporarily-mutated home.html before this fix landed — see
+  // task-4-report.md.
+  const shopLink = home.match(/<a[^>]*href=["']\.\/shop\.html(?:[?#][^"']*)?["'][^>]*>/);
   if (!shopLink) fail('no link to shop.html');
   else if (!/btn--on-film/.test(shopLink[0]))
     fail('the shop link is not the cream on-film button — anything else is unreadable over a moving picture');
   else pass('the shop link is the cream on-film button');
 
-  const contactLink = home.match(/<a[^>]*href="\.\/contact\.html"[^>]*>/);
+  const contactLink = home.match(/<a[^>]*href=["']\.\/contact\.html(?:[?#][^"']*)?["'][^>]*>/);
   if (!contactLink) fail('no link to contact.html');
   else if (!/btn--ghost/.test(contactLink[0]))
     fail('the contact link is not the ghost button');
@@ -632,6 +638,53 @@ if (want('pages')) {
   const leaked = PAGES.filter(p => shop.includes(p));
   if (leaked.length) fail(`index.html links to ${leaked.join(', ')} — the new pages are not public yet`);
   else pass('the shop links to none of the new pages');
+
+  console.log('The story:');
+  // The brief's literal Step 1 code calls readFileSync unguarded, which
+  // throws ENOENT and crashes the whole process before story.html exists —
+  // the exact moment Step 2 asks you to run this and read a clean report.
+  // A crash is worse than a fail: it skips the intended-to-be-red rest of
+  // this section instead of showing it. existsSync + an empty-string
+  // fallback keeps every storyNeed(...) below a real, safe .includes() call
+  // that returns false on empty input, so this one line reports the missing
+  // file and every line after it reports its own FAIL too — matching the
+  // brief's own stated expectation verbatim: "FAIL story.html is missing
+  // והשורות שאחריה" (and the lines after it).
+  const storyPath = join(ROOT, 'story.html');
+  if (!existsSync(storyPath)) fail('story.html is missing');
+  const story = existsSync(storyPath) ? readFileSync(storyPath, 'utf8') : '';
+  const storyNeed = (s, why) => story.includes(s) ? pass(why) : fail(why);
+
+  // Noy wrote this about herself. It is quoted, not adapted — a paraphrase
+  // here would be putting words in a real person's mouth on her own website.
+  storyNeed('אני קודם כל בודקת מה אני בעצמי הכי הייתי רוצה לאכול', 'movement 1, in her words');
+  storyNeed('אשכרה', 'movement 2 ends on her word');
+  storyNeed('זאת מאפייה של אישה אחת', 'movement 3, in her words');
+  storyNeed('הכל נגמר מהר. אז יאללה', 'movement 3 ends on her line');
+
+  // The brief's own check here read 'לא מושחת'. Noy's actual sentence is
+  // "...אם אתם מחפשים מושחת, זה לא המקום" — "מושחת" and "לא" are not
+  // adjacent; that "לא" belongs to the next clause ("זה לא המקום"). Confirmed
+  // by extracting movement 4's paragraph straight out of the brief and
+  // running .includes() against it: the literal check string is not a
+  // substring of Noy's own verbatim words, so it could never pass without
+  // altering her sentence — which is the one thing this task forbids.
+  // Narrowed to the one distinctive word actually in the text (confirmed
+  // unique to movement 4, so this stays a real assertion, not a vacuous one).
+  storyNeed('מושחת', 'movement 4, in her words');
+
+  // Same failure mode, same method: the brief's check here read
+  // 'רוב הקמחים מלאים', but the claim reads "...אשתמש ברוב של קמחים מלאים" —
+  // "של", not the "ה" the check assumed, sits between "רוב" and "קמחים".
+  // Narrowed to a substring that is actually present in her sentence.
+  storyNeed('ברוב של קמחים מלאים', 'the first of the three claims');
+  storyNeed('תמיד אמעיט בסוכר', 'the second');
+  storyNeed('מתוק מדי', 'the third');
+  storyNeed('shop.html', 'a way into the shop from the end of the story');
+
+  const moves = (story.match(/class="[^"]*st-move/g) || []).length;
+  if (moves === 4) pass('four movements, as the design settled');
+  else fail(`the story has ${moves} movements, not 4`);
 }
 
 if (failed) {
