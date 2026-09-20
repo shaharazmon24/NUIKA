@@ -76,10 +76,21 @@ h2 { font-size: var(--t-sub); }
   display: inline-block;
 }
 
-/* Both languages live in the page and one of them is hidden, exactly as the
-   shop already does it. [hidden] needs the explicit rule because the elements
-   are inline and some resets override the browser default. */
-[lang-content][hidden] { display: none !important; }
+/* Both languages live in the page and one of them is hidden — the same idea
+   as the shop's own three-rule pattern (index.html, keyed off body.lang-en),
+   just keyed off html[lang="en"] instead, since nuikaLang() already sets that
+   attribute and a static page can carry lang="he" from the start. English is
+   hidden by CSS alone before any script runs; nuikaLang()'s own [hidden]
+   toggling only ever agrees with these rules, never fights them (a "hidden"
+   element is always also "none" here, and revert only ever applies to an
+   element these rules leave without the [hidden] attribute) — so no element
+   can end up stuck hidden by one mechanism in a way the toggle cannot undo.
+   No !important: after the Plan 5 cutover this stylesheet and the shop's own
+   will share a page, and !important here would outrank the shop's own
+   display: revert. */
+[lang-content="en"] { display: none; }
+html[lang="en"] [lang-content="he"] { display: none; }
+html[lang="en"] [lang-content="en"] { display: revert; }
 
 /* ---------- buttons ---------- */
 
@@ -173,7 +184,19 @@ h2 { font-size: var(--t-sub); }
 }
 
 .nu-mark { flex: 0 0 auto; display: block; line-height: 0; }
-.nu-mark img { display: block; width: 160px; height: auto; }
+
+/* A mask, not an <img>: the header needs this one file in two different
+   colours — terracotta on a light page, cream over the home page's video —
+   and only a mask can be recoloured with CSS. 160 ÷ 2.72 (the wordmark's
+   aspect ratio) ≈ 59. */
+.nu-mark__art {
+  display: block;
+  width: 160px;
+  height: 59px;
+  background: var(--terra);
+  -webkit-mask: url(./images/logo.png) center / contain no-repeat;
+          mask: url(./images/logo.png) center / contain no-repeat;
+}
 
 /* Centred no matter how wide the items are, with the mark and the language
    button pinned to the two ends. Absolute so the nav's own width cannot pull
@@ -216,6 +239,10 @@ h2 { font-size: var(--t-sub); }
    it and its own ink colour. A page opts in by adding this class. */
 .nu-header--on-film { color: var(--cream); border-block-end: 0; }
 
+/* `color` above recolours the nav text and the language button for free, but
+   the mark is a background-colour mask, not text — it needs its own rule. */
+.nu-header--on-film .nu-mark__art { background: var(--cream); }
+
 .nu-footer {
   display: flex;
   align-items: center;
@@ -227,8 +254,11 @@ h2 { font-size: var(--t-sub); }
   color: var(--cream);
 }
 
-/* Drawn as a mask rather than an image, so the one file serves both grounds:
-   cream here, terracotta on a light page. No second copy to keep in step. */
+/* Drawn as a mask, the same idea and the same file as the header's
+   .nu-mark__art above — one logo.png, recoloured per element instead of
+   kept as a second image asset. The footer's own ground never changes
+   (always --ink), so this copy is always cream; .nu-mark__art is the one
+   that switches, via .nu-header--on-film. */
 .nu-mark--foot {
   width: 150px;
   height: 55px;
@@ -250,7 +280,7 @@ h2 { font-size: var(--t-sub); }
 
 @media (max-width: 720px) {
   .nu-header { flex-wrap: wrap; gap: 14px; padding: 14px 18px; }
-  .nu-mark img { width: 130px; }   /* the floor, never below it */
+  .nu-mark__art { width: 130px; height: 48px; }   /* the floor, never below it */
   .nu-nav { position: static; order: 3; width: 100%; gap: 16px; flex-wrap: wrap; }
   .nu-footer { justify-content: center; text-align: center; padding: 32px 18px; }
 }
