@@ -456,6 +456,38 @@ if (want('design')) {
 if (want('pages')) {
   console.log('New pages:');
 
+  // Every check in this phase reads source text, and source text has
+  // comments. Checks here have now been defeated three separate times by
+  // deleting the real code and leaving the word behind in a comment — once
+  // in HTML, once in a // line, once in a /* */ block inside <style> (see
+  // task-6-report.md for all three, each broken and reverted in turn).
+  // Strip all three forms, once, in one shared function every simple
+  // presence check in this phase runs against, and check what is left.
+  // Replaced with a space, not nothing, so a stripped comment cannot glue
+  // two identifiers into one.
+  //
+  // The // branch's guard — the character immediately before it must be
+  // none of colon, a word character, a quote, or a backslash — is what
+  // keeps it from eating a real "https://" (preceded by ':', excluded) or a
+  // protocol-relative "//example.com" (typically preceded by a quote,
+  // excluded). Proven, not assumed: task-6-report.md round-trips a real
+  // https://wa.me/972547382282 URL through this exact function inside both
+  // a <script> and a <style> block and confirms it survives intact, and
+  // separately confirms a genuine trailing same-line comment placed AFTER
+  // such a URL on the same line is still stripped correctly.
+  //
+  // What this deliberately does NOT attempt: telling a trailing `//` inside
+  // a string literal from one that opens a real comment when the string
+  // itself contains something other than "://" or an opening quote right
+  // before the slashes — e.g. a string literal like "` //x`" opens with a
+  // space, which the guard cannot distinguish from a real comment without a
+  // full lexer. No content in these four pages currently has that shape;
+  // this is named here so nobody mistakes the guard for a general one.
+  const uncommented = s => s
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/(^|[^:\w"'\\])\/\/[^\n]*/g, '$1 ');
+
   // Every page of the new site shares one skeleton. These are not style
   // preferences: each line below is something that silently breaks the page
   // for somebody if it is missing.
@@ -465,7 +497,8 @@ if (want('pages')) {
     const p = join(ROOT, page);
     if (!existsSync(p)) { fail(`${page} is missing`); continue; }
     const h = readFileSync(p, 'utf8');
-    const need = (re, why) => re.test(h) ? pass(`${page}: ${why}`) : fail(`${page}: ${why}`);
+    const hCode = uncommented(h);
+    const need = (re, why) => re.test(hCode) ? pass(`${page}: ${why}`) : fail(`${page}: ${why}`);
 
     need(/<html[^>]+lang="he"/, 'starts in Hebrew, so the CSS hides English before any script runs');
     need(/<html[^>]+dir="rtl"/, 'starts right-to-left');
@@ -480,12 +513,27 @@ if (want('pages')) {
 
     // A page that writes its own colour has left the design system, and the
     // contrast guard no longer covers it.
+    //
+    // Deliberately still against the raw `h`, not `hCode`: nobody comments
+    // out a colour declaration and leaves the hex value behind as an
+    // explanatory note the way wa.me/esc()/nuikaRefresh actually happened —
+    // there is no demonstrated failure here to fix, and it costs nothing to
+    // leave this the simpler check it already is.
     const hex = [...h.matchAll(/(?:color|background)\s*:\s*(#[0-9A-Fa-f]{3,6})/g)].map(m => m[1]);
     if (hex.length) fail(`${page}: writes raw colours (${[...new Set(hex)].join(', ')}) instead of using the tokens`);
     else pass(`${page}: takes every colour from site.css`);
 
     // The same rule site.css lives under. The English flip has to work by
     // itself, in the page's own styles too.
+    //
+    // Also deliberately still against the raw `h`: the /* rtl-ok */ marker
+    // this check looks for a few lines down is ITSELF a comment. Running
+    // this against `hCode` would strip that marker along with everything
+    // else, silently turning every intentional exception into a failure —
+    // the escape hatch would stop working the moment anyone reached for it.
+    // No page currently uses the marker (grep confirms), so this is a
+    // latent trap rather than a live bug; worth naming and avoiding now
+    // rather than after someone reaches for the escape hatch and it fails.
     //
     // The property forms (margin-left, padding-right, border-left,
     // text-align:left/right) are unambiguous wherever they appear, so they
@@ -527,7 +575,8 @@ if (want('pages')) {
 
   console.log('The home page and its film:');
   const home = readFileSync(join(ROOT, 'home.html'), 'utf8');
-  const homeNeed = (re, why) => re.test(home) ? pass(why) : fail(why);
+  const homeCode = uncommented(home);
+  const homeNeed = (re, why) => re.test(homeCode) ? pass(why) : fail(why);
 
   // Presence is not enough. The failure that matters is the two <source>
   // elements swapping media conditions: both files are still named, both
@@ -653,7 +702,8 @@ if (want('pages')) {
   const storyPath = join(ROOT, 'story.html');
   if (!existsSync(storyPath)) fail('story.html is missing');
   const story = existsSync(storyPath) ? readFileSync(storyPath, 'utf8') : '';
-  const storyNeed = (s, why) => story.includes(s) ? pass(why) : fail(why);
+  const storyCode = uncommented(story);
+  const storyNeed = (s, why) => storyCode.includes(s) ? pass(why) : fail(why);
 
   // Noy wrote this about herself. It is quoted, not adapted — a paraphrase
   // here would be putting words in a real person's mouth on her own website.
@@ -696,7 +746,8 @@ if (want('pages')) {
   const galleryPath = join(ROOT, 'gallery.html');
   if (!existsSync(galleryPath)) fail('gallery.html is missing');
   const gal = existsSync(galleryPath) ? readFileSync(galleryPath, 'utf8') : '';
-  const galNeed = (re, why) => re.test(gal) ? pass(why) : fail(why);
+  const galCode = uncommented(gal);
+  const galNeed = (re, why) => re.test(galCode) ? pass(why) : fail(why);
 
   // Anchored to an actual fetch() call, not just the bare substring
   // "gallery.json" — the page's own error-log string ("could not load
@@ -714,8 +765,26 @@ if (want('pages')) {
   // \b before "alt" and requiring a quote after "=" (real attribute syntax,
   // not a bare JS assignment) fixes both: found by deliberately breaking it,
   // see task-5-report.md.
+  //
+  // Still not the whole story: this only confirms the attribute SYNTAX is
+  // present, which it always is — it is baked into the static template
+  // string regardless of what value ends up inside the quotes. Hardcoding
+  // `var alt = '';` instead of reading the manifest leaves `alt="` sitting
+  // in the generated markup exactly as before, so this check alone stayed
+  // green through that mutation too (see task-6-report.md). The second
+  // check below closes that: it requires the manifest field to actually be
+  // read, so the two together say the value is both read AND placed.
   galNeed(/\balt\s*=\s*["']|\.alt\b/, 'every image carries its alt text');
-  galNeed(/nuikaRefresh/, 'calls nuikaRefresh after injecting, or the injected markup shows both languages at once');
+  galNeed(/entry\.alt\s*(?:&&|\[|\.)/, "each tile's alt comes from the manifest, not an empty string");
+  // A bare substring, not a call — commenting out the real
+  // `window.nuikaRefresh();` line left the word sitting in the surrounding
+  // prose (this very doc-comment two lines up says "nuikaRefresh" too) and
+  // the check stayed green while the guarantee it exists to protect — that
+  // markup injected after load does not render both languages at once,
+  // named twice in the brief as the gallery's central risk — was completely
+  // gone (see task-6-report.md). Requiring the call syntax, against the
+  // comment-stripped text, closes both holes at once.
+  galNeed(/nuikaRefresh\s*\(\s*\)/, 'the grid calls nuikaRefresh() after injecting — without it every tile shows both languages at once');
   galNeed(/loading\s*=\s*["']lazy|loading:\s*["']lazy/, 'images below the fold load lazily');
 
   // Every frame in the gallery is 2.66:1, straight off the film. A tall tile
@@ -760,23 +829,16 @@ if (want('pages')) {
   const ct = existsSync(contactPath) ? readFileSync(contactPath, 'utf8') : '';
 
   // Every check below runs against this comment-stripped copy, not the raw
-  // file. Proven necessary, not theoretical: FOUR of the six checks here
-  // stayed green while deliberately wrong — the real wa.me number, the real
+  // file — the shared `uncommented()` defined at the top of this phase.
+  // Proven necessary, not theoretical: FOUR of the six checks here stayed
+  // green while deliberately wrong — the real wa.me number, the real
   // Instagram handle, the real encodeURIComponent( call, and the real
   // unescaped-innerHTML guard — each time by keeping the WRONG behaviour in
-  // the code and leaving the RIGHT word sitting only in a nearby comment
-  // (see task-6-report.md for all four, run one at a time and reverted).
-  // HTML comments are stripped first — a non-greedy span from <!-- to the
-  // nearest -->, which is what a real comment is — then whole lines whose
-  // trimmed text opens with `//` are dropped (a JS line comment). Neither
-  // pass touches real content: no line of HTML or CSS in this file starts
-  // with `//`, and a "https://" URL always sits inside an attribute, never
-  // inside `<!-- -->`.
-  const ctCode = ct
-    .replace(/<!--[\s\S]*?-->/g, ' ')
-    .split('\n')
-    .filter(line => !/^\s*\/\//.test(line))
-    .join('\n');
+  // the code and leaving the RIGHT word sitting only in a nearby comment,
+  // in all three comment styles this file uses (HTML, //, and /* */ inside
+  // <style>) (see task-6-report.md for all four, run one at a time and
+  // reverted).
+  const ctCode = uncommented(ct);
   const ctNeed = (re, why) => re.test(ctCode) ? pass(why) : fail(why);
 
   ctNeed(/wa\.me\/972547382282/, 'the real WhatsApp number');
@@ -803,7 +865,25 @@ if (want('pages')) {
   if (/<form[^>]+action=/.test(ctCode)) fail('the form has an action — it must not submit anywhere');
   else if (/\bformaction\s*=/.test(ctCode)) fail('a control carries formaction — it would submit the form there no matter what the <form> tag itself says');
   else pass('the form submits nowhere; it composes a WhatsApp message');
-  if (/fetch\s*\(|XMLHttpRequest/.test(ctCode)) fail('contact.html sends a request somewhere');
+  // "Sends nothing" covers the network APIs a form like this could
+  // plausibly reach for: fetch, XMLHttpRequest, sendBeacon (built for
+  // exactly this fire-and-forget shape — a POST that doesn't wait for a
+  // response is not obfuscation, it is the standard tool for it), and
+  // `new Image()` used as a 1x1 tracking pixel (the classic pre-fetch-API
+  // beacon: `(new Image()).src = 'https://…'`). Neither of the last two is
+  // exotic; both were pointed out as ordinary alternatives this check
+  // missed entirely (see task-6-report.md).
+  //
+  // What this does NOT, and cannot, cover: a runtime `form.action = someUrl`
+  // assigned by code this static text scan never executes, or the same
+  // fetch/XMLHttpRequest names reached through JS built specifically to
+  // dodge a literal-text scan — bracket notation (`window['fetch'](...)`),
+  // string concatenation, `eval`, a dynamic `import()`. Those are real,
+  // accepted blind spots of reading source text rather than running it, not
+  // a promise this check makes. Recorded honestly rather than silently
+  // hoped not to matter.
+  if (/fetch\s*\(|XMLHttpRequest|sendBeacon\s*\(|new\s+Image\s*\(/.test(ctCode))
+    fail('contact.html sends a request somewhere');
   else pass('contact.html sends nothing');
 
   // Same exposure the shop's admin panel was hardened against.
