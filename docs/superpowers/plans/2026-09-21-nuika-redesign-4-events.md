@@ -674,10 +674,18 @@ git commit -m "nuika/events: קריאה ציבורית, כתיבה לנוי, כ�
     need(/window\.nuikaEsc|nuikaEsc/, 'escapes Noy\'s text with the shared esc');
 
     // "What is past" is decided against today's date. toISOString() is UTC,
-    // and Israel is UTC+2/+3 — an event would move to the archive at 21:00 or
-    // 22:00 the evening BEFORE it happens, on the day people are looking it up.
+    // and Israel is UTC+2/+3 — AHEAD of UTC, so UTC is always the same
+    // calendar day as Israel or the day BEFORE it, never after. Measured
+    // directly: Israel 21:00 → toISOString reads the same day; Israel 00:01
+    // and again at 02:00 the next morning → toISOString still reads
+    // YESTERDAY. So the real failure is a finished event still showing under
+    // "מה קרוב" for two or three hours after local midnight, not one
+    // dropping out early — that second failure is real, but it belongs to a
+    // visitor at a NEGATIVE offset (e.g. New York), where UTC can already
+    // read tomorrow while their own clock still says today, hiding an event
+    // on the day it actually happens.
     if (/toISOString\s*\(\s*\)/.test(evCode)) {
-      fail('events.html builds a date with toISOString() — that is UTC, so an event drops into the archive hours before its day ends in Israel');
+      fail('events.html builds a date with toISOString() — that is UTC, and Israel runs ahead of it, so a finished event keeps showing as upcoming for two or three hours after local midnight');
     } else {
       pass('events.html compares dates in local time, not UTC');
     }
@@ -776,9 +784,16 @@ node scripts/validate.mjs --pages
     var WHATSAPP = '972547382282';
 
     // Today as YYYY-MM-DD in the VISITOR'S timezone. Not toISOString(): that
-    // is UTC, and from 21:00 or 22:00 Israel time it already reads tomorrow —
-    // so an event would drop into the archive on the evening before the day
-    // it actually happens, exactly when someone is checking whether to come.
+    // is UTC, and Israel is UTC+2/+3 — AHEAD of UTC, so UTC is always the
+    // same calendar day as Israel or the day BEFORE it, never after.
+    // Measured directly: Israel 21:00 → toISOString reads the same day;
+    // Israel 00:01 and again at 02:00 the next morning → toISOString still
+    // reads YESTERDAY. So the real failure here is a finished event still
+    // showing under "מה קרוב" for two or three hours after local midnight —
+    // not one dropping out early. The mirror failure is real too, just not
+    // Israel's: a visitor at a NEGATIVE offset (e.g. New York) can have UTC
+    // already reading tomorrow while their own clock still says today, which
+    // hides an event on the very day it happens.
     function todayKey() {
       var d = new Date();
       var m = String(d.getMonth() + 1);

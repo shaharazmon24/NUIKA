@@ -72,6 +72,7 @@ by `lang-content="he"` / `lang-content="en"` attributes.
 | `nuika/products` | menu, prices, sold-out flags, stock caps, tags |
 | `nuika/orders` | every order, keyed by timestamp |
 | `nuika/settings` | `ordersOpen`, `bitLink`, `payboxLink`, `deadline` |
+| `nuika/events` | Noy's events board — one record per event, each with `date` (`YYYY-MM-DD`), `title`, and optionally `place`, `time`, `body`, `ctaLabel`, `ctaText`, `created`. Public read (`events.html` shows it with no sign-in), admin write only. **Requires the rules to be published — see below.** |
 | `nuika/kitchen/pantry` | ingredients and prices |
 | `nuika/kitchen/recipes` | recipes with ingredient weights |
 | `nuika/kitchen/weeklyPlan` | `{recipeId: quantity}` |
@@ -80,6 +81,40 @@ by `lang-content="he"` / `lang-content="en"` attributes.
 `localStorage` is only for per-device convenience: the customer's own cart,
 their saved name and phone, and their last order. Nothing Noy manages belongs
 there — it would not reach anyone else's device.
+
+### One human step: publish the rules for `nuika/events`
+
+`firebase-rules.json` is the file we edit; it is **not** what the database
+enforces. The database enforces whatever was last pasted into the Firebase
+console. `nuika/events` is in the committed file but is **not yet published**,
+and until someone publishes it both halves of the events feature are dead:
+
+- the **Events** tab in the admin panel (`?admin`) cannot save — every write
+  comes back `PERMISSION_DENIED`;
+- the public board at `events.html` reads nothing and shows its empty state,
+  no matter what Noy has entered.
+
+No amount of code fixes this. Someone has to do it once, by hand:
+
+1. Open the [Firebase console](https://console.firebase.google.com/) →
+   project **nuika-5371f** → **Realtime Database** → **Rules**.
+2. Replace the whole contents with `firebase-rules.json` from this repo.
+3. Press **Publish**.
+
+Publishing is purely additive and safe: the live rules were checked against
+the committed file and match on every other node, so this changes nothing
+about orders, products, settings, stock or the kitchen — it only adds the
+`events` node.
+
+To check whether it has already been done, without signing in:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' \
+  'https://nuika-5371f-default-rtdb.firebaseio.com/nuika/events.json'
+```
+
+`200` means the rules are published. `401` means they are not, and the events
+board is still dead.
 
 ## Things that will bite you
 

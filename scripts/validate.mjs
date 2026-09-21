@@ -5,8 +5,22 @@
 // normal commit, the site keeps loading, and the loss is invisible until a
 // customer hits it. These checks turn that into a red X on the commit.
 //
-// Run locally:  node scripts/validate.mjs
-// CI runs each phase separately so the failing one is obvious in the log.
+// Run locally:  node scripts/validate.mjs   (no arguments = every phase)
+//
+// CI runs this twice, and the two runs are not the same run:
+//
+//   .github/workflows/validate.yml  — on every push to main, every pull
+//     request and workflow_dispatch. One step per phase (--syntax,
+//     --features, --assets, --design, --pages), so the failing one is
+//     obvious from the step that went red without reading the log.
+//
+//   .github/workflows/deploy.yml    — on push to main. One step, no flags,
+//     every phase in a single process. This is the gate: nothing is
+//     published unless it exits 0, so the live shop keeps serving the last
+//     good version.
+//
+// Both matter. A phase that only the second run reaches still blocks a
+// deploy, so every phase must be able to run alone AND as part of the whole.
 
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -15,7 +29,29 @@ import { dirname, join } from 'node:path';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const html = readFileSync(join(ROOT, 'index.html'), 'utf8');
 
+// The five phases, declared once. `want()` reads this to decide what runs;
+// the argument check below reads the same list to decide what is a real flag,
+// so a phase can never be runnable but unspellable, or spellable but dead.
+const PHASES = ['syntax', 'features', 'assets', 'design', 'pages'];
+
 const phases = process.argv.slice(2);
+
+// An unrecognised flag used to match nothing, which meant every want() below
+// returned false, which meant zero checks ran — and the script then printed
+// "All checks passed." and exited 0. A typo (`--feature`, `--page`) bought a
+// clean green report for a commit nobody had looked at, and CI gates the real
+// deploy on this script. A gate that passes when it has not run is worse than
+// no gate, so an unknown argument is a hard error before any check starts.
+{
+  const unknown = phases.filter(a => !PHASES.includes(a.replace(/^--/, '')) || !a.startsWith('--'));
+  if (unknown.length) {
+    console.error(`Unknown argument(s): ${unknown.join(', ')}`);
+    console.error(`Usage: node scripts/validate.mjs [${PHASES.map(p => `--${p}`).join('] [')}]`);
+    console.error('With no arguments every phase runs. Refusing to run: an unrecognised flag would have run no checks at all and still reported success.');
+    process.exit(2);
+  }
+}
+
 const want = f => phases.length === 0 || phases.includes(`--${f}`);
 
 let failed = false;
@@ -1829,7 +1865,20 @@ if (want('pages')) {
     need(/<html[^>]+lang="he"/, 'starts in Hebrew, so the CSS hides English before any script runs');
     need(/<html[^>]+dir="rtl"/, 'starts right-to-left');
     need(/<link[^>]+href="\.\/site\.css"/, 'loads the shared stylesheet');
-    need(/<script[^>]+src="\.\/site\.js"/, 'loads the shared script');
+
+    // The version query is not decoration. gallery.html and events.html call
+    // window.nuikaEsc, which exists only in the current site.js — and the two
+    // files are cached on different clocks: the live headers send the HTML
+    // with max-age=600 and site.js with max-age=14400, so a visitor can hold
+    // a four-hour-old script behind ten-minute-old markup. sw.js compounds it:
+    // non-HTML is cache-first, and site.js is not in ASSETS, so it is only
+    // ever written opportunistically and only evicted when CACHE is bumped.
+    // Served that way, esc is undefined, cardHTML() throws, and the gallery is
+    // a headline with no tiles while the events board paints its empty state
+    // over real events. A query string the old caches have never seen is what
+    // makes the new HTML fetch the new script instead. Bump it — here and in
+    // sw.js's CACHE — whenever site.js gains something a page depends on.
+    need(/<script[^>]+src="\.\/site\.js\?v=\d+"/, 'loads the shared script through a versioned URL, so new markup can never be served against a stale cached site.js');
     need(/data-nuika-header=/, 'declares where the shared header goes');
     need(/data-nuika-footer/, 'declares where the shared footer goes');
     need(/fonts\.googleapis\.com/, 'loads Bellefair and Plex, or the page silently falls back to Times New Roman');
@@ -1959,6 +2008,26 @@ if (want('pages')) {
       fail(`${page}: lang-content value(s) "${[...new Set(badLang)].join('", "')}" — must be exactly "he" or "en", or the paragraph silently vanishes in every language`);
     else
       pass(`${page}: all ${langValues.length} lang-content values are "he" or "en"`);
+  }
+
+  // Per-page the check above only proves each one is versioned. A bump that
+  // reaches four pages and misses the fifth is the same bug in miniature: the
+  // page left behind keeps asking for the URL the stale script is cached
+  // under, and it is the only page that breaks — which is exactly the kind of
+  // failure nobody reproduces, because the four pages they try all work.
+  {
+    const versions = new Map();
+    for (const page of PAGES) {
+      const p = join(ROOT, page);
+      if (!existsSync(p)) continue;   // already failed above, on its own line
+      const m = readFileSync(p, 'utf8').match(/<script[^>]+src="\.\/site\.js\?v=(\d+)"/);
+      if (m) versions.set(page, m[1]);
+    }
+    const distinct = [...new Set(versions.values())];
+    if (distinct.length > 1)
+      fail(`the pages disagree about site.js's version (${[...versions].map(([p, v]) => `${p}=v${v}`).join(', ')}) — whichever page is on the older number is the one that gets the stale script`);
+    else if (distinct.length === 1)
+      pass(`all ${versions.size} pages load site.js at the same version (v${distinct[0]})`);
   }
 
   console.log('The home page and its film:');
@@ -2331,7 +2400,18 @@ if (want('pages')) {
 
   console.log('The events board:');
   {
-    const evp = readFileSync(join(ROOT, 'events.html'), 'utf8');
+    // Same reason as home.html, story.html, gallery.html and contact.html
+    // above — this block was written without their guard and was the one
+    // exception. readFileSync unguarded throws ENOENT and takes the whole
+    // process down, so a deleted events.html gives a stack trace instead of
+    // the clean FAIL every other page produces, and the checks after it never
+    // run at all. existsSync + an empty-string fallback keeps every need(...)
+    // below a safe .test() against '' (which simply fails), so this line
+    // reports the missing file and every line after it reports its own FAIL.
+    const evPath = join(ROOT, 'events.html');
+    const evExists = existsSync(evPath);
+    if (!evExists) fail('events.html is missing');
+    const evp = evExists ? readFileSync(evPath, 'utf8') : '';
     const evCode = uncommented(evp);
     const need = (re, why) => re.test(evCode) ? pass(why) : fail(why);
 
@@ -2596,8 +2676,30 @@ if (want('pages')) {
 
     // The shared header has linked here since Plan 1. Until this file existed
     // that link was a 404 from every page on the site.
-    if (existsSync(join(ROOT, 'events.html'))) pass('the nav link to events.html finally resolves');
-    else fail('every page links to ./events.html — it must exist');
+    //
+    // The first version of this check was `if (existsSync('events.html'))`,
+    // sitting inside a block that had ALREADY read events.html unguarded a
+    // couple of hundred lines above — so it could only ever be reached when
+    // the file existed, and could only ever print ok. It asserted nothing.
+    // The guard above now reports the file's absence on its own line, which
+    // leaves this check free to test what its own message actually claims:
+    // that the nav ENTRY still points at this file. Both halves can break
+    // independently — the href can be renamed while the file stays put, and
+    // that is a 404 from all five pages with events.html sitting right there
+    // in the repo, which no existsSync will ever notice.
+    const navHrefs = [...readFileSync(join(ROOT, 'site.js'), 'utf8')
+      .matchAll(/href\s*:\s*'(\.\/[^']+)'/g)].map(m => m[1]);
+    if (!navHrefs.length) {
+      fail('site.js has no relative nav hrefs at all — the shared header is not linking anywhere, and this check cannot vouch for events.html being reachable');
+    } else {
+      const broken = navHrefs.filter(h => !existsSync(join(ROOT, h.replace(/^\.\//, '').split(/[?#]/)[0])));
+      if (broken.length)
+        fail(`the shared nav links to ${broken.join(', ')}, which ${broken.length > 1 ? 'do' : 'does'} not exist — every page on the site carries that 404`);
+      else if (!navHrefs.includes('./events.html'))
+        fail(`the shared nav no longer links to ./events.html (it lists ${navHrefs.join(', ')}) — the board exists but nothing on the site reaches it`);
+      else
+        pass(`the nav link to events.html finally resolves, and all ${navHrefs.length} shared nav targets exist`);
+    }
   }
 }
 
