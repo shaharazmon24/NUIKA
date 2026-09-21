@@ -179,9 +179,27 @@
     // every desktop browser, which is falsy and correct, but pinning the
     // comparison keeps this from ever being satisfied by some future
     // non-boolean value on that property.
+    //
+    // location.search and location.hash are carried through, and that is NOT
+    // tidiness — dropping the query silently breaks Noy's OTHER home-screen
+    // icon. admin.html exists for one reason: to be an icon that lands on the
+    // admin sign-in. Its whole body is location.replace('./?admin'), and its
+    // own comment records that saving /?admin directly once "produced an icon
+    // that opened the storefront" — a bug that has already been found and
+    // fixed once. After the cutover the root IS this page, so that icon's
+    // chain runs admin.html -> ./?admin -> here. The shop gates the panel on
+    // `new URLSearchParams(location.search).has('admin')` (index.html, in
+    // checkAdminAccess()), so a bare './shop.html' here arrives with no query,
+    // no panel opens, and Noy gets the customer storefront instead of her own
+    // admin — the same fixed bug, returning by a new route. Measured, not
+    // theorised: with a bare target the destination reports
+    // admin_query_present: false. manifest.json's "./?admin" shortcut breaks
+    // the same way and is migrated in the cutover commit; this line is what
+    // repairs admin.html without touching admin.html at all.
+    // Do not "simplify" this back to a bare string.
     var installed = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
                  || window.navigator.standalone === true;
-    if (installed) { location.replace('./shop.html'); }
+    if (installed) { location.replace('./shop.html' + location.search + location.hash); }
   </script>
   <div class="hm-screen">
     <!-- Two cuts, not one file scaled. A phone frame keeps about a fifth of

@@ -2526,8 +2526,47 @@ if (want('pages')) {
   // straight back here and forward again. Either quote is accepted (the
   // shopLink check twenty lines up was hardened for exactly that after
   // href='...' false-failed), as is a trailing #fragment or ?query.
-  homeNeed(/location\.replace\(\s*(['"])\.\/shop\.html(?:[?#][^'"]*)?\1\s*\)/,
-           'sends an installed launch to the shop');
+  //
+  // Read the ARGUMENT of the call, not the whole line, so the two checks
+  // below are about the redirect's destination and nothing else. `[^)]*`
+  // stops at the first `)`, which is correct for the argument this page
+  // actually writes (a string plus two property reads, no nested call). An
+  // argument containing parentheses would truncate here and fail the checks
+  // rather than pass them — the safe direction for a checker to be wrong in,
+  // and the whole lesson of the dead check above.
+  const redirectArg = (homeCode.match(/location\.replace\(([^)]*)\)/) || ['', ''])[1];
+  const redirectNeed = (re, why) => re.test(redirectArg) ? pass(why) : fail(why);
+
+  redirectNeed(/(['"])\.\/shop\.html(?:[?#][^'"]*)?\1/,
+               'sends an installed launch to the shop');
+
+  // The query string is the only thing this redirect can silently destroy,
+  // and destroying it breaks Noy's OTHER home-screen icon.
+  //
+  // admin.html exists for exactly one reason: an icon that lands on the admin
+  // sign-in. Its whole body is location.replace('./?admin'), and its own
+  // comment records that saving /?admin directly once "produced an icon that
+  // opened the storefront" — already found, already fixed once. After the
+  // cutover the root IS home.html, so that icon's chain runs
+  // admin.html -> ./?admin -> here -> the shop. The shop opens the panel from
+  // `new URLSearchParams(window.location.search).has('admin')` in
+  // checkAdminAccess(), so a bare './shop.html' here arrives with no query and
+  // Noy lands on the customer storefront: the same fixed bug, by a new route.
+  // Measured on a locally-built destination state, not argued — a bare target
+  // reported admin_query_present: false, and the counterfactual
+  // shop.html?admin showed the real sign-in.
+  //
+  // Checked as two property reads rather than as one exact expression on
+  // purpose: what matters is that both survive the hop, not how they were
+  // spelled. Deleting either one fails this line.
+  const carriesQuery = /location\.search/.test(redirectArg);
+  const carriesHash  = /location\.hash/.test(redirectArg);
+  if (carriesQuery && carriesHash) {
+    pass('carries the query string and fragment through, so Noy\'s admin icon still reaches the admin');
+  } else {
+    const lost = [!carriesQuery && 'location.search', !carriesHash && 'location.hash'].filter(Boolean);
+    fail(`the redirect drops ${lost.join(' and ')} — admin.html sends Noy here as ./?admin, and the shop opens her panel only when that query survives the hop`);
+  }
 
   // These live in site.js's footer builder and nowhere else. Two copies drift,
   // which is the entire reason this page does not write its own — so require
