@@ -85,6 +85,68 @@
        and 1280 — see task-3-report.md for the full measurement tables. */
     .hm-line { margin: 0; max-inline-size: 16ch; }
     .hm-acts { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+    /* This is the one page whose whole promise is a single screen with
+       nothing to scroll to — and the one place that promise actually broke:
+       .hm-screen's middle row is 1fr, but 1fr cannot shrink a row below its
+       own content's height, so on a short window header + copy + footer
+       simply overflow it. Landscape on a phone is exactly when this shows
+       up (measured before this block existed: 812x375 ran 63px over with
+       the footer clipped, 640x360 ran 59px over, also clipped; 360x640
+       portrait already fit). Keyed to height, not to orientation or width:
+       a short window is the actual constraint, however it got that way, and
+       720px landscape and 720px-wide-mobile are two unrelated axes that
+       happen to share a number in site.css — conflating them here would
+       either miss a short-but-wide window or fire on a tall narrow one that
+       was never broken. 480px sits with real margin above the tallest
+       broken case measured (375px) and real margin below the shortest
+       ordinary portrait phone (568px, iPhone SE) — including margin because
+       a fold, a URL bar, or a slightly shorter device should not sit in the
+       gap between "fixed" and "broken again".
+       Nothing here hides the header or the footer — every element that was
+       visible before is still visible, just smaller and closer together,
+       per the brief's own instruction not to fix this by hiding either one. */
+    @media (max-height: 480px) {
+      /* Header: padding and the wordmark both shrink. 130x48 is not an
+         arbitrary smaller number — it is the exact floor site.css's own
+         mobile breakpoint already uses (the width below which the umbel's
+         finest strokes fade out), so this never renders the mark smaller
+         than the rest of the site already considers legible. Scoped to
+         .hm-screen so nothing here touches the mark on any other page. */
+      .hm-screen > .nu-header { padding-block: 4px; }
+      .hm-screen .nu-mark__art { width: 130px; height: 48px; }
+
+      /* Below 720px width site.css's own mobile rule takes .nu-nav out of
+         the header's flex row (position: static, order: 3, width: 100%) so
+         it wraps onto a visible second line — the right call on a page that
+         scrolls, wrong here, where that second line is exactly what pushes
+         a short screen over. Reasserting position: absolute keeps the nav
+         centred over the header on its own line, out of flow, at any width,
+         the same way it already behaves above 720px wide. */
+      .hm-screen .nu-nav { position: absolute; inset-inline: 0; }
+
+      /* Footer: padding, the wordmark, and the gap between items all shrink.
+         108x40 keeps the mark's own 150:55 aspect ratio (within a
+         fraction of a pixel); nothing in --design enforces a floor on this
+         mark specifically the way it does for the header's, and at this
+         size it is still clearly the same logo. Gap only ever matters here
+         when the footer's four items wrap to a second row on a narrow
+         width — it is what shrinks the space between those rows. */
+      .hm-screen > .nu-footer { padding-block: 6px; gap: 6px; }
+      .hm-screen .nu-mark--foot { width: 108px; height: 40px; }
+      .hm-screen .nu-soc-row,
+      .hm-screen .nu-fine,
+      .hm-screen .nu-to-shop { font-size: var(--t-label); }
+
+      /* The headline itself. Overridden as a custom property, scoped to
+         .hm-screen, rather than edited in site.css's :root — this is the one
+         page short enough to need a smaller giant step; every other use of
+         --t-giant (there are none today, but the token is shared) keeps its
+         normal clamp everywhere else. Still a real two-line headline at a
+         smaller size, not a truncated one. */
+      .hm-screen { --t-giant: clamp(24px, 6vh, 40px); }
+      .hm-mid { gap: 6px; padding-block-end: 8px; }
+    }
   </style>
 </head>
 <body>

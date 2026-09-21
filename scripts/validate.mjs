@@ -30,6 +30,40 @@ function appScript() {
   return html.slice(start + '<script>'.length, end);
 }
 
+// Every inline <script> block in a page, in file order — the same
+// new Function(...) mechanism appScript() uses above, generalised to a file
+// that may hold several such blocks (home.html has two). A block whose
+// opening tag carries a src attribute is a separate file (site.js today; a
+// CDN script tomorrow) — the browser fetches its own contents, this file
+// never sees them, so it is skipped rather than parsed as if its text (there
+// is none, the element is empty) or, worse, some future non-JS src were
+// inline JavaScript.
+//
+// HTML comments are stripped first. Not a defensive guess: writing this very
+// function's own doc comment on the finding it fixes ("even if the
+// <script> below fails to parse...") put the literal text "<script>" inside
+// an HTML comment in contact.html, and the first run of this check against
+// the real file parsed everything from THAT word through the next real
+// </script> — several hundred characters later — as one JavaScript block,
+// failing with "Unexpected identifier" on ordinary prose. None of the four
+// pages' real script content contains "<!--" or "-->" (checked directly,
+// since stripping comments blindly would corrupt a block that did), so this
+// is safe today; it is recorded as a discovered failure, not a theoretical
+// one, precisely because the next person to comment on this code will
+// reach for the word "script" too.
+function inlineScripts(src) {
+  const withoutComments = src.replace(/<!--[\s\S]*?-->/g, ' ');
+  return [...withoutComments.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)]
+    .filter(m => !/\bsrc\s*=/.test(m[1]))
+    .map(m => m[2]);
+}
+
+// Shared with the `pages` phase below. Hoisted here, to module scope, so
+// `--syntax` alone (CI runs every phase separately) can still check these
+// four files' inline JavaScript without depending on the `pages` phase
+// having run first to define the list.
+const PAGES = ['home.html', 'story.html', 'gallery.html', 'contact.html'];
+
 if (want('syntax')) {
   console.log('JavaScript syntax:');
   const js = appScript();
@@ -47,6 +81,39 @@ if (want('syntax')) {
   // A merge that was committed without resolving would ship these markers.
   if (/^(<{7}|={7}|>{7})/m.test(html)) fail('unresolved merge conflict markers');
   else pass('no conflict markers');
+
+  // index.html (above) and site.js (checked under `--design`) were the only
+  // files this phase ever parsed. The four new pages add roughly 440 lines
+  // of their own inline JavaScript — the contact form's whole submit and
+  // validate logic, the gallery's grid and lightbox, the home page's
+  // autoplay handling — and none of it was parsed anywhere. A syntax error
+  // dropped into any one of them left the entire suite green: the contact
+  // form silently fell back to a native submit (see the leaked-phone-number
+  // finding above `ctNeed` under `--pages`), the gallery rendered a heading
+  // and nothing else, and the home page's film never played and never
+  // honoured Save-Data or reduced motion. Parsing every inline block in all
+  // four pages, the same way appScript() already does for index.html, turns
+  // all three back into a red suite instead of a silent runtime failure.
+  console.log('New pages\' inline JavaScript:');
+  for (const page of PAGES) {
+    const p = join(ROOT, page);
+    if (!existsSync(p)) { fail(`${page}: missing, cannot check its inline JavaScript`); continue; }
+    const scripts = inlineScripts(readFileSync(p, 'utf8'));
+    if (scripts.length === 0) { pass(`${page}: no inline <script> block`); continue; }
+    let ok = true;
+    scripts.forEach((block, i) => {
+      try {
+        new Function(block);
+      } catch (err) {
+        fail(`${page}: inline <script> block ${i + 1} of ${scripts.length} has a syntax error: ${err.message}`);
+        ok = false;
+      }
+    });
+    if (ok) {
+      const lines = scripts.reduce((n, s) => n + s.split('\n').length, 0);
+      pass(`${page}: ${scripts.length} inline <script> block${scripts.length === 1 ? '' : 's'} ${scripts.length === 1 ? 'parses' : 'parse'} (${lines} lines)`);
+    }
+  }
 }
 
 if (want('features')) {
@@ -490,8 +557,10 @@ if (want('pages')) {
 
   // Every page of the new site shares one skeleton. These are not style
   // preferences: each line below is something that silently breaks the page
-  // for somebody if it is missing.
-  const PAGES = ['home.html', 'story.html', 'gallery.html', 'contact.html'];
+  // for somebody if it is missing. PAGES itself is declared once, at module
+  // scope above (next to inlineScripts(), which the `--syntax` phase needs
+  // it for too) rather than here, so `--pages` and `--syntax` cannot list
+  // the four files differently after one of them is edited and not the other.
 
   for (const page of PAGES) {
     const p = join(ROOT, page);
@@ -571,10 +640,61 @@ if (want('pages')) {
       .map(({ n }) => n);
     if (bad.length) fail(`${page}: physical left/right on line(s) ${bad.join(', ')} — use the -inline- form or mark the line /* rtl-ok */`);
     else pass(`${page}: no physical left/right`);
+
+    // Same exposure the shop's admin panel was hardened against — a crafted
+    // name, note or address running arbitrary JavaScript against a live
+    // database handle. This used to be one check, written against
+    // contact.html specifically (`ctNeed` under "Contact" below), which is
+    // the one page of the four that never builds innerHTML at all: it reads
+    // fields with .value and writes errors with .textContent, so that guard
+    // could not have caught anything. gallery.html is the page that actually
+    // builds innerHTML (from gallery.json, `grid.innerHTML = ...` and
+    // `filterRow.innerHTML = ...`), and had no guard of its own — the
+    // reviewer removed esc() from both call sites and the suite stayed
+    // green. Checked here, inside the loop every one of the four pages
+    // already runs through, rather than against one named page again, so
+    // Plan 4 (which does the same thing from Firebase, on a page not yet
+    // written) inherits the guard automatically instead of needing its own
+    // copy remembered.
+    if (/\.innerHTML\s*=/.test(hCode) && !/esc\(/.test(hCode))
+      fail(`${page}: writes innerHTML without escaping`);
+    else pass(`${page}: no unescaped innerHTML`);
+
+    // site.js hides anything whose lang-content value is not exactly "he" or
+    // "en" (html:not([lang="en"]) [lang-content="en"] and html[lang="en"]
+    // [lang-content="he"], both under "Bilingual language toggle" in
+    // --design above) — there is no third state. A typo here is not an
+    // error anywhere else in the page: the CSS still matches something
+    // (just never this element), the JS still runs, and the paragraph
+    // simply renders as nothing, in every language, forever. Confirmed by
+    // deliberately changing one real "en" to "eng": movement 4's whole
+    // English paragraph disappeared and the rest of this suite stayed
+    // green. Checked against the raw file, not the comment-stripped copy —
+    // grep confirms no comment in these four pages contains an actual
+    // `lang-content="..."` attribute-value pair to false-trigger on, only
+    // the bare word or `[lang-content]` in prose.
+    const langValues = [...h.matchAll(/\blang-content\s*=\s*["']([^"']*)["']/g)].map(m => m[1]);
+    const badLang = langValues.filter(v => v !== 'he' && v !== 'en');
+    if (badLang.length)
+      fail(`${page}: lang-content value(s) "${[...new Set(badLang)].join('", "')}" — must be exactly "he" or "en", or the paragraph silently vanishes in every language`);
+    else
+      pass(`${page}: all ${langValues.length} lang-content values are "he" or "en"`);
   }
 
   console.log('The home page and its film:');
-  const home = readFileSync(join(ROOT, 'home.html'), 'utf8');
+  // Same reason as story.html, gallery.html and contact.html below: Plan 5
+  // renames this exact file to index.html, so this one is not a hypothetical
+  // future gap the way theirs were — it is the one file in this section
+  // GUARANTEED to go missing on Plan 5's very first commit. readFileSync
+  // unguarded would throw ENOENT and crash the whole process right at that
+  // moment, taking every check after it down with it instead of reporting
+  // its own clean FAIL. existsSync + an empty-string fallback keeps every
+  // homeNeed(...) below a safe .test() against '' (which simply fails), so
+  // this line reports the missing file and every line after it reports its
+  // own FAIL too, instead of a crash hiding them all.
+  const homePath = join(ROOT, 'home.html');
+  if (!existsSync(homePath)) fail('home.html is missing');
+  const home = existsSync(homePath) ? readFileSync(homePath, 'utf8') : '';
   const homeCode = uncommented(home);
   const homeNeed = (re, why) => re.test(homeCode) ? pass(why) : fail(why);
 
@@ -886,10 +1006,48 @@ if (want('pages')) {
     fail('contact.html sends a request somewhere');
   else pass('contact.html sends nothing');
 
-  // Same exposure the shop's admin panel was hardened against.
-  if (/innerHTML/.test(ctCode) && !/esc\(/.test(ctCode))
-    fail('contact.html writes innerHTML without escaping');
-  else pass('no unescaped innerHTML');
+  // The unescaped-innerHTML guard that used to live here, checking only
+  // contact.html, now runs inside the shared per-page loop above (see the
+  // comment there) — this is the one page of the four that never touches
+  // innerHTML at all, so a guard scoped to only this file could not have
+  // caught the regression it was meant for.
+
+  // The form's own action/name exposure (finding 1) is a contact.html-only
+  // risk — no other page composes a message from customer-entered fields —
+  // so unlike the innerHTML guard above, this one stays local rather than
+  // moving into the shared loop.
+  const ctForm = ct.match(/<form\b[^>]*\bid=["']ctForm["'][^>]*>/);
+  if (!ctForm) {
+    fail('contact.html: no <form id="ctForm"> — cannot check it for a name attribute or an action');
+  } else {
+    if (/\baction\s*=/.test(ctForm[0]))
+      fail('contact.html: #ctForm has gained an action — it must not submit anywhere');
+    else
+      pass('contact.html: #ctForm has no action');
+
+    if (/\bonsubmit\s*=\s*["']return false["']/.test(ctForm[0]))
+      pass('contact.html: #ctForm still has onsubmit="return false" as a second layer against a native submit');
+    else
+      fail('contact.html: #ctForm lost onsubmit="return false" — a syntax error in the <script> below would once again fall through to a native GET submit');
+  }
+
+  // Every field inside the form, by id, so the message stays clear about
+  // exactly what regained a name — except ctSubject's four radio inputs,
+  // which legitimately keep name="ctSubject": it is what makes them a single
+  // mutually-exclusive group at all (a radio with no name groups with
+  // nothing), and the page's own script finds the checked one by that same
+  // name. Their value is always one of four fixed words, never
+  // customer-entered text, so it carries none of the exposure the fields
+  // below do.
+  const PII_FIELD_IDS = ['ctName', 'ctPhone', 'ctMessage'];
+  for (const id of PII_FIELD_IDS) {
+    const field = ct.match(new RegExp('<(?:input|textarea)\\b[^>]*\\bid=["\']' + id + '["\'][^>]*>'));
+    if (!field) { fail(`contact.html: #${id} is missing`); continue; }
+    if (/\bname\s*=/.test(field[0]))
+      fail(`contact.html: #${id} has regained a name attribute — a native submit would put its value in the URL`);
+    else
+      pass(`contact.html: #${id} carries no name attribute`);
+  }
 }
 
 if (failed) {

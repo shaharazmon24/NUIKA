@@ -149,13 +149,23 @@
     </div>
 
     <div class="ct-layout">
-      <form class="ct-form rise" id="ctForm" novalidate>
+      <!-- No action, and onsubmit="return false" as a second, independent
+           layer: this attribute is compiled by the parser the moment this
+           tag is read, so it still blocks a native GET submit (and the
+           customer's phone number landing in the URL and in history on a
+           possibly shared device) even if the <script> below fails to parse
+           or has not finished loading yet. Either layer alone would stop
+           the submit; both cost nothing. -->
+      <form class="ct-form rise" id="ctForm" novalidate onsubmit="return false">
         <div class="ct-field-group">
           <label class="ct-label" for="ctName">
             <span lang-content="he">שם מלא</span>
             <span lang-content="en">Full name</span>
           </label>
-          <input class="ct-field" type="text" id="ctName" name="name" maxlength="80" autocomplete="name" required>
+          <!-- No name attribute: the script below reads this field by id
+               (nameEl.value), so name is dead weight that only a native
+               submit would ever use — and only to put this text in a URL. -->
+          <input class="ct-field" type="text" id="ctName" maxlength="80" autocomplete="name" required>
           <p class="ct-error" id="ctNameErr" role="alert"></p>
         </div>
 
@@ -164,7 +174,10 @@
             <span lang-content="he">טלפון</span>
             <span lang-content="en">Phone</span>
           </label>
-          <input class="ct-field" type="tel" id="ctPhone" name="phone" maxlength="25"
+          <!-- No name attribute — see the note on ctName above. This is the
+               field the leak was found through: a native submit put this
+               exact value in the URL and in a shared phone's history. -->
+          <input class="ct-field" type="tel" id="ctPhone" maxlength="25"
                  dir="ltr" placeholder="05X-XXXXXXX" autocomplete="tel" required>
           <p class="ct-error" id="ctPhoneErr" role="alert"></p>
         </div>
@@ -174,6 +187,17 @@
             <span lang-content="he">נושא</span>
             <span lang-content="en">Subject</span>
           </legend>
+          <!-- These four keep name="ctSubject", unlike the fields above: it
+               is what makes them a single mutually-exclusive radio group at
+               all (a radio input with no name is alone in its own group of
+               one — the browser would let more than one chip show checked
+               at once), and the script below finds the checked one by that
+               same name (form.querySelector('input[name="ctSubject"]:checked')).
+               Its value is always one of four fixed words (order / event /
+               workshop / question), never customer-entered text, so it
+               carries none of the exposure the name/phone/message fields
+               did — onsubmit="return false" on the form above is what stops
+               it (and everything else here) from ever reaching a URL. -->
           <div class="ct-chips">
             <label class="ct-chip">
               <input type="radio" name="ctSubject" value="order" checked>
@@ -203,7 +227,8 @@
             <span lang-content="he">הודעה</span>
             <span lang-content="en">Message</span>
           </label>
-          <textarea class="ct-field" id="ctMessage" name="message" rows="5" maxlength="2000" required></textarea>
+          <!-- No name attribute — see the note on ctName above. -->
+          <textarea class="ct-field" id="ctMessage" rows="5" maxlength="2000" required></textarea>
           <p class="ct-error" id="ctMessageErr" role="alert"></p>
         </div>
 
