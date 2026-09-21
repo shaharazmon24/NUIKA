@@ -2503,6 +2503,32 @@ if (want('pages')) {
     fail('the contact link is not the ghost button');
   else pass('the contact link is the ghost button');
 
+  // Noy's saved icon launches the manifest's start_url. The manifest half of
+  // this is fixed in the cutover commit; this is the second layer, because
+  // iOS and Android disagree about how an installed launch is detectable.
+  // A visitor in a normal browser tab must never be redirected.
+  homeNeed(/display-mode:\s*standalone/, 'detects an installed launch (Android/Chrome)');
+  homeNeed(/navigator\.standalone/, 'detects an installed launch (iOS)');
+
+  // The brief's third check here was a bare /shop\.html/, and it was dead on
+  // arrival — measured, not suspected: added verbatim against a home.html
+  // with no redirect in it at all, it reported `ok`. This page has carried
+  // `<a class="btn btn--on-film" href="./shop.html">` since the day it was
+  // written, so the substring is already in the file and nothing about the
+  // redirect can remove it. It could not fail, which also means the brief's
+  // own Step 3 breakage row for it ("swap ./shop.html for ./index.html →
+  // FAIL") could not have produced a FAIL: the anchor keeps the string alive
+  // no matter where the redirect points. Anchored to the navigation call
+  // instead, which is the thing that actually sends Noy onward.
+  //
+  // location.replace, not location.href, is pinned deliberately: replace
+  // leaves no history entry, so the shop's own Back does not bounce her
+  // straight back here and forward again. Either quote is accepted (the
+  // shopLink check twenty lines up was hardened for exactly that after
+  // href='...' false-failed), as is a trailing #fragment or ?query.
+  homeNeed(/location\.replace\(\s*(['"])\.\/shop\.html(?:[?#][^'"]*)?\1\s*\)/,
+           'sends an installed launch to the shop');
+
   // These live in site.js's footer builder and nowhere else. Two copies drift,
   // which is the entire reason this page does not write its own — so require
   // them in site.js AND require home.html not to have grown a copy. An OR of

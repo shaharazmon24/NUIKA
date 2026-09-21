@@ -150,6 +150,39 @@
   </style>
 </head>
 <body>
+  <script>
+    // Noy saved this site to her home screen when the root WAS the shop. After
+    // the cutover her icon lands here, on the film. The manifest's start_url
+    // handles it on Android; iOS ignores start_url for an already-saved icon,
+    // so the page checks for itself and sends an installed launch onward.
+    //
+    // Deliberately NOT a redirect for everyone: a visitor in an ordinary tab
+    // is here on purpose.
+    //
+    // First thing in <body>, not appended to the script block at the bottom,
+    // and not folded into the poster-swap block beside the <video> either.
+    // Both of those sit after the film element is parsed, which means an
+    // installed launch would start pulling a 10-14MB film it is about to
+    // throw away, and would paint a frame of it before leaving. Here the
+    // replace happens before the parser has reached the <video> at all, so
+    // the only thing Noy's icon costs her is this page's markup.
+    //
+    // Two conditions because a visitor only ever has one of them: Chrome on
+    // Android reports an installed launch through the display-mode media
+    // feature and leaves navigator.standalone undefined, while iOS Safari
+    // sets navigator.standalone and has never supported display-mode. The
+    // matchMedia guard is for the same reason every other matchMedia call on
+    // this page has one — an old WebView without it must fall through to the
+    // iOS branch rather than throw here and take the page down.
+    //
+    // === with true, not a truthy test: navigator.standalone is undefined in
+    // every desktop browser, which is falsy and correct, but pinning the
+    // comparison keeps this from ever being satisfied by some future
+    // non-boolean value on that property.
+    var installed = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+                 || window.navigator.standalone === true;
+    if (installed) { location.replace('./shop.html'); }
+  </script>
   <div class="hm-screen">
     <!-- Two cuts, not one file scaled. A phone frame keeps about a fifth of
          the picture's width, so the phone cut is a real vertical re-edit with
