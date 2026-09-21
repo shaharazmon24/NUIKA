@@ -2192,6 +2192,10 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
         הגדרות
       </button>
+      <button class="admin-tab-btn" id="atab-events" onclick="switchAdminTab('events')" role="tab">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        אירועים
+      </button>
       <button class="admin-tab-btn" id="atab-kitchen" onclick="switchAdminTab('kitchen')" role="tab" style="position:relative;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2h18l-2 7H5L3 2z"/><path d="M5 9l1 11h12l1-11"/><path d="M9 13h6"/></svg>
         מטבח
@@ -2468,6 +2472,31 @@
 
       <div id="fin-import-preview" style="margin-top:12px;"></div>
     </div>
+  </div>
+
+  <div id="admin-tab-events" class="admin-tab-content">
+    <h2 style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.2rem;font-weight:700;margin:0 0 18px;">אירועים</h2>
+
+    <div class="admin-card">
+      <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;margin:0 0 12px;">
+        מה שמופיע כאן מופיע באתר. אירוע שהתאריך שלו עבר יורד לבד ל"היה" — אין צורך למחוק.
+      </p>
+
+      <form id="evForm" onsubmit="saveEvent(); return false;">
+        <input type="hidden" id="evId">
+        <input type="date" id="evDate" class="field" required>
+        <input type="text" id="evTitle" class="field" maxlength="120" placeholder="כותרת" required>
+        <input type="text" id="evTime" class="field" maxlength="60" placeholder="שעה — למשל שישי 8:00–12:00">
+        <input type="text" id="evPlace" class="field" maxlength="120" placeholder="מקום">
+        <textarea id="evBody" class="field" maxlength="600" rows="3" placeholder="שתיים-שלוש שורות"></textarea>
+        <input type="text" id="evCtaLabel" class="field" maxlength="40" placeholder="כפתור — מה כתוב עליו (ריק = בלי כפתור)">
+        <input type="text" id="evCtaText" class="field" maxlength="300" placeholder="כפתור — ההודעה שתיפתח בוואטסאפ">
+        <button type="submit" class="admin-save-btn">שמירה</button>
+        <button type="button" class="admin-save-btn" onclick="clearEventForm()">ניקוי</button>
+      </form>
+    </div>
+
+    <div id="evAdminList"></div>
   </div>
 
   <div id="admin-tab-kitchen" class="admin-tab-content">
@@ -5797,6 +5826,7 @@ function switchAdminTab(tab) {
     switchKitchenTab(_currentKitchenTab || 'pantry');
   }
   if (tab === 'finance') initFinance();
+  if (tab === 'events')  initEvents();
 }
 
 function updateOrdersTabBadge() {
@@ -7307,6 +7337,130 @@ function exportFinanceCSV() {
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ─── ADMIN: EVENTS ─────────────────────────────────
+let EVENTS = [];
+// Empty until Firebase answers. Saving in that window is how the pantry got
+// wiped on every offline open — an empty local array there means "not loaded
+// yet", never "Noy deleted everything".
+let _eventsLoaded = false;
+let _eventsBound  = false;
+
+function initEvents() {
+  if (_eventsBound) { renderEventsAdmin(); return; }
+  _eventsBound = true;
+  db.ref(ROOT + '/events').on('value', snap => {
+    const val = snap.val() || {};
+    EVENTS = Object.keys(val).map(k => Object.assign({ id: k }, val[k]));
+    _eventsLoaded = true;
+    renderEventsAdmin();
+  }, fbError);
+}
+
+function clearEventForm() {
+  ['evId','evDate','evTitle','evTime','evPlace','evBody','evCtaLabel','evCtaText']
+    .forEach(id => { document.getElementById(id).value = ''; });
+}
+
+function saveEvent() {
+  if (!_eventsLoaded) { alert('רגע, עוד טוען. נסי שוב בעוד שנייה.'); return; }
+
+  const date  = document.getElementById('evDate').value.trim();
+  const title = document.getElementById('evTitle').value.trim();
+  if (!date || !title) { alert('תאריך וכותרת הם חובה.'); return; }
+
+  const id = document.getElementById('evId').value || String(Date.now());
+  const ev = {
+    date, title,
+    time:     document.getElementById('evTime').value.trim(),
+    place:    document.getElementById('evPlace').value.trim(),
+    body:     document.getElementById('evBody').value.trim(),
+    ctaLabel: document.getElementById('evCtaLabel').value.trim(),
+    ctaText:  document.getElementById('evCtaText').value.trim(),
+    created:  Date.now()
+  };
+
+  // Per key, never the whole node. Noy edits from a phone and a laptop, and
+  // the SDK queues writes made offline — a whole-node write made on one
+  // device and delivered later deletes what the other device added in
+  // between. savePantry(), saveRecipes() and saveWeeklyPlan() still carry
+  // exactly this bug; do not add a fourth.
+  db.ref(ROOT + '/events/' + id).set(ev)
+    .then(clearEventForm)
+    .catch(fbError);
+}
+
+function editEvent(id) {
+  const ev = EVENTS.find(e => e.id === id);
+  if (!ev) return;
+  document.getElementById('evId').value       = ev.id;
+  document.getElementById('evDate').value     = ev.date || '';
+  document.getElementById('evTitle').value    = ev.title || '';
+  document.getElementById('evTime').value     = ev.time || '';
+  document.getElementById('evPlace').value    = ev.place || '';
+  document.getElementById('evBody').value     = ev.body || '';
+  document.getElementById('evCtaLabel').value = ev.ctaLabel || '';
+  document.getElementById('evCtaText').value  = ev.ctaText || '';
+  document.getElementById('admin-panel').scrollTop = 0;
+}
+
+function deleteEvent(id) {
+  const ev = EVENTS.find(e => e.id === id);
+  if (!ev) return;
+  if (!confirm('למחוק את "' + ev.title + '"? אירוע שעבר יורד לארכיון לבד — אין צורך למחוק אותו.')) return;
+  db.ref(ROOT + '/events/' + id).remove().catch(fbError);
+}
+
+function renderEventsAdmin() {
+  const box = document.getElementById('evAdminList');
+  if (!box) return;
+  if (!_eventsLoaded) { box.innerHTML = '<p>טוען…</p>'; return; }
+  if (!EVENTS.length)  { box.innerHTML = '<p>אין אירועים. הטופס למעלה מוסיף אחד.</p>'; return; }
+
+  const sorted = EVENTS.slice().sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  // Every value below is text Noy typed, and it lands in innerHTML on a page
+  // holding a live database handle with admin rights. esc() is not optional
+  // here — this is the exact route CLAUDE.md warns about for order notes.
+  //
+  // Each field is escaped once, into its own local, before any of them is
+  // concatenated. Not a style choice: the page-level escaping scanner splits
+  // a write on `+` at depth zero, so a card built inline inside .map(...)
+  // reads as ONE expression, and a single esc( anywhere in it vouches for
+  // every other field in it — a bare ev.title next to an escaped ev.date
+  // passed that scanner clean. Escaping at the top means the string below
+  // holds no ev.<field> for a later edit to leave unescaped by accident.
+  box.innerHTML = sorted.map(ev => {
+    const date  = esc(ev.date);
+    const title = esc(ev.title);
+    const place = esc(ev.place || '');
+    const id    = esc(ev.id);
+    return '<div class="admin-card">' +
+             '<strong>' + date + '</strong> — ' + title +
+             (place ? ' · ' + place : '') +
+             '<button type="button" class="admin-save-btn" data-ev-edit="' + id + '">עריכה</button>' +
+             '<button type="button" class="admin-save-btn" data-ev-del="'  + id + '">מחיקה</button>' +
+           '</div>';
+  }).join('');
+
+  // The id is carried in a data attribute and read back out of the DOM, never
+  // written into an inline onclick. esc() alone is NOT enough inside an event
+  // handler attribute, and this was measured, not guessed: with the buttons
+  // built as onclick="editEvent('" + esc(ev.id) + "')" an event whose key was
+  //     1'); alert(3); //
+  // rendered an attribute that the browser HTML-decodes back to
+  //     editEvent('1'); alert(3); //')
+  // before compiling it as JavaScript, and clicking עריכה ran alert(3) on the
+  // page holding the admin database handle. Escaping runs once; an inline
+  // handler then decodes and parses a second time, so &#39; becomes a real
+  // quote again and closes the string. A data attribute has no second parse:
+  // the value comes back out as the plain string it went in as.
+  box.querySelectorAll('[data-ev-edit]').forEach(b => {
+    b.onclick = () => editEvent(b.getAttribute('data-ev-edit'));
+  });
+  box.querySelectorAll('[data-ev-del]').forEach(b => {
+    b.onclick = () => deleteEvent(b.getAttribute('data-ev-del'));
+  });
 }
 
 // ─── READING A SPREADSHEET FILE ───────────────────

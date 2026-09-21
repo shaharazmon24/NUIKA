@@ -820,6 +820,207 @@ if (want('features')) {
     if (html.includes(needle)) fail(`regression: "${needle}" — ${why}`);
     else pass(`no regression: ${why}`);
   }
+
+  // The events tab lives inside the live shop. These are not style checks:
+  // each line below is a way this project has already lost data once.
+  const app = appScript();
+  if (!app) {
+    fail('index.html: could not find the application script');
+  } else {
+    // The events section, bounded by the file's own `// ───` section-marker
+    // convention rather than by a character count. The brief specified a
+    // fixed 4000-character window from the marker; measured against the real
+    // file that window runs off the end of the events code and into
+    // renderFinance(), whose summary is a template literal with no esc() in
+    // it (`${income.count}`, `${income.total.toFixed(0)}` — numbers, and
+    // correctly unescaped), so the events checks would have FAILed on
+    // finance code they do not own. A window that fell SHORT would be worse:
+    // a write past its end would never be scanned at all and the check would
+    // report ok having looked at nothing.
+    const EV_MARK = '// ─── ADMIN: EVENTS';
+    const evAt    = app.indexOf(EV_MARK);
+    const evTo    = evAt < 0 ? -1 : app.indexOf('// ───', evAt + EV_MARK.length);
+    const evRaw   = evAt < 0 ? '' : app.slice(evAt, evTo < 0 ? app.length : evTo);
+    const evInfo  = evRaw ? classify(evRaw) : null;
+
+    if (!evRaw) {
+      fail('admin events: no "// ─── ADMIN: EVENTS" section in the application script — the events code is gone, or its marker comment changed and every check below would have been reading an empty string');
+    } else if (evInfo.uncertain) {
+      // An analyser that cannot understand its input must never report ok.
+      fail(`admin events: the events section does not classify unambiguously (${[...new Set(evInfo.trouble.map(t => `line ${lineOf(evRaw, t.index)}: ${t.reason}`))].join('; ')}) — this check will not vouch for a scan of code it cannot read`);
+    } else {
+      // Comments masked, strings kept. Presence checks in this file have been
+      // defeated four separate times by deleting the real code and leaving
+      // the word behind in a comment; see uncommented()'s doc comment. That
+      // helper reads an HTML document, so a JavaScript-only slice uses
+      // classify() directly — the same pairing the cardHTML() scan uses.
+      const evCode = maskTags(evRaw, evInfo.tags, t => t === 'm');
+      const has = (re, why) => re.test(evCode) ? pass(`admin events: ${why}`) : fail(`admin events: ${why}`);
+
+      // Finds a function's body by asking classify() which positions are
+      // code, rather than tracking quotes by hand. `re` must end at the
+      // opening brace.
+      const bodyOf = re => {
+        const open = evCode.match(re);
+        if (!open) return null;
+        const from = open.index + open[0].length;
+        let depth = 1, i = from;
+        for (; i < evCode.length && depth > 0; i++) {
+          if (evInfo.tags[i] !== 'c') continue;
+          if (evCode[i] === '{') depth++;
+          else if (evCode[i] === '}') depth--;
+        }
+        return depth > 0 ? null : { start: from, end: i - 1, text: evCode.slice(from, i - 1) };
+      };
+
+      has(/function\s+initEvents\s*\(/, 'has initEvents()');
+      // ROOT is the const 'nuika', so the node is written as ROOT + '/events'
+      // and the literal string "nuika/events" never appears in the script.
+      has(/['"`]\/events\/?['"`]|['"`]nuika\/events/, 'addresses the events node');
+
+      // db.ref('nuika/events').set(obj) replaces the whole subtree and
+      // destroys whatever the other device changed in the same round-trip.
+      // Noy uses a phone and a laptop, and the SDK queues offline writes, so
+      // a stale queued write lands later and deletes an event the other
+      // device added. This is the bug savePantry(), saveRecipes() and
+      // saveWeeklyPlan() still carry. Both spellings of the node are matched,
+      // because a regex that only knew the literal "nuika/events" could never
+      // have fired at all.
+      if (/ref\s*\(\s*(?:ROOT\s*\+\s*)?['"`](?:nuika)?\/?events['"`]\s*\)\s*\.\s*(?:set|update)\s*\(/.test(evCode)) {
+        fail('admin events: writes the whole events node — use per-key writes: ref(ROOT + "/events/" + id).set(ev)');
+      } else {
+        pass('admin events: writes one event at a time, never the whole node');
+      }
+
+      // Writes used to fail silently here while the UI reported success.
+      const evWrites = [...evCode.matchAll(/ref\s*\([^)]*events\/[^)]*\)\s*\.\s*(set|remove|update)\s*\(([\s\S]{0,200}?)(?=\n\s*(?:function|\}|const|let|var|db\.ref)|$)/g)];
+      const uncaught = evWrites.filter(m => !/\.catch\s*\(\s*fbError\s*\)/.test(m[0]));
+      if (evWrites.length === 0) fail('admin events: found no write to nuika/events/<id> at all');
+      else if (uncaught.length) fail(`admin events: ${uncaught.length} write(s) to nuika/events have no .catch(fbError) — they fail silently while the UI says saved`);
+      else pass('admin events: every write catches its failure');
+
+      // EVENTS is empty until Firebase answers. Saving in that window wrote
+      // emptiness over real data and wiped the pantry on every offline open.
+      //
+      // Checked inside saveEvent()'s body, not as a bare presence test for
+      // the word. Measured: with `if (!_eventsLoaded)` cut out of saveEvent()
+      // a /_eventsLoaded/ test over the section still reported ok, because
+      // the declaration, the listener's assignment and renderEventsAdmin()'s
+      // own check all still spell it. The guard is a property of saveEvent().
+      const saveBody = bodyOf(/function\s+saveEvent\s*\([^)]*\)\s*\{/);
+      if (!saveBody) {
+        fail('admin events: no function saveEvent() whose body closes — cannot verify it refuses to save before the listener has answered');
+      } else if (!/_eventsLoaded/.test(saveBody.text)) {
+        fail('admin events: saveEvent() does not check _eventsLoaded — EVENTS is empty until Firebase answers, and saving in that window is how the pantry got wiped on every offline open');
+      } else {
+        pass('admin events: saveEvent() refuses to write before the listener has answered');
+      }
+
+      // An empty node means Noy has no events. It does NOT mean first run.
+      // Deliberately against the raw script rather than the comment-stripped
+      // copy: for a BANNED pattern, prose that mentions both words is a loud
+      // false alarm, which is the safe direction. The unsafe direction would
+      // be real seeding code hidden from the scan by a masked comment.
+      if (/_seeded[\s\S]{0,200}events|events[\s\S]{0,200}_seeded/.test(app)) {
+        fail('admin events: the events node must never be seeded — an empty tree means Noy listed none');
+      } else {
+        pass('admin events: never seeds the events node');
+      }
+
+      // The escaping check from Task 1 runs over the four static pages; the
+      // shop is not in that list. But the admin panel is the highest-risk
+      // innerHTML in the project — it renders text a person typed on a page
+      // holding an admin database handle — so the events code gets the same
+      // test, scoped to itself.
+      const evHtmlWrites = [...evCode.matchAll(/\.(innerHTML|outerHTML)\s*\+?=\s*([^;]*);/g)];
+      const evUnsafe = unsafeHtmlWrites(evCode, html);
+      if (!evHtmlWrites.length) fail('admin events: found no innerHTML write in the events section — did the marker comment change?');
+      else if (evUnsafe.length) fail(`admin events: ${evUnsafe.length} innerHTML write(s) render data without esc() — a crafted event title would run against the live database handle`);
+      else pass('admin events: every innerHTML write escapes what it renders');
+
+      // unsafeHtmlWrites() alone cannot catch an unescaped FIELD here, and
+      // that was measured rather than assumed. htmlPieces() splits the
+      // right-hand side on `+` at depth 0, and the whole card is built inside
+      // sorted.map(...), so the entire concatenation is ONE piece: a single
+      // `esc(` anywhere in it makes every field in it read as escaped. With
+      // esc(ev.title) replaced by a bare ev.title the write still passed
+      // clean. That is the same tautology the events.html checker was
+      // rewritten to close, and it is closed the same way — every reference
+      // to ev inside the card builder must itself be escaped. The builder's
+      // parameter is outside the body slice, which starts after its `{`.
+      const cardBody = bodyOf(/\.map\s*\(\s*ev\s*=>\s*\{/);
+      if (!cardBody) {
+        fail('admin events: renderEventsAdmin() has no `.map(ev => {` card builder whose body closes — this check cannot vouch for what the admin list renders');
+      } else {
+        // Everything that is not code — string text, template text, regex
+        // bodies, comments — is blanked, so the scan only sees real code.
+        const cardCode = maskTags(cardBody.text, evInfo.tags.slice(cardBody.start, cardBody.end), t => t !== 'c');
+        const allowed = [];
+        const TAIL = `(?:\\s*\\|\\|\\s*(?:ev\\.\\w+)?)*\\s*\\)+`;
+        const ESC_RE = new RegExp(`\\besc\\s*\\(\\s*(?:\\w+\\s*\\(\\s*)?ev\\.\\w+${TAIL}`, 'g');
+        const ENC_RE = new RegExp(`\\bencodeURIComponent\\s*\\(\\s*ev\\.\\w+${TAIL}`, 'g');
+        for (const re of [ESC_RE, ENC_RE]) {
+          for (const m of cardCode.matchAll(re)) {
+            for (const fm of m[0].matchAll(/ev\.\w+/g)) allowed.push([m.index + fm.index, m.index + fm.index + fm[0].length]);
+          }
+        }
+        // esc() is not enough inside an inline event-handler attribute, and
+        // this is a measurement rather than a precaution. With the buttons
+        // built as onclick="editEvent('" + esc(ev.id) + "')", an event whose
+        // Firebase key was `1'); alert(3); //` produced an attribute the
+        // browser HTML-decodes back to `editEvent('1'); alert(3); //')`
+        // before compiling it as JavaScript; clicking עריכה ran alert(3) on
+        // the page holding the admin database handle. Every escaping check
+        // above stayed green throughout, because esc() WAS being called —
+        // the escaping was simply the wrong kind for the position it landed
+        // in. An attribute value is decoded once as HTML and then parsed
+        // again as JavaScript; esc() only defends the first parse. The id
+        // belongs in a data attribute, which is read back out of the DOM and
+        // never parsed as code.
+        const inlineHandler = cardBody.text.match(/\bon[a-z]+\s*=\s*\\?['"]/);
+        if (inlineHandler) {
+          fail(`admin events: the card builder writes an inline ${inlineHandler[0].trim()} handler — an attribute value is HTML-decoded and THEN parsed as JavaScript, so esc() does not protect it (a key containing an apostrophe closes the string and runs); carry the id in a data-* attribute and bind the listener in code`);
+        } else {
+          pass('admin events: the admin list builds no inline event handler, so no field is parsed as code');
+        }
+
+        const refs = [...cardCode.matchAll(/\bev\b(?:\.\w+)?/g)];
+        if (!refs.length) {
+          fail('admin events: the card builder never references ev anywhere in its body — this check is not looking at what it thinks it is');
+        } else {
+          const bad = refs.filter(m => !allowed.some(([s, e]) => m.index >= s && m.index + m[0].length <= e)).map(m => m[0]);
+          if (bad.length) fail(`admin events: the admin list renders ${[...new Set(bad)].join(', ')} outside esc() — a crafted event title would run against the live database handle`);
+          else pass('admin events: every field the admin list renders is escaped');
+        }
+      }
+    }
+
+    // The one line that connects the tab to its data. Without it the tab
+    // opens onto a panel that never loads and never renders, and every check
+    // above would still be green.
+    if (/tab\s*===\s*['"]events['"]\s*\)?\s*\)?\s*initEvents\s*\(/.test(app)) {
+      pass('admin events: switchAdminTab() dispatches to initEvents()');
+    } else {
+      fail('admin events: switchAdminTab() never calls initEvents() — the tab would open onto a panel that never loads');
+    }
+  }
+
+  for (const [re, why] of [
+    [/id="atab-events"/,             'the admin has an events tab button'],
+    [/id="admin-tab-events"/,        'the admin has an events tab panel'],
+    [/switchAdminTab\('events'\)/,   'the events tab button switches to it'],
+  ]) {
+    if (re.test(html)) pass(`admin events: ${why}`);
+    else fail(`admin events: ${why}`);
+  }
+
+  // The brief also asked for a check here that index.html links to no
+  // events.html until Plan 5. It is not repeated: the `pages` phase already
+  // makes that assertion over all five new pages, not just this one (see
+  // "the new pages are not public yet"), CI runs every phase and the deploy
+  // workflow runs the whole script, and measuring the breakage with both in
+  // place produced two FAIL lines for one fault. The broader check is the
+  // one that stayed.
 }
 
 if (want('assets')) {
