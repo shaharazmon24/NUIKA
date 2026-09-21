@@ -750,6 +750,16 @@ node scripts/validate.mjs --pages
   (function () {
     var esc = window.nuikaEsc;
 
+    // The same config block index.html carries. Copied, not shared, and that
+    // is a deliberate call rather than an oversight: the site has no build
+    // step, index.html is one self-contained file by design, and a shared
+    // firebase-config.js would be a third script tag on every page that
+    // needs the database plus a load-order dependency on a page whose whole
+    // job is to render fast. These are public client keys — the rules are
+    // what protect the data, not the config. If a third page ever needs it,
+    // that is the moment to extract it.
+    //
+    // Copy it out of index.html rather than from here, and check it matches.
     firebase.initializeApp({
       apiKey: "AIzaSyBH1KnxvJVBuMCkQ4vRjoBT0kfIn5ZEtqQ",
       authDomain: "nuika-5371f.firebaseapp.com",
@@ -760,7 +770,10 @@ node scripts/validate.mjs --pages
       appId: "1:652173710332:web:ab1d01485446fb2075d879"
     });
 
-    var WHATSAPP = '972536262020';   // must match the number in contact.html
+    // Read out of contact.html, not invented. An earlier draft of this plan
+    // carried a made-up number, which would have sent a customer's message to
+    // a stranger. Verify it against contact.html before trusting this line.
+    var WHATSAPP = '972547382282';
 
     // Today as YYYY-MM-DD in the VISITOR'S timezone. Not toISOString(): that
     // is UTC, and from 21:00 or 22:00 Israel time it already reads tomorrow —
