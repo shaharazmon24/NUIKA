@@ -829,14 +829,18 @@ if (want('features')) {
   } else {
     // The events section, bounded by the file's own `// ───` section-marker
     // convention rather than by a character count. The brief specified a
-    // fixed 4000-character window from the marker; measured against the real
-    // file that window runs off the end of the events code and into
-    // renderFinance(), whose summary is a template literal with no esc() in
-    // it (`${income.count}`, `${income.total.toFixed(0)}` — numbers, and
-    // correctly unescaped), so the events checks would have FAILed on
-    // finance code they do not own. A window that fell SHORT would be worse:
-    // a write past its end would never be scanned at all and the check would
-    // report ok having looked at nothing.
+    // fixed 4000-character window from the marker. Measured on the real
+    // file: the section is 5,808 characters as stored with CRLF endings
+    // (5,684 with LF), so that window stops 1,808 characters SHORT of the
+    // end — it lands in the middle of a comment, and
+    // `box.innerHTML = sorted.map(...)` sits past the cut. The escaping
+    // checks would have scanned the two literal '<p>טוען…</p>' placeholders,
+    // found nothing to complain about, and reported ok having never looked
+    // at the card at all. Had the section been shorter the window would have
+    // overrun the other way, into the next section (READING A SPREADSHEET
+    // FILE), and failed on code the events checks do not own. A character
+    // count is wrong in whichever direction it lands; the marker is the
+    // actual boundary.
     const EV_MARK = '// ─── ADMIN: EVENTS';
     const evAt    = app.indexOf(EV_MARK);
     const evTo    = evAt < 0 ? -1 : app.indexOf('// ───', evAt + EV_MARK.length);
@@ -892,12 +896,65 @@ if (want('features')) {
         pass('admin events: writes one event at a time, never the whole node');
       }
 
-      // Writes used to fail silently here while the UI reported success.
-      const evWrites = [...evCode.matchAll(/ref\s*\([^)]*events\/[^)]*\)\s*\.\s*(set|remove|update)\s*\(([\s\S]{0,200}?)(?=\n\s*(?:function|\}|const|let|var|db\.ref)|$)/g)];
-      const uncaught = evWrites.filter(m => !/\.catch\s*\(\s*fbError\s*\)/.test(m[0]));
-      if (evWrites.length === 0) fail('admin events: found no write to nuika/events/<id> at all');
-      else if (uncaught.length) fail(`admin events: ${uncaught.length} write(s) to nuika/events have no .catch(fbError) — they fail silently while the UI says saved`);
-      else pass('admin events: every write catches its failure');
+      // Every write to the events tree, audited inside the function that
+      // performs it. Scoped per function because a section-wide scan is
+      // satisfied by any ONE compliant write: with the check written that
+      // way, replacing the entire body of saveEvent()'s write with
+      // `clearEventForm();` left the suite green at exit 0 with zero FAIL
+      // lines, because deleteEvent()'s own well-formed write answered for it
+      // — saving silently did nothing and nothing noticed. That is the same
+      // defect the _eventsLoaded check had, closed the same way.
+      //
+      // The ref argument is resolved through one level of local assignment
+      // before it is judged. `const p = ROOT + '/events'; db.ref(p).set(all)`
+      // is this project's worst historical data-loss bug wearing a variable,
+      // and it passed a check that only pattern-matched the call site.
+      //
+      // The accepted shape is a WHITELIST, not a blacklist: the target must
+      // be a path below the node. The bare node fails, and so does any
+      // expression this cannot read — a check that cannot see its input must
+      // not pass it.
+      const resolveRef = (body, expr) => {
+        const t = expr.trim();
+        if (!/^[A-Za-z_$][\w$]*$/.test(t)) return t;       // not a bare name
+        const decl = body.match(new RegExp(`(?:const|let|var)\\s+${t}\\s*=\\s*([^;]+);`))
+                  || body.match(new RegExp(`(?<![.\\w])${t}\\s*=\\s*([^;]+);`));
+        return decl ? decl[1].trim() : t;
+      };
+      // ROOT + '/events/' + id, or `${ROOT}/events/${id}` — a key UNDER the
+      // node. `'/events'` with nothing after it is the node itself.
+      const PER_KEY = /(?:['"`][^'"`]*\/events\/['"`]\s*\+)|(?:\/events\/\$\{)/;
+      const REF_CALL = /\bdb\s*\.\s*ref\s*\(((?:[^()]|\([^()]*\))*)\)\s*\.\s*(set|update|remove)\s*\(/g;
+
+      const auditWrites = name => {
+        const body = bodyOf(new RegExp(`function\\s+${name}\\s*\\([^)]*\\)\\s*\\{`));
+        if (!body) {
+          fail(`admin events: no function ${name}() whose body closes — its writes cannot be audited, so nothing here vouches for them`);
+          return;
+        }
+        const evCalls = [...body.text.matchAll(REF_CALL)]
+          .filter(c => /events/.test(resolveRef(body.text, c[1])));
+        if (!evCalls.length) {
+          fail(`admin events: ${name}() performs no write to the events tree — the function the tab depends on does nothing, and a section-wide scan would have passed it on another function's write`);
+          return;
+        }
+        const problems = [];
+        for (const c of evCalls) {
+          const target = resolveRef(body.text, c[1]).replace(/\s+/g, ' ');
+          if (!PER_KEY.test(target)) {
+            problems.push(`admin events: ${name}() writes db.ref(${target}).${c[2]}(...) — that is the whole events node, which replaces the subtree and deletes what the other device added in the same round-trip; write ROOT + '/events/' + id instead`);
+          }
+          const end = statementEnd(body.text, c.index);
+          const stmt = body.text.slice(c.index, end === -1 ? body.text.length : end);
+          if (!/\.catch\s*\(\s*fbError\s*\)/.test(stmt)) {
+            problems.push(`admin events: ${name}()'s write to the events tree has no .catch(fbError) — it fails silently while the UI says saved`);
+          }
+        }
+        if (problems.length) problems.forEach(fail);
+        else pass(`admin events: ${name}() writes one key at a time and catches its failure`);
+      };
+      auditWrites('saveEvent');
+      auditWrites('deleteEvent');
 
       // EVENTS is empty until Firebase answers. Saving in that window wrote
       // emptiness over real data and wiped the pantry on every offline open.
@@ -977,11 +1034,24 @@ if (want('features')) {
         // again as JavaScript; esc() only defends the first parse. The id
         // belongs in a data attribute, which is read back out of the DOM and
         // never parsed as code.
-        const inlineHandler = cardBody.text.match(/\bon[a-z]+\s*=\s*\\?['"]/);
+        // Two syntaxes, one bug. The on*= form was measured running alert(3)
+        // from a key of `1'); alert(3); //`. A check covering only that form
+        // was then bypassed with the other one — building
+        // `<a href="javascript:editEvent('" + id + "')">` passed at exit 0
+        // and executed by the identical double parse, because href is
+        // decoded as HTML and then run as JavaScript. Both are refused. The
+        // javascript: form is refused anywhere in the SECTION, not just in
+        // the card builder, because every URL-bearing attribute — href, src,
+        // action, formaction, xlink:href — reaches the same parser, and
+        // comments are already masked out of evCode so prose cannot trip it.
+        const inlineHandler = cardBody.text.match(/\bon[a-z]+\s*=\s*\\?['"]/i);
+        const jsUrl = evCode.match(/javascript\s*:/i);
         if (inlineHandler) {
           fail(`admin events: the card builder writes an inline ${inlineHandler[0].trim()} handler — an attribute value is HTML-decoded and THEN parsed as JavaScript, so esc() does not protect it (a key containing an apostrophe closes the string and runs); carry the id in a data-* attribute and bind the listener in code`);
+        } else if (jsUrl) {
+          fail('admin events: the events section builds a javascript: URL — href/src/action/formaction/xlink:href are HTML-decoded and THEN parsed as JavaScript, exactly like an inline handler, so esc() does not protect what goes in one; carry the id in a data-* attribute and bind the listener in code');
         } else {
-          pass('admin events: the admin list builds no inline event handler, so no field is parsed as code');
+          pass('admin events: no field reaches a second parser — no inline handler, no javascript: URL');
         }
 
         const refs = [...cardCode.matchAll(/\bev\b(?:\.\w+)?/g)];

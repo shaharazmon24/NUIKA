@@ -7346,6 +7346,10 @@ let EVENTS = [];
 // yet", never "Noy deleted everything".
 let _eventsLoaded = false;
 let _eventsBound  = false;
+// True only while a save is in flight. The order button has _submitting for
+// exactly this; without it, two clicks on שמירה 9 ms apart produced two
+// separate events, because the id is chosen fresh from Date.now() per call.
+let _eventSaving  = false;
 
 function initEvents() {
   if (_eventsBound) { renderEventsAdmin(); return; }
@@ -7355,7 +7359,28 @@ function initEvents() {
     EVENTS = Object.keys(val).map(k => Object.assign({ id: k }, val[k]));
     _eventsLoaded = true;
     renderEventsAdmin();
-  }, fbError);
+  }, err => {
+    // A refused READ is not a failed save, so this must not be fbError().
+    // That alert says "השמירה נכשלה — בדקי חיבור לאינטרנט", which is wrong
+    // twice over here: nothing was being saved, and PERMISSION_DENIED is not
+    // a connection problem — it would send Noy chasing a network fault that
+    // does not exist. Measured against the live database, where the
+    // nuika/events rules are not published yet: opening the tab produced
+    // exactly that alert and then an empty list.
+    //
+    // Firebase detaches a listener it cancels, so _eventsBound has to go back
+    // to false. Left true, the tab was wedged for the rest of the page
+    // session — reopening it took the early return and never re-subscribed,
+    // and nothing short of a reload recovered it.
+    //
+    // _eventsLoaded deliberately stays false: saveEvent() then refuses to
+    // write, which is the safe direction, because an empty EVENTS here means
+    // "never loaded", never "Noy deleted everything".
+    _eventsBound = false;
+    console.error('events listener refused:', err && err.code, err);
+    const box = document.getElementById('evAdminList');
+    if (box) box.innerHTML = '<p>לא הצלחתי לטעון את לוח האירועים. סגרי ופתחי שוב את הלשונית.</p>';
+  });
 }
 
 function clearEventForm() {
@@ -7365,12 +7390,14 @@ function clearEventForm() {
 
 function saveEvent() {
   if (!_eventsLoaded) { alert('רגע, עוד טוען. נסי שוב בעוד שנייה.'); return; }
+  if (_eventSaving) return;
 
   const date  = document.getElementById('evDate').value.trim();
   const title = document.getElementById('evTitle').value.trim();
   if (!date || !title) { alert('תאריך וכותרת הם חובה.'); return; }
 
   const id = document.getElementById('evId').value || String(Date.now());
+  const existing = EVENTS.find(e => e.id === id);
   const ev = {
     date, title,
     time:     document.getElementById('evTime').value.trim(),
@@ -7378,8 +7405,17 @@ function saveEvent() {
     body:     document.getElementById('evBody').value.trim(),
     ctaLabel: document.getElementById('evCtaLabel').value.trim(),
     ctaText:  document.getElementById('evCtaText').value.trim(),
-    created:  Date.now()
+    // Preserved, never restamped. `created` is the only record of when Noy
+    // first listed the event, and rewriting it on every edit destroys it.
+    created:  (existing && existing.created) || Date.now()
   };
+
+  // Held for the whole round-trip, and released in .finally() so a rejected
+  // write unlocks the button too. The guard above is the same one the order
+  // button uses; this is the half that makes it release.
+  _eventSaving = true;
+  const saveBtn = document.querySelector('#evForm button[type="submit"]');
+  if (saveBtn) saveBtn.disabled = true;
 
   // Per key, never the whole node. Noy edits from a phone and a laptop, and
   // the SDK queues writes made offline — a whole-node write made on one
@@ -7388,7 +7424,8 @@ function saveEvent() {
   // exactly this bug; do not add a fourth.
   db.ref(ROOT + '/events/' + id).set(ev)
     .then(clearEventForm)
-    .catch(fbError);
+    .catch(fbError)
+    .finally(() => { _eventSaving = false; if (saveBtn) saveBtn.disabled = false; });
 }
 
 function editEvent(id) {
