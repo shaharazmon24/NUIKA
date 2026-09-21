@@ -23,6 +23,58 @@ const line = '─'.repeat(52);
 const say  = m => console.log(m);
 const message = process.argv.slice(2).join(' ').trim();
 
+// Stamp the version AFTER the merge, never before it.
+//
+// Both machines write this same line, so stamping before the commit made the
+// version tag a guaranteed conflict on every parallel session — the one line
+// both sides always touch. Two conflicts in a row landed here and nowhere
+// else. Stamped after the merge, the incoming stamp is simply replaced by the
+// fresh one and there is nothing left to collide over.
+//
+// The timestamp orders the versions; the hash identifies the commit it was
+// built on. Read it back with `node scripts/status.mjs`, in the admin panel
+// header, or as NUIKA_VERSION in the browser console.
+//
+// This has to run on EVERY path that pushes. It used to live inline in the
+// path that commits your own edits, so a publish from a clean tree — a merged
+// branch, or a conflict you already resolved — went out unstamped. status.mjs
+// reads this tag to compare the folder, GitHub and the live site, so an
+// unstamped publish left all three reporting the same old version while the
+// live site had in fact changed. The one tool whose job is to refuse to
+// pretend everything is fine could not see the change at all.
+function stampVersion() {
+  try {
+    const idxPath = join(ROOT, 'index.html');
+    const before  = readFileSync(idxPath, 'utf8');
+    const stamp   = new Date().toISOString();
+    const parent  = git('rev-parse --short HEAD', true);
+    const after   = before.replace(
+      /(<meta name="nuika-version" content=")[^"]*("\s*\/?>)/,
+      `$1${stamp}|${parent}$2`
+    );
+    if (after === before) {
+      say('     ⚠  לא מצאתי את תג הגרסה ב-index.html — ממשיך בלי לחתום.');
+    } else {
+      writeFileSync(idxPath, after);
+      execSync('git add index.html', { cwd: ROOT });
+      execSync(`git commit -q -m "גרסה ${stamp.slice(0, 16).replace('T', ' ')}"`, { cwd: ROOT });
+      say(`     גרסה: ${stamp.slice(0, 16).replace('T', ' ')}`);
+    }
+  } catch (e) {
+    say('     ⚠  חתימת הגרסה נכשלה: ' + e.message + ' — ממשיך.');
+  }
+}
+
+// Every publish goes through here, and it stamps before it pushes. Do not call
+// `git push` anywhere else in this file: a second push site is exactly how the
+// clean-tree path shipped unstamped for one release. `validate.mjs` enforces
+// that this is the only one.
+function publish(branch) {
+  stampVersion();
+  run(`git push origin ${branch}`);
+}
+
+
 try {
   const branch = git('rev-parse --abbrev-ref HEAD');
 
@@ -52,7 +104,7 @@ try {
       process.exit(1);
     }
     run(`git pull --rebase origin ${branch}`);
-    run(`git push origin ${branch}`);
+    publish(branch);
     say('\n' + line);
     say('  ✓ נשלח. תוך כדקה השינוי יהיה באתר.');
     say('     nuika.co.il');
@@ -114,41 +166,9 @@ try {
     }
   }
 
-  // Stamp the version AFTER the merge, never before it.
-  //
-  // Both machines write this same line, so stamping before the commit made the
-  // version tag a guaranteed conflict on every parallel session — the one line
-  // both sides always touch. Two conflicts in a row landed here and nowhere
-  // else. Stamped after the merge, the incoming stamp is simply replaced by the
-  // fresh one and there is nothing left to collide over.
-  //
-  // The timestamp orders the versions; the hash identifies the commit it was
-  // built on. Read it back with `node scripts/status.mjs`, in the admin panel
-  // header, or as NUIKA_VERSION in the browser console.
-  try {
-    const idxPath = join(ROOT, 'index.html');
-    const before  = readFileSync(idxPath, 'utf8');
-    const stamp   = new Date().toISOString();
-    const parent  = git('rev-parse --short HEAD', true);
-    const after   = before.replace(
-      /(<meta name="nuika-version" content=")[^"]*("\s*\/?>)/,
-      `$1${stamp}|${parent}$2`
-    );
-    if (after === before) {
-      say('     ⚠  לא מצאתי את תג הגרסה ב-index.html — ממשיך בלי לחתום.');
-    } else {
-      writeFileSync(idxPath, after);
-      execSync('git add index.html', { cwd: ROOT });
-      execSync(`git commit -q -m "גרסה ${stamp.slice(0, 16).replace('T', ' ')}"`, { cwd: ROOT });
-      say(`     גרסה: ${stamp.slice(0, 16).replace('T', ' ')}`);
-    }
-  } catch (e) {
-    say('     ⚠  חתימת הגרסה נכשלה: ' + e.message + ' — ממשיך.');
-  }
-
   // 4. Publish.
   say('4/4  שולח לאתר...\n');
-  run(`git push origin ${branch}`);
+  publish(branch);
 
   say('\n' + line);
   say('  ✓ נשלח. תוך כדקה השינוי יהיה באתר.');

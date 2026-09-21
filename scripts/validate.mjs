@@ -184,6 +184,54 @@ if (want('assets')) {
     else fail(`CNAME contains "${host}" — expected nuika.co.il`);
   }
 
+  // status.mjs reads this one tag to compare the folder, GitHub and the live
+  // site, and ship.mjs rewrites it on every publish. If it ever goes missing,
+  // stamping quietly becomes a no-op — ship.mjs prints a warning and carries
+  // on — and every release after that is invisible to status.mjs. Never edit
+  // it by hand; this only checks that it is there and in the shape both
+  // scripts agree on.
+  const versionTag = html.match(/<meta name="nuika-version" content="([^"]*)"/);
+  if (!versionTag) {
+    fail('index.html has no nuika-version meta tag — ship.mjs cannot stamp it and status.mjs cannot compare anything');
+  } else if (/^\d{4}-\d\d-\d\dT[\d:.]+Z\|[0-9a-f]{7,}$/.test(versionTag[1])) {
+    pass('index.html carries a version stamp in the shape ship.mjs writes');
+  } else {
+    fail(`the nuika-version tag reads "${versionTag[1]}" — expected <ISO timestamp>|<commit>, which is what status.mjs parses`);
+  }
+
+  // Every publish must stamp the version into index.html first. status.mjs
+  // compares the folder, GitHub and the live site by that stamp, so a push
+  // that skips it leaves all three reporting the same old version while the
+  // live site has in fact changed — the one tool whose job is to refuse to
+  // pretend everything is fine goes blind.
+  //
+  // Not hypothetical. ship.mjs grew a second publish path — the one taken when
+  // the tree is already clean, as it is right after merging a branch — and that
+  // path pushed without stamping. The four new pages went live under the
+  // previous version tag and status.mjs reported all three in agreement.
+  //
+  // The fix was one publish() that stamps and then pushes. This keeps it one.
+  // Comments in ship.mjs are whole lines, so dropping them is enough to keep a
+  // comment that merely mentions pushing from counting as a push site.
+  const ship = readFileSync(join(ROOT, 'scripts', 'ship.mjs'), 'utf8')
+    .split('\n')
+    .filter(l => !l.trimStart().startsWith('//'))
+    .join('\n');
+
+  const pushSites = [...ship.matchAll(/git push/g)].length;
+  if (pushSites === 1) pass('ship.mjs pushes from exactly one place');
+  else fail(`ship.mjs pushes from ${pushSites} place(s) — every push goes through publish(), which stamps first`);
+
+  const publishFn = ship.match(/function publish\s*\([^)]*\)\s*\{([\s\S]*?)\n\}/);
+  if (!publishFn) {
+    fail('ship.mjs has no publish() — the one function allowed to push');
+  } else {
+    const stampAt = publishFn[1].indexOf('stampVersion()');
+    const pushAt  = publishFn[1].indexOf('git push');
+    if (stampAt >= 0 && pushAt >= 0 && stampAt < pushAt) pass('publish() stamps the version before it pushes');
+    else fail('publish() must call stampVersion() before it pushes, or a release goes out under the previous version tag');
+  }
+
   console.log('Referenced assets:');
   const manifest = JSON.parse(readFileSync(join(ROOT, 'manifest.json'), 'utf8'));
   for (const icon of manifest.icons || []) {
