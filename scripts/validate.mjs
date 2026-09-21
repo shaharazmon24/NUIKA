@@ -54,19 +54,55 @@ function appScript() {
 function inlineScripts(src) {
   const withoutComments = src.replace(/<!--[\s\S]*?-->/g, ' ');
   return [...withoutComments.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)]
-    // A block is inline JavaScript only if it has no src AND its type says
-    // JavaScript (or says nothing, which means JavaScript). Filtering on src
-    // alone swallowed an application/ld+json block — structured data for
-    // Google, an entirely reasonable thing for a bakery with events to have —
-    // and failed the whole suite with a syntax error on valid JSON.
-    .filter(m => !/\bsrc\s*=/.test(m[1]))
-    .filter(m => {
-      const type = m[1].match(/\btype\s*=\s*["']([^"']*)["']/);
-      if (!type) return true;
-      return /^(text\/javascript|application\/javascript|module)$/i.test(type[1].trim());
-    })
+    .filter(m => isInlineJs(m[1]))
     .map(m => m[2]);
 }
+
+// The HTML standard's list of JavaScript MIME type essences.
+const JS_MIME_ESSENCES = new Set([
+  'application/ecmascript', 'application/javascript',
+  'application/x-ecmascript', 'application/x-javascript',
+  'text/ecmascript', 'text/javascript',
+  'text/javascript1.0', 'text/javascript1.1', 'text/javascript1.2',
+  'text/javascript1.3', 'text/javascript1.4', 'text/javascript1.5',
+  'text/jscript', 'text/livescript',
+  'text/x-ecmascript', 'text/x-javascript',
+]);
+
+// True when a <script> tag's attribute text says "this element's own text is
+// JavaScript, and this process can read it". Used by inlineScripts() above
+// (which parses those bodies) and by classifyHtml() below (which strips
+// their comments), from one definition, so the two can never disagree about
+// what a script is.
+//
+// A src= block's contents live in a file nothing here fetches. An
+// application/ld+json block is data — structured data for Google is an
+// entirely reasonable thing for a bakery with events to publish, and
+// parsing that JSON as JavaScript failed the whole suite once.
+//
+// Everything else here is the HTML rule, and each clause is a measured
+// regression rather than defensive breadth. A three-value list
+// (text/javascript, application/javascript, module) shipped in fix round 4
+// and silently stopped reading two kinds of block that are classic
+// JavaScript per the spec: `type=""` and `type="text/javascript;charset=utf-8"`.
+// `loading="lazy"` deleted from gallery.html and left in a // comment inside
+// either one passed clean, exit 0 — the body was never comment-stripped and
+// never syntax-checked. So: no type attribute means JavaScript; an empty or
+// whitespace-only type means JavaScript; `module` means JavaScript; and
+// anything else is matched on its ESSENCE — everything before the first `;`
+// — trimmed and case-insensitively, because `TEXT/JavaScript` and
+// `text/javascript;charset=utf-8` are both the same type as `text/javascript`.
+// The value may also be unquoted (`type=module`), which the old pattern,
+// requiring quotes, silently read as "no type at all".
+const isInlineJs = attrs => {
+  if (/\bsrc\s*=/.test(attrs)) return false;
+  const m = attrs.match(/\btype\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/i);
+  if (!m) return true;
+  const value = (m[1] ?? m[2] ?? m[3] ?? '').trim();
+  if (value === '') return true;
+  if (value.toLowerCase() === 'module') return true;
+  return JS_MIME_ESSENCES.has(value.split(';')[0].trim().toLowerCase());
+};
 
 // Shared with the `pages` phase below. Hoisted here, to module scope, so
 // `--syntax` alone (CI runs every phase separately) can still check these
@@ -150,7 +186,7 @@ const STATEMENT_HEADS = new Set(['if', 'for', 'while', 'with']);
 // passing clean. See task-4-report.md, fix rounds 3 and 4.
 function classify(s) {
   const tags = new Array(s.length).fill('c');
-  const stack = []; // {k:'str',q} | {k:'tmpl'} | {k:'hole',depth} | {k:'line'} | {k:'block'} | {k:'html'}
+  const stack = []; // {k:'str',q} | {k:'tmpl'} | {k:'hole',depth} | {k:'line'} | {k:'block'}
   const trouble = [];
   let uncertain = false;
   const top = () => stack[stack.length - 1];
@@ -223,15 +259,45 @@ function classify(s) {
     return k - 1;
   };
 
+  // Is position `i` preceded, on its own line, by nothing but whitespace and
+  // comments? That is what makes a `-->` a comment rather than `--` and `>`.
+  const lineLeading = (i) => {
+    for (let k = i - 1; k >= 0; k--) {
+      if (s[k] === '\n') return true;
+      if (tags[k] === 'm' || /\s/.test(s[k])) continue;
+      return false;
+    }
+    return true;
+  };
+
   // Shared by the two code contexts — top level and a template literal's
   // `${ }` hole — which differ only in how they end.
   const codeChar = (i) => {
     const c = s[i];
     if (c === "'" || c === '"') { tags[i] = 's'; stack.push({ k: 'str', q: c }); return i; }
     if (c === '`') { tags[i] = 's'; stack.push({ k: 'tmpl' }); return i; }
+    // JavaScript's own HTML-like comments (Annex B B.1.3), and they are LINE
+    // comments, not a block pair. `<!--` comments to the end of its line and
+    // nothing more; the lines after it RUN. Treating `<!-- … -->` as a block
+    // and blanking everything between was measured hiding live code from the
+    // escaping guard: on gallery.html,
+    //     var hOpen = 1; <!--
+    //     lbDesc.innerHTML = '<b>' + location.hash + '</b>';
+    //     -->
+    //     var hClose = 2;
+    // passed clean, exit 0, while `new Function()` accepted it, --syntax
+    // stayed green, and the unescaped write really did reach innerHTML in a
+    // browser. See task-4-report.md, fix round 5.
     if (c === '<' && s[i + 1] === '!' && s[i + 2] === '-' && s[i + 3] === '-') {
       tags[i] = tags[i + 1] = tags[i + 2] = tags[i + 3] = 'm';
-      stack.push({ k: 'html' }); return i + 3;
+      stack.push({ k: 'line' }); return i + 3;
+    }
+    // `-->` is a comment ONLY where nothing but whitespace and comments comes
+    // before it on its own line. Anywhere else it is a decrement followed by
+    // a greater-than — `while (i --> 0)` is ordinary, if cute, JavaScript.
+    if (c === '-' && s[i + 1] === '-' && s[i + 2] === '>' && lineLeading(i)) {
+      tags[i] = tags[i + 1] = tags[i + 2] = 'm';
+      stack.push({ k: 'line' }); return i + 2;
     }
     if (c === '/' && s[i + 1] === '*') { tags[i] = tags[i + 1] = 'm'; stack.push({ k: 'block' }); return i + 1; }
     if (c === '/' && s[i + 1] === '/') { tags[i] = tags[i + 1] = 'm'; stack.push({ k: 'line' }); return i + 1; }
@@ -291,15 +357,9 @@ function classify(s) {
       continue;
     }
 
-    if (ctx.k === 'block') {
-      tags[i] = 'm';
-      if (c === '*' && s[i + 1] === '/') { tags[i + 1] = 'm'; i++; stack.pop(); continue; }
-      continue;
-    }
-
-    // ctx.k === 'html'
+    // ctx.k === 'block'
     tags[i] = 'm';
-    if (c === '-' && s[i + 1] === '-' && s[i + 2] === '>') { tags[i + 1] = tags[i + 2] = 'm'; i += 2; stack.pop(); continue; }
+    if (c === '*' && s[i + 1] === '/') { tags[i + 1] = 'm'; i++; stack.pop(); continue; }
   }
 
   // Anything still open at the end means this walk lost track of where it
@@ -350,18 +410,6 @@ function classifyCss(s) {
   }
   return { tags };
 }
-
-// A <script> block is inline JavaScript only if it has no src AND its type
-// says JavaScript (or says nothing, which means JavaScript). Same rule
-// inlineScripts() applies, for the same two measured reasons recorded there:
-// a src block's contents live in a file this process never reads, and an
-// application/ld+json block is data, not code.
-const isInlineJs = attrs => {
-  if (/\bsrc\s*=/.test(attrs)) return false;
-  const type = attrs.match(/\btype\s*=\s*["']([^"']*)["']/);
-  if (!type) return true;
-  return /^(text\/javascript|application\/javascript|module)$/i.test(type[1].trim());
-};
 
 // An HTML document is three different languages in one file, and each one
 // decides what a comment is differently. This walks the markup itself,
