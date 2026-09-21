@@ -197,3 +197,35 @@ Code changes are for layout, new features, and bugs.
 - The committed product images are 1–2 MB each.
 - VAT is hardcoded at 17%; Israel has been at 18% since January 2025. The
   costing also assumes Noy is a עוסק פטור — worth confirming with her.
+
+## What `scripts/validate.mjs` does not catch
+
+Measured on 21 Sep 2026 while building the events board, each by breaking the
+thing the check protects. None is a defect in shipped code; all are limits of
+the guards. Listed because a check you trust more than it deserves is how this
+project has lost work before.
+
+- **The version marker is a manual discipline.** `./site.js?v=2` exists because
+  `gallery.html` now depends on `window.nuikaEsc` from `site.js`, and the two
+  files are cached on different clocks (`max-age=600` vs `max-age=14400`). The
+  check enforces that all five pages carry a number and agree on it. It cannot
+  know that `site.js` changed and the number did not, and it will not catch a
+  downgrade to a number visitors already hold. **Change `site.js` → bump
+  `?v=` in all five pages and `CACHE` in `sw.js`, by hand.**
+- **The escaping guard is text analysis, not a parser.** An apostrophe inside a
+  regex literal makes the statement splitter swallow the rest of a statement —
+  a silent pass. Safe today only because `contact.html` holds the pages' only
+  regex literal and has no `innerHTML` write at all.
+- **`/* esc-ok: */` is a promise nothing verifies.** `events.html`'s `cardHTML`
+  has a dedicated check; `gallery.html`'s two markers do not. Strip `esc()` out
+  of `tileHTML` and the suite stays green.
+- **The events write audit is a heuristic.** It catches every spelling that has
+  actually gone wrong, but `const r = db.ref(ROOT + '/events'); r.set(all)` —
+  the whole-node write, one variable away — passes when added beside a
+  compliant write.
+- **`index.html` is not in `PAGES`**, so the hardened escaping check never runs
+  over the shop. The events tab carries its own scoped check; nothing else in
+  the file is covered.
+- **A `data-src=` or `data-type=` attribute on a `<script>` tag hides it** from
+  the inline-script scan, so a syntax error in that block passes. No page
+  carries such an attribute.
