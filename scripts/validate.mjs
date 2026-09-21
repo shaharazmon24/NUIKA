@@ -764,6 +764,39 @@ if (want('design')) {
       pass('the real WhatsApp number is wired into the footer');
     else
       fail('site.js does not contain the real WhatsApp number 972547382282 — a placeholder here is a dead contact link on a bakery\'s own footer');
+
+    // Written by hand twice already, in gallery.html and contact.html. A third
+    // copy was the moment to stop. esc() is the function this project's worst
+    // class of bug runs through; three private copies means three places for one
+    // of them to drift.
+    const sjs = readFileSync(join(ROOT, 'site.js'), 'utf8');
+    for (const name of ['nuikaEsc', 'nuikaOnLangChange']) {
+      if (new RegExp(`window\\.${name}\\s*=`).test(sjs)) pass(`site.js exports ${name}`);
+      else fail(`site.js does not export ${name} — every page writes its own copy instead`);
+    }
+
+    // A listener that re-injects markup calls nuikaRefresh(), which calls
+    // nuikaLang() again. If listeners fired on every nuikaLang() call rather
+    // than on an actual change, that is an infinite loop — the page would hang
+    // on its own refresh. The guard is a comparison against the previous value.
+    // Named against the exact implementation below on purpose. A looser pattern
+    // —   /!==\s*lang|lang\s*===/   — was tried first and could never fail:
+    // site.js already contains `lang === 'en'` in the dir attribute line, so the
+    // check passed with the guard deleted. Tie it to the thing it guards.
+    const guarded = /var\s+wasLang\s*=\s*currentLang\s*\(\s*\)/.test(sjs) &&
+                    /if\s*\(\s*lang\s*!==\s*wasLang\s*\)/.test(sjs);
+    if (guarded) {
+      pass('site.js fires language listeners on a change, not on every call');
+    } else {
+      fail('site.js must only fire language listeners when the language actually changed, or nuikaRefresh() inside a listener recurses forever');
+    }
+
+    // The point of exporting them is that the pages stop defining their own.
+    for (const page of ['gallery.html', 'contact.html']) {
+      const src = readFileSync(join(ROOT, page), 'utf8');
+      if (/function\s+esc\s*\(/.test(src)) fail(`${page} still defines its own esc() — use window.nuikaEsc`);
+      else pass(`${page} takes esc from site.js`);
+    }
   }
 }
 

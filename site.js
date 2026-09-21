@@ -104,7 +104,19 @@
     return document.documentElement.getAttribute('lang') === 'en' ? 'en' : 'he';
   }
 
+  /* Listeners for an actual language change. They fire from nuikaLang() only
+     when the value moved, never on a same-language call — nuikaRefresh() calls
+     nuikaLang(currentLang()) on purpose, and a listener that re-injects markup
+     calls nuikaRefresh() in turn. Firing on every call would make that pair an
+     infinite loop the first time anyone wired them together. */
+  var langListeners = [];
+
+  function nuikaOnLangChange(fn) {
+    if (typeof fn === 'function') langListeners.push(fn);
+  }
+
   function nuikaLang(next) {
+    var wasLang = currentLang();
     var lang = next === 'en' ? 'en' : 'he';
     var root = document.documentElement;
     root.setAttribute('lang', lang);
@@ -122,6 +134,15 @@
     }
 
     try { localStorage.setItem(LANG_KEY, lang); } catch (e) { /* nothing to do */ }
+
+    /* One listener that throws must not stop the others, and must not leave
+       the page half-switched. */
+    if (lang !== wasLang) {
+      for (var j = 0; j < langListeners.length; j++) {
+        try { langListeners[j](lang); }
+        catch (e) { console.error('nuika: a language listener threw', e); }
+      }
+    }
   }
 
   document.addEventListener('click', function (e) {
@@ -185,4 +206,6 @@
   window.nuikaFooter = nuikaFooter;
   window.nuikaLang = nuikaLang;
   window.nuikaRefresh = nuikaRefresh;
+  window.nuikaEsc = esc;
+  window.nuikaOnLangChange = nuikaOnLangChange;
 })();

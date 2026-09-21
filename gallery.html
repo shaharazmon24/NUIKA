@@ -258,11 +258,7 @@
       // unescaped data reaching innerHTML, and the manifest will grow — so
       // it is escaped like any other data would be, the same function
       // site.js already uses for the same reason.
-      function esc(s) {
-        return String(s).replace(/[&<>"']/g, function (c) {
-          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-        });
-      }
+      var esc = window.nuikaEsc;
 
       function currentLang() {
         return document.documentElement.getAttribute('lang') === 'en' ? 'en' : 'he';
