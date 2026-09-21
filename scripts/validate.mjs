@@ -1010,31 +1010,90 @@ if (want('features')) {
       // inside the statement that does the racing — not on the write's own
       // chain, which never settles offline.
       if (saveBody) {
-        const takes    = /_eventSaving\s*=\s*true/.test(saveBody.text);
-        const releases = [...saveBody.text.matchAll(/_eventSaving\s*=\s*false/g)];
+        const code = saveBody.text;
+        const bTag = i => evInfo.tags[saveBody.start + i];   // 'c' === real code
 
-        // Each `Promise.race(...)` statement's full span, so "downstream of
-        // the race" is a position question rather than a guess.
-        const raceSpans = [...saveBody.text.matchAll(/Promise\s*\.\s*race\s*\(/g)].map(m => {
-          const end = statementEnd(saveBody.text, m.index);
-          return [m.index, end === -1 ? saveBody.text.length : end];
-        });
-        const inSomeRace = i => raceSpans.some(([s, e]) => i >= s && i <= e);
-        const racedRelease = releases.filter(m => inSomeRace(m.index));
-        const strayRelease = releases.filter(m => !inSomeRace(m.index));
-        const racedHasTimeout = racedRelease.some(m =>
-          raceSpans.some(([s, e]) => m.index >= s && m.index <= e && /setTimeout\s*\(/.test(saveBody.text.slice(s, e))));
+        // The end of the chained expression starting at `from`, found by
+        // following the chain itself rather than by hunting for a `;`.
+        // statementEnd() cannot be used here: a race written WITHOUT its
+        // terminating semicolon let it run on into the next statement, so a
+        // release sitting on the write's own chain fell inside the race's
+        // span and read as raced — last round's wedge with one character
+        // removed. A chain ends where the links stop, semicolon or not.
+        const chainEnd = from => {
+          let i = from;
+          const group = () => {                  // consume one balanced (...)
+            let d = 0;
+            for (; i < code.length; i++) {
+              if (bTag(i) !== 'c') continue;
+              if (code[i] === '(') d++;
+              else if (code[i] === ')') { d--; if (d === 0) { i++; return true; } }
+            }
+            return false;
+          };
+          const skip = j => { while (j < code.length && (bTag(j) !== 'c' || /\s/.test(code[j]))) j++; return j; };
+          while (i < code.length && !(bTag(i) === 'c' && code[i] === '(')) i++;
+          if (!group()) return code.length;
+          for (;;) {
+            let j = skip(i);
+            if (code[j] !== '.') return i;
+            j++;
+            while (j < code.length && /[\w$]/.test(code[j])) j++;
+            j = skip(j);
+            if (code[j] !== '(') return i;
+            i = j;
+            if (!group()) return code.length;
+          }
+        };
+        const spansOf = re => [...code.matchAll(re)].map(m => [m.index, chainEnd(m.index)]);
+        const inside = (spans, i) => spans.some(([s, e]) => i >= s && i <= e);
 
-        if (!takes) {
+        // Releasing through a helper is correct code. Any function in the
+        // section whose body assigns the flag counts, so `.then(release)`
+        // reads as a release rather than as "never releases it" — which was
+        // a false statement about correct code.
+        const helpers = [...evCode.matchAll(/function\s+(\w+)\s*\([^)]*\)\s*\{([\s\S]{0,400}?)\}/g)]
+          .filter(m => /_eventSaving\s*=\s*false/.test(m[2])).map(m => m[1]);
+
+        const releases = [
+          ...code.matchAll(/_eventSaving\s*=\s*false/g),
+          ...(helpers.length ? code.matchAll(new RegExp(`\\b(?:${helpers.join('|')})\\b`, 'g')) : []),
+        ];
+
+        const raceSpans = spansOf(/Promise\s*\.\s*race\s*\(/g);
+        // Chains headed by the write: db.ref(...)... and <var>... where the
+        // var was assigned a db.ref(...) chain. These are the two shapes that
+        // actually shipped and wedged.
+        const writeVars = [...code.matchAll(/(?:const|let|var)\s+(\w+)\s*=\s*db\s*\.\s*ref\s*\(/g)].map(m => m[1]);
+        const writeSpans = [
+          ...spansOf(/\bdb\s*\.\s*ref\s*\(/g),
+          ...(writeVars.length ? spansOf(new RegExp(`\\b(?:${writeVars.join('|')})\\s*\\.`, 'g')) : []),
+        ];
+
+        const onWriteChain = releases.filter(m => inside(writeSpans, m.index) && !inside(raceSpans, m.index));
+        const raced = releases.filter(m => inside(raceSpans, m.index));
+        const racedTimed = raced.some(m => raceSpans.some(([s, e]) =>
+          m.index >= s && m.index <= e && /setTimeout\s*\(/.test(code.slice(s, e))));
+
+        if (!/_eventSaving\s*=\s*true/.test(code)) {
           fail('admin events: saveEvent() never sets _eventSaving — nothing stops a double click creating two events, which was measured at 9 ms apart');
         } else if (!releases.length) {
           fail('admin events: saveEvent() takes the _eventSaving lock and never releases it — the tab locks on the first save');
-        } else if (strayRelease.length) {
-          fail('admin events: saveEvent() releases _eventSaving outside the Promise.race statement — a release hung on the write\'s own chain never runs while offline, because a Firebase write does not settle until the server acknowledges it, and the tab stays locked for the rest of the page session');
-        } else if (!racedHasTimeout) {
-          fail('admin events: saveEvent() releases _eventSaving from a Promise.race that has no setTimeout in it — without a timer the race cannot settle while offline, so the release never runs');
+        } else if (onWriteChain.length) {
+          fail('admin events: saveEvent() releases _eventSaving on the write\'s own promise chain — a Firebase write does not settle until the server acknowledges it, so offline that release never runs and the tab stays locked for the rest of the page session; release it from the timed race instead');
+        } else if (!raced.length || !racedTimed) {
+          fail('admin events: saveEvent() has no release of _eventSaving reached from a Promise.race containing a setTimeout — without a timer nothing settles the race while offline, so the lock never releases');
         } else {
-          pass('admin events: saveEvent() releases the save lock from a timed race, not from the write itself');
+          // Deliberately narrow. Textual containment in a race span is a
+          // PROXY for "runs on the race's settled path", not that property,
+          // and it is not worth making sound: several shapes that release
+          // from the write can still be written so as to satisfy it. What
+          // this does establish is the absence of the two shapes that
+          // actually shipped and wedged the tab — a release on
+          // write.finally() and a release on the write's .then() chain —
+          // plus the presence of a timed race. It is a regression guard
+          // against those, not a proof that the lock always releases.
+          pass('admin events: no release of the save lock sits on the write\'s own chain, and a timed race is present');
         }
       }
 
