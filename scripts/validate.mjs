@@ -1005,10 +1005,9 @@ if (want('features')) {
       // (`Promise.race([Promise.resolve(1),Promise.resolve(2)]);
       // setTimeout(function(){},0);`), and deleting the lock altogether,
       // which skipped the check entirely because it was conditional on the
-      // lock existing. So it now verifies the three things the message
-      // claims: the lock is taken, it is released, and every release sits
-      // inside the statement that does the racing — not on the write's own
-      // chain, which never settles offline.
+      // lock existing. What it asks now is written at the pass() below,
+      // beside the message that reports it; there is deliberately only one
+      // description of this check in the file.
       if (saveBody) {
         const code = saveBody.text;
         const bTag = i => evInfo.tags[saveBody.start + i];   // 'c' === real code
@@ -1070,8 +1069,32 @@ if (want('features')) {
           ...(writeVars.length ? spansOf(new RegExp(`\\b(?:${writeVars.join('|')})\\s*\\.`, 'g')) : []),
         ];
 
-        const onWriteChain = releases.filter(m => inside(writeSpans, m.index) && !inside(raceSpans, m.index));
-        const raced = releases.filter(m => inside(raceSpans, m.index));
+        // No race exemption. Being lexically inside `Promise.race(...)` does
+        // not put a `write.then(...)` release on the race's settled path —
+        // the nesting is textual, the promise is still the write's. The
+        // earlier `&& !inside(raceSpans, …)` exempted exactly that, and
+        // `Promise.race([ write.then(() => { _eventSaving = false; }),
+        // timeout ])` passed while wedging for real: with a pending write,
+        // _eventSaving was still true after 9 seconds.
+        const onWriteChain = releases.filter(m => inside(writeSpans, m.index));
+        const raced = releases.filter(m => inside(raceSpans, m.index) && !inside(writeSpans, m.index));
+
+        // Brace/paren depth inside saveEvent's body. A release at depth 0 is
+        // a bare statement that runs immediately — it defeats the very
+        // double-click guard the flag exists for. The previous "every
+        // release must sit inside the race statement" rule caught that for
+        // free; restructuring traded it away, so it is asked for directly.
+        const depthAt = i => {
+          let d = 0;
+          for (let k = 0; k < i; k++) {
+            if (bTag(k) !== 'c') continue;
+            const ch = code[k];
+            if (ch === '(' || ch === '[' || ch === '{') d++;
+            else if (ch === ')' || ch === ']' || ch === '}') d--;
+          }
+          return d;
+        };
+        const unconditional = releases.filter(m => depthAt(m.index) === 0);
         const racedTimed = raced.some(m => raceSpans.some(([s, e]) =>
           m.index >= s && m.index <= e && /setTimeout\s*\(/.test(code.slice(s, e))));
 
@@ -1079,21 +1102,24 @@ if (want('features')) {
           fail('admin events: saveEvent() never sets _eventSaving — nothing stops a double click creating two events, which was measured at 9 ms apart');
         } else if (!releases.length) {
           fail('admin events: saveEvent() takes the _eventSaving lock and never releases it — the tab locks on the first save');
+        } else if (unconditional.length) {
+          fail('admin events: saveEvent() releases _eventSaving unconditionally, as a bare statement — it is cleared before the write it is meant to be guarding has settled, so the double click it exists to stop goes straight through');
         } else if (onWriteChain.length) {
           fail('admin events: saveEvent() releases _eventSaving on the write\'s own promise chain — a Firebase write does not settle until the server acknowledges it, so offline that release never runs and the tab stays locked for the rest of the page session; release it from the timed race instead');
         } else if (!raced.length || !racedTimed) {
           fail('admin events: saveEvent() has no release of _eventSaving reached from a Promise.race containing a setTimeout — without a timer nothing settles the race while offline, so the lock never releases');
         } else {
-          // Deliberately narrow. Textual containment in a race span is a
-          // PROXY for "runs on the race's settled path", not that property,
-          // and it is not worth making sound: several shapes that release
-          // from the write can still be written so as to satisfy it. What
-          // this does establish is the absence of the two shapes that
-          // actually shipped and wedged the tab — a release on
-          // write.finally() and a release on the write's .then() chain —
-          // plus the presence of a timed race. It is a regression guard
-          // against those, not a proof that the lock always releases.
-          pass('admin events: no release of the save lock sits on the write\'s own chain, and a timed race is present');
+          // The message below is the whole claim, and it is deliberately a
+          // statement about spellings rather than about behaviour. This
+          // check reads text: it knows which promise chain a release is
+          // WRITTEN inside, not which one it RUNS on. A release reached
+          // through an intermediate variable (`const w2 = write.then(...);
+          // w2.finally(release)`) is not tracked, and w2 is not a chain head
+          // it looks for — so this must never be read as "the lock always
+          // releases". It is a regression guard against the spellings that
+          // have actually wedged this tab, kept honest by the mutation
+          // table rather than by argument.
+          pass('admin events: no release of the save lock is written inside a chain headed by the write, and one is written inside a timed race');
         }
       }
 
