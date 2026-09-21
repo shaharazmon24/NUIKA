@@ -310,6 +310,7 @@
       }
 
       function renderGrid() {
+        /* esc-ok: tileHTML escapes every field it renders */
         grid.innerHTML = entries.map(tileHTML).join('');
       }
 
@@ -350,6 +351,7 @@
             '<span lang-content="en">' + esc(label.en) + '</span></button>';
         }
 
+        /* esc-ok: every value in `html` above went through esc() */
         filterRow.innerHTML = html;
         filterRow.hidden = false;
       }

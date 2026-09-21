@@ -54,7 +54,17 @@ function appScript() {
 function inlineScripts(src) {
   const withoutComments = src.replace(/<!--[\s\S]*?-->/g, ' ');
   return [...withoutComments.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)]
+    // A block is inline JavaScript only if it has no src AND its type says
+    // JavaScript (or says nothing, which means JavaScript). Filtering on src
+    // alone swallowed an application/ld+json block — structured data for
+    // Google, an entirely reasonable thing for a bakery with events to have —
+    // and failed the whole suite with a syntax error on valid JSON.
     .filter(m => !/\bsrc\s*=/.test(m[1]))
+    .filter(m => {
+      const type = m[1].match(/\btype\s*=\s*["']([^"']*)["']/);
+      if (!type) return true;
+      return /^(text\/javascript|application\/javascript|module)$/i.test(type[1].trim());
+    })
     .map(m => m[2]);
 }
 
@@ -63,6 +73,99 @@ function inlineScripts(src) {
 // four files' inline JavaScript without depending on the `pages` phase
 // having run first to define the list.
 const PAGES = ['home.html', 'story.html', 'gallery.html', 'contact.html'];
+
+// Escaping is a property of each write, not of the file. The check these
+// replace looked for the string `esc(` anywhere in the page, so a new
+// unescaped write sitting next to escaped ones passed — which is exactly the
+// write a new page is about to add. It also saw only `.innerHTML =`, never
+// `+=` and never `.outerHTML`.
+//
+// Each assignment is read to the end of its statement, and the statement is
+// then split into the pieces it concatenates. EVERY piece that names something
+// must escape. Asking only whether `esc(` appears somewhere in the statement
+// was not enough, and was measured not to be — it passed
+//     box.innerHTML = '<b>' + esc(ev.date) + '</b>' + ev.title;
+// where one of two fields is escaped and the other one is the injection.
+//
+// encodeURIComponent() counts as escaping: it encodes < > " and ' too, so a
+// value that went through it cannot open a tag or close an attribute.
+//
+// A statement that hands the escaping to a function it calls — a row builder
+// that escapes every field itself — marks the line above it
+// /* esc-ok: <which function escapes> */, the same escape hatch the
+// physical-left/right check already uses as /* rtl-ok */. The marker has to
+// name the function, so a reviewer can open it and see that it really does.
+//
+// Known limit, written down rather than hidden: within a single parenthesised
+// piece — `(p ? ' - ' + esc(p) : '')` — one esc() satisfies the whole piece,
+// so a crafted `(a ? b : esc(c))` would pass. The marker and the reviewer are
+// what cover that; a regex is not going to.
+//
+// Hoisted to module scope, like PAGES above and for the same reason: the
+// `features` phase uses these too, and CI runs each phase on its own.
+
+// A `+` inside a string, a call, a bracket or a brace is not a join.
+const htmlPieces = rhs => {
+  const out = []; let depth = 0, cur = '', q = null;
+  for (let i = 0; i < rhs.length; i++) {
+    const c = rhs[i];
+    if (q) { cur += c; if (c === q && rhs[i - 1] !== '\\') q = null; continue; }
+    if (c === "'" || c === '"' || c === '`') { q = c; cur += c; continue; }
+    if (c === '(' || c === '[' || c === '{') depth++;
+    if (c === ')' || c === ']' || c === '}') depth--;
+    if (c === '+' && depth === 0) { out.push(cur); cur = ''; continue; }
+    cur += c;
+  }
+  out.push(cur);
+  return out;
+};
+
+const htmlLiteralOnly = s =>
+  !/[A-Za-z_$]/.test(s.replace(/'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`(?:[^`\\]|\\.)*`/g, ''));
+
+const htmlEscapes = s => /\besc\s*\(/.test(s) || /\bencodeURIComponent\s*\(/.test(s);
+
+// Every unescaped write to innerHTML/outerHTML in `code`. `raw` is the same
+// file before comments were stripped, and is used only to read the
+// /* esc-ok: */ markers back off it: uncommented() collapses a block comment
+// to one space, and the lines it spanned with it, so a line number taken from
+// the stripped text does not point at the same line in the file. The
+// statement's own opening text is the anchor instead. Statements themselves
+// come from the stripped text, so a write that appears only inside a comment
+// is never considered at all.
+//
+// `raw.indexOf(anchor)` alone breaks the moment two different statements
+// share the same anchor text. The regex's own `\.` never includes the
+// receiver, so `grid.innerHTML = html` and `filterRow.innerHTML = html`
+// produce the identical anchor `.innerHTML = html;` — searching from 0 every
+// time then resolves BOTH matches to whichever one sits first in the file.
+// Found by mutation-testing row 6 of the table below (`box.innerHTML =
+// html;`, no marker) against gallery.html's own already-marked
+// `filterRow.innerHTML = html;`: the first-occurrence lookup made the real,
+// marked write get re-flagged alongside the mutated one. In the opposite
+// file order it is worse than a false alarm — an unmarked, genuinely unsafe
+// write would silently inherit an earlier write's /* esc-ok: */ marker and
+// pass. A cursor that only ever moves forward, advanced once per match in
+// the same order matchAll already visits them in, maps the Nth match in
+// `code` to the Nth occurrence of that text in `raw` instead of always the
+// first, so same-shaped writes can no longer borrow each other's marker.
+function unsafeHtmlWrites(code, raw) {
+  let cursor = 0;
+  return [...code.matchAll(/\.(innerHTML|outerHTML)\s*\+?=\s*([^;]*);/g)].filter(m => {
+    const anchor = m[0].trim().slice(0, 40);
+    const at = raw.indexOf(anchor, cursor);
+    if (at >= 0) cursor = at + anchor.length;
+    if (/\$\{/.test(m[2])) {
+      // A template literal: the splitter cannot see its holes.
+      if (htmlEscapes(m[2])) return false;
+    } else {
+      const risky = htmlPieces(m[2]).filter(p => !htmlLiteralOnly(p) && !htmlEscapes(p));
+      if (!risky.length) return false;
+    }
+    const before = at > 0 ? raw.slice(Math.max(0, at - 220), at) : '';
+    return !/esc-ok:/.test(before);
+  });
+}
 
 if (want('syntax')) {
   console.log('JavaScript syntax:');
@@ -704,9 +807,12 @@ if (want('pages')) {
     // Plan 4 (which does the same thing from Firebase, on a page not yet
     // written) inherits the guard automatically instead of needing its own
     // copy remembered.
-    if (/\.innerHTML\s*=/.test(hCode) && !/esc\(/.test(hCode))
-      fail(`${page}: writes innerHTML without escaping`);
-    else pass(`${page}: no unescaped innerHTML`);
+    const unsafe = unsafeHtmlWrites(hCode, h);
+    if (unsafe.length) {
+      fail(`${page}: ${unsafe.length} write(s) to innerHTML/outerHTML render data without esc() — ${unsafe.map(m => m[0].slice(0, 60).replace(/\s+/g, ' ')).join(' | ')}`);
+    } else {
+      pass(`${page}: every innerHTML/outerHTML write escapes what it renders`);
+    }
 
     // site.js hides anything whose lang-content value is not exactly "he" or
     // "en" (html:not([lang="en"]) [lang-content="en"] and html[lang="en"]
@@ -717,11 +823,12 @@ if (want('pages')) {
     // simply renders as nothing, in every language, forever. Confirmed by
     // deliberately changing one real "en" to "eng": movement 4's whole
     // English paragraph disappeared and the rest of this suite stayed
-    // green. Checked against the raw file, not the comment-stripped copy —
-    // grep confirms no comment in these four pages contains an actual
-    // `lang-content="..."` attribute-value pair to false-trigger on, only
-    // the bare word or `[lang-content]` in prose.
-    const langValues = [...h.matchAll(/\blang-content\s*=\s*["']([^"']*)["']/g)].map(m => m[1]);
+    // green. Checked against hCode, the comment-stripped copy — not the raw
+    // file this check read before: a comment demonstrating a different
+    // lang-content value (exactly the shape a later task's own doc comment
+    // writes) is real text to this regex, and used to fail the check over a
+    // value nobody had actually shipped.
+    const langValues = [...hCode.matchAll(/\blang-content\s*=\s*["']([^"']*)["']/g)].map(m => m[1]);
     const badLang = langValues.filter(v => v !== 'he' && v !== 'en');
     if (badLang.length)
       fail(`${page}: lang-content value(s) "${[...new Set(badLang)].join('", "')}" — must be exactly "he" or "en", or the paragraph silently vanishes in every language`);
