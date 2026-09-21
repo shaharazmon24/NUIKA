@@ -72,7 +72,7 @@ function inlineScripts(src) {
 // `--syntax` alone (CI runs every phase separately) can still check these
 // four files' inline JavaScript without depending on the `pages` phase
 // having run first to define the list.
-const PAGES = ['home.html', 'story.html', 'gallery.html', 'contact.html'];
+const PAGES = ['home.html', 'story.html', 'gallery.html', 'contact.html', 'events.html'];
 
 // Every check in the `pages` phase reads source text, and source text has
 // comments. Checks there have now been defeated three separate times by
@@ -1415,6 +1415,116 @@ if (want('pages')) {
       fail(`contact.html: #${id} has regained a name attribute — a native submit would put its value in the URL`);
     else
       pass(`contact.html: #${id} carries no name attribute`);
+  }
+
+  console.log('The events board:');
+  {
+    const evp = readFileSync(join(ROOT, 'events.html'), 'utf8');
+    const evCode = uncommented(evp);
+    const need = (re, why) => re.test(evCode) ? pass(why) : fail(why);
+
+    need(/nuika\/events/, 'reads nuika/events');
+    need(/firebase-database-compat\.js/, 'loads the database SDK, or the board is permanently empty');
+
+    // A public page with a database handle that can write is one crafted
+    // click away from being the shop's problem. It has no reason to.
+    //
+    // Scoped to a ref() chain. A bare /\.(push)\s*\(/ was tried first and
+    // flagged `(a ? upcoming : past).push(x)` — pushing into a local array,
+    // which this page does on every render.
+    const writes = [...evCode.matchAll(/ref\s*\([^)]*\)\s*\.\s*(set|update|remove|push|transaction)\s*\(/g)];
+    if (writes.length) fail(`events.html calls ref().${writes.map(m => m[1]).join(', ')} — a public page must only read`);
+    else pass('events.html only reads; it never writes to the database');
+
+    // The whole board is injected after mount() ran its one-time pass.
+    need(/window\.nuikaRefresh\s*\(\s*\)/, 'calls nuikaRefresh() after injecting, or every card shows both languages at once');
+    need(/window\.nuikaEsc|nuikaEsc/, 'escapes Noy\'s text with the shared esc');
+
+    // The /* esc-ok: cardHTML escapes every field it renders */ marker above
+    // up.innerHTML and pa.innerHTML is exactly that — a marker, never
+    // verified. unsafeHtmlWrites() (module scope, shared with the per-page
+    // loop above) only ever matches a literal `.innerHTML`/`.outerHTML`
+    // assignment, and cardHTML instead builds its markup in a local `bits`
+    // variable, one `bits += ...` at a time, returned only at the very end.
+    // None of those lines are textually `.innerHTML =` anything, so none of
+    // them were ever inspected — proven, not assumed: replacing
+    // esc(ev.title) with the bare ev.title inside cardHTML left this entire
+    // file green (task-4-report.md, breakage 2), which is the same class of
+    // regression that once shipped in gallery.html (see the comment above
+    // the shared innerHTML guard in the `pages` phase) and is exactly what
+    // the marker exists to rule out.
+    //
+    // So cardHTML is checked directly instead of trusted. Every `bits +=`
+    // and `var <name> =` statement in its body is isolated with the same
+    // quote-aware statementEnd() the shared guard above already uses (the
+    // second form matters on its own: ev.ctaText and the ev.title fallback
+    // reach the card only via `var text = encodeURIComponent(...)`, never
+    // through `bits` directly — confirmed by the same method, see
+    // task-4-report.md). Every ev.<field> reference found inside one of
+    // those statements must sit inside a still-open esc( or
+    // encodeURIComponent( within the previous 60 characters — enough to
+    // credit one level of nesting (esc(dateLabel(ev.date))) without also
+    // crediting a call that already closed before this reference
+    // (esc(foo) + ev.title). A reference outside every bits/var statement —
+    // the truthiness guards if (ev.time), if (ev.place), if (ev.body), if
+    // (ev.ctaLabel) — is never inside one of those statements at all, so it
+    // is correctly never considered here.
+    const cardOpen = evCode.match(/function\s+cardHTML\s*\([^)]*\)\s*\{/);
+    if (!cardOpen) {
+      fail('events.html: no function cardHTML(ev) — cannot verify it escapes what it renders');
+    } else {
+      let cdepth = 1, cq = null, ci = cardOpen.index + cardOpen[0].length;
+      for (; ci < evCode.length && cdepth > 0; ci++) {
+        const c = evCode[ci];
+        if (cq) { if (c === cq && evCode[ci - 1] !== '\\') cq = null; continue; }
+        if (c === "'" || c === '"' || c === '`') { cq = c; continue; }
+        else if (c === '{') cdepth++;
+        else if (c === '}') cdepth--;
+      }
+      const cardBody = evCode.slice(cardOpen.index + cardOpen[0].length, ci - 1);
+
+      const sinkRhs = [];
+      for (const m of cardBody.matchAll(/\bbits\s*\+?=\s*|\bvar\s+\w+\s*=\s*/g)) {
+        const start = m.index + m[0].length;
+        const semi = statementEnd(cardBody, start);
+        sinkRhs.push(cardBody.slice(start, semi === -1 ? cardBody.length : semi));
+      }
+
+      const unescapedFields = new Set();
+      for (const rhs of sinkRhs) {
+        for (const fm of rhs.matchAll(/\bev\.(date|title|time|place|body|ctaLabel|ctaText)\b/g)) {
+          const before = rhs.slice(Math.max(0, fm.index - 60), fm.index);
+          if (!/(?:\besc|\bencodeURIComponent)\s*\([^)]*$/.test(before)) unescapedFields.add(fm[1]);
+        }
+      }
+      if (unescapedFields.size) {
+        fail(`events.html: cardHTML() renders ev.${[...unescapedFields].join(', ev.')} without esc()/encodeURIComponent() — Noy's own event text would reach every visitor's innerHTML unescaped`);
+      } else {
+        pass('events.html: cardHTML() escapes every ev.* field it concatenates into the card');
+      }
+    }
+
+    // "What is past" is decided against today's date. toISOString() is UTC,
+    // and Israel is UTC+2/+3 — an event would move to the archive at 21:00 or
+    // 22:00 the evening BEFORE it happens, on the day people are looking it up.
+    if (/toISOString\s*\(\s*\)/.test(evCode)) {
+      fail('events.html builds a date with toISOString() — that is UTC, so an event drops into the archive hours before its day ends in Israel');
+    } else {
+      pass('events.html compares dates in local time, not UTC');
+    }
+
+    need(/getFullYear\s*\(\s*\)/, 'builds today from local date parts');
+    need(/id="evUpcoming"/, 'has a container for what is coming');
+    need(/id="evPast"/, 'has a container for the archive');
+    need(/id="evEmpty"/, 'has a designed empty state — a board with no events must say so, not render nothing');
+    need(/wa\.me|whatsapp/i, 'offers WhatsApp from the empty state');
+    need(/encodeURIComponent/, 'encodes the WhatsApp text, or a line break truncates the message');
+    need(/data-nuika-header="events"/, 'marks itself current in the shared nav');
+
+    // The shared header has linked here since Plan 1. Until this file existed
+    // that link was a 404 from every page on the site.
+    if (existsSync(join(ROOT, 'events.html'))) pass('the nav link to events.html finally resolves');
+    else fail('every page links to ./events.html — it must exist');
   }
 }
 

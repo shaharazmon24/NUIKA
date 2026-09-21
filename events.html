@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>אירועים — NUIKA</title>
+  <meta name="description" content="דוכנים, סדנאות והזמנות לחג אצל נואיקה. מה קרוב, ומה כבר היה.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bellefair&family=IBM+Plex+Sans+Hebrew:wght@300;400&display=swap">
+  <link rel="stylesheet" href="./site.css">
+
+  <style>
+    /* The events board's own layout. Prefixed .ev- so nothing here can
+       collide with another page's styles. */
+
+    .ev-main       { max-width: 760px; margin-inline: auto; padding: 96px 20px 64px; }
+    .ev-title      { font-family: Bellefair, serif; font-size: 44px; line-height: 1.1;
+                     color: var(--ink); text-align: center; margin-block-end: 48px; }
+    .ev-h2         { font-family: Bellefair, serif; font-size: 26px; line-height: 1.2;
+                     color: var(--terra); margin-block: 40px 20px; }
+    .ev-card       { border-block-end: 1px solid rgba(59,42,36,.14); padding-block: 24px; }
+    .ev-card__date { font-family: 'IBM Plex Sans Hebrew', sans-serif; font-size: 11px;
+                     letter-spacing: .3em; color: var(--muted); margin: 0 0 8px; }
+    .ev-card__title{ font-family: Bellefair, serif; font-size: 26px; line-height: 1.2;
+                     color: var(--ink); margin: 0 0 6px; }
+    .ev-card__meta { font-size: 13px; line-height: 1.7; color: var(--muted); margin: 0; }
+    .ev-card__body { font-size: 17px; line-height: 1.9; color: var(--ink); margin: 12px 0 0; }
+    .ev-card__cta  { margin-block-start: 16px; }
+
+    /* The archive is the same card, quieter. Not a new colour — every colour
+       on this page is a token from site.css, and the contrast table there was
+       measured. */
+    .ev-list--past .ev-card { opacity: .62; }
+
+    .ev-empty      { text-align: center; padding-block: 56px; }
+    .ev-empty__line{ font-family: Bellefair, serif; font-size: 26px; color: var(--ink); margin: 0 0 8px; }
+    .ev-empty__sub { font-size: 13px; line-height: 1.7; color: var(--muted); margin: 0 0 24px; }
+
+    @media (max-width: 600px) {
+      .ev-main    { padding: 72px 16px 48px; }
+      .ev-title   { font-size: 34px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="nu-header" data-nuika-header="events"></header>
+
+  <main class="ev-main">
+    <h1 class="ev-title">
+      <span lang-content="he">אירועים</span>
+      <span lang-content="en">Events</span>
+    </h1>
+
+    <section id="evUpcoming" class="ev-list" aria-labelledby="evUpcomingH"></section>
+    <section id="evEmpty" class="ev-empty" hidden></section>
+    <section id="evPast" class="ev-list ev-list--past" aria-labelledby="evPastH" hidden></section>
+  </main>
+
+  <footer class="nu-footer" data-nuika-footer></footer>
+
+  <script src="./site.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script>
+  (function () {
+    var esc = window.nuikaEsc;
+
+    // The same config block index.html carries. Copied, not shared, and that
+    // is a deliberate call rather than an oversight: the site has no build
+    // step, index.html is one self-contained file by design, and a shared
+    // firebase-config.js would be a third script tag on every page that
+    // needs the database plus a load-order dependency on a page whose whole
+    // job is to render fast. These are public client keys — the rules are
+    // what protect the data, not the config. If a third page ever needs it,
+    // that is the moment to extract it.
+    //
+    // Copy it out of index.html rather than from here, and check it matches.
+    firebase.initializeApp({
+      apiKey: "AIzaSyBH1KnxvJVBuMCkQ4vRjoBT0kfIn5ZEtqQ",
+      authDomain: "nuika-5371f.firebaseapp.com",
+      databaseURL: "https://nuika-5371f-default-rtdb.firebaseio.com",
+      projectId: "nuika-5371f",
+      storageBucket: "nuika-5371f.firebasestorage.app",
+      messagingSenderId: "652173710332",
+      appId: "1:652173710332:web:ab1d01485446fb2075d879"
+    });
+
+    // Read out of contact.html, not invented. An earlier draft of this plan
+    // carried a made-up number, which would have sent a customer's message to
+    // a stranger. Verify it against contact.html before trusting this line.
+    var WHATSAPP = '972547382282';
+
+    // Today as YYYY-MM-DD in the VISITOR'S timezone. Not toISOString(): that
+    // is UTC, and from 21:00 or 22:00 Israel time it already reads tomorrow —
+    // so an event would drop into the archive on the evening before the day
+    // it actually happens, exactly when someone is checking whether to come.
+    function todayKey() {
+      var d = new Date();
+      var m = String(d.getMonth() + 1);
+      var day = String(d.getDate());
+      return d.getFullYear() + '-' + (m.length < 2 ? '0' + m : m) + '-' + (day.length < 2 ? '0' + day : day);
+    }
+
+    function dateLabel(iso) {
+      var p = iso.split('-');
+      return p[2] + '.' + p[1] + '.' + p[0];
+    }
+
+    function cardHTML(ev) {
+      var bits = '';
+      bits += '<p class="ev-card__date">' + esc(dateLabel(ev.date)) + '</p>';
+      bits += '<h3 class="ev-card__title">' + esc(ev.title) + '</h3>';
+      // Each line is skipped rather than rendered empty — Noy fills in what
+      // she has, and an empty row reads like a mistake on her part.
+      if (ev.time)  bits += '<p class="ev-card__meta">' + esc(ev.time) + '</p>';
+      if (ev.place) bits += '<p class="ev-card__meta">' + esc(ev.place) + '</p>';
+      if (ev.body)  bits += '<p class="ev-card__body">' + esc(ev.body) + '</p>';
+      if (ev.ctaLabel) {
+        var text = encodeURIComponent(ev.ctaText || ev.title);
+        bits += '<a class="btn btn--primary ev-card__cta" target="_blank" rel="noopener"' +
+                ' href="https://wa.me/' + WHATSAPP + '?text=' + text + '">' + esc(ev.ctaLabel) + '</a>';
+      }
+      return '<article class="ev-card rise">' + bits + '</article>';
+    }
+
+    function render(list) {
+      var today = todayKey();
+      var upcoming = [], past = [];
+      for (var i = 0; i < list.length; i++) {
+        (list[i].date >= today ? upcoming : past).push(list[i]);
+      }
+      upcoming.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+      past.sort(function (a, b) { return a.date > b.date ? -1 : a.date < b.date ? 1 : 0; });
+
+      var up = document.getElementById('evUpcoming');
+      var pa = document.getElementById('evPast');
+      var em = document.getElementById('evEmpty');
+
+      /* esc-ok: cardHTML escapes every field it renders */
+      up.innerHTML = upcoming.length
+        ? '<h2 id="evUpcomingH" class="ev-h2"><span lang-content="he">מה קרוב</span>' +
+          '<span lang-content="en">Coming up</span></h2>' + upcoming.map(cardHTML).join('')
+        : '';
+      up.hidden = !upcoming.length;
+
+      /* esc-ok: cardHTML escapes every field it renders */
+      pa.innerHTML = past.length
+        ? '<h2 id="evPastH" class="ev-h2"><span lang-content="he">היה</span>' +
+          '<span lang-content="en">Past</span></h2>' + past.map(cardHTML).join('')
+        : '';
+      pa.hidden = !past.length;
+
+      // A ternary here would put the `upcoming.length` test in the same
+      // top-level piece as the literal markup that follows it, which the
+      // Task 1 escaping check cannot tell apart from a genuine unescaped
+      // interpolation — it flagged exactly that shape. if/else keeps each
+      // branch a plain literal (or a value that has actually gone through
+      // encodeURIComponent), which is also simply true rather than merely
+      // checker-friendly: WHATSAPP is a constant, but encoding it anyway at
+      // its one point of use costs nothing and stays correct if that ever
+      // changes.
+      if (upcoming.length) {
+        em.innerHTML = '';
+      } else {
+        em.innerHTML =
+          '<p class="ev-empty__line"><span lang-content="he">אין אירוע קרוב כרגע.</span>' +
+          '<span lang-content="en">Nothing coming up right now.</span></p>' +
+          '<p class="ev-empty__sub"><span lang-content="he">כשיהיה, זה יופיע כאן. אפשר גם פשוט לכתוב לי.</span>' +
+          '<span lang-content="en">When there is, it shows up here. Or just write to me.</span></p>' +
+          '<a class="btn btn--primary" target="_blank" rel="noopener" href="https://wa.me/' + encodeURIComponent(WHATSAPP) +
+          '?text=' + encodeURIComponent('היי נוי, אשמח לשמוע על אירועים קרובים') + '">' +
+          '<span lang-content="he">דברו איתי</span><span lang-content="en">Talk to me</span></a>';
+      }
+      em.hidden = !!upcoming.length;
+
+      // Everything above was injected after site.js already ran its one-time
+      // pass in mount(). Without this every card shows Hebrew and English at
+      // the same time, and .rise never releases.
+      window.nuikaRefresh();
+    }
+
+    // once(), not on(): an events board does not change while someone reads
+    // it, and a page that keeps a socket open is a page that keeps a socket
+    // open. There is no seeding here of any kind — an empty node means Noy
+    // has no events listed, which is a real and ordinary state.
+    firebase.database().ref('nuika/events').once('value')
+      .then(function (snap) {
+        var val = snap.val() || {};
+        var list = Object.keys(val).map(function (k) { return val[k]; })
+                         .filter(function (e) { return e && e.date && e.title; });
+        render(list);
+      })
+      .catch(function (err) {
+        console.error('events: could not read nuika/events', err);
+        render([]);   // the designed empty state, never a blank page
+      });
+  })();
+  </script>
+</body>
+</html>
