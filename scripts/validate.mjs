@@ -74,6 +74,139 @@ function inlineScripts(src) {
 // having run first to define the list.
 const PAGES = ['home.html', 'story.html', 'gallery.html', 'contact.html', 'events.html'];
 
+// Real string/template/comment walker, shared by uncommented() (right below)
+// and the events board's cardHTML() escaping check (in the `pages` phase).
+// Classifies every position in `s` as:
+//   'c' — code, INCLUDING a template literal's own `${ }` hole, which is
+//         code, not text, however deeply it nests further strings of its own
+//   's' — string text: inside a plain '/" string, or a template literal's
+//         literal text (never a hole)
+//   'm' — a comment: //, /* */, or <!--
+// and separately reports `uncertain`: true the moment the walk meets a `/`
+// at a code (or hole) position that it cannot resolve as `//`, `/*`, or a
+// clearly-non-comment division — telling a regex literal apart from
+// division needs a real parser, and guessing wrong is exactly how earlier
+// versions of the checks that read this file's output got confused (see
+// task-4-report.md, fix round 2: /don't/'s apostrophe, read as a plain
+// quote by a walker with no concept of a regex literal, desynced everything
+// after it). The cardHTML check FAILs outright when `uncertain` is true
+// rather than trust a scan it cannot vouch for; uncommented() (below) has no
+// such option — a `/` it cannot resolve as a comment opener is simply left
+// as code, exactly as before, since either way it certainly is not a
+// comment. contact.html's one real regex literal (/\D/g) contains no quote
+// character, so this never turns into a second problem in practice today.
+//
+// Backslash handling is the one place a wrong guess here shipped live: on
+// meeting `\` inside any string or template, the VERY NEXT character is
+// consumed unconditionally, never by asking "was the previous character a
+// backslash" once a possible closing quote is reached. That lookbehind is an
+// off-by-one for a literal ending in an ESCAPED backslash (`\\`) — the
+// second backslash is itself escaped and does not escape what follows, but
+// a one-character lookbehind cannot tell `\\` (string still closes
+// normally) apart from a single `\` right before the closing quote (the
+// quote is escaped, string does not close). `` `x\\` `` measured this live,
+// twice: the escaping check's own scanner treated the template as
+// unterminated and masked the rest of cardHTML() as string text — a real
+// `<img src="y">` landed in a rendered card from a field with nothing
+// escaping it at all — and the separate, simpler quote-tracker that finds a
+// function's matching closing brace (used to extract cardHTML()'s body,
+// just below) had the identical bug for the identical reason. Consuming
+// forward one character at a time has no lookbehind to get wrong regardless
+// of how many backslashes are chained. See task-4-report.md, fix round 3.
+function classify(s) {
+  const tags = new Array(s.length).fill('c');
+  const stack = []; // {k:'str',q} | {k:'tmpl'} | {k:'hole',depth} | {k:'line'} | {k:'block'} | {k:'html'}
+  let uncertain = false;
+  const top = () => stack[stack.length - 1];
+
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    const ctx = top();
+
+    if (!ctx) {
+      if (c === "'" || c === '"') { tags[i] = 's'; stack.push({ k: 'str', q: c }); continue; }
+      if (c === '`') { tags[i] = 's'; stack.push({ k: 'tmpl' }); continue; }
+      if (c === '<' && s[i + 1] === '!' && s[i + 2] === '-' && s[i + 3] === '-') {
+        tags[i] = tags[i + 1] = tags[i + 2] = tags[i + 3] = 'm'; i += 3;
+        stack.push({ k: 'html' }); continue;
+      }
+      if (c === '/' && s[i + 1] === '*') { tags[i] = tags[i + 1] = 'm'; i++; stack.push({ k: 'block' }); continue; }
+      if (c === '/' && s[i + 1] === '/') { tags[i] = tags[i + 1] = 'm'; i++; stack.push({ k: 'line' }); continue; }
+      if (c === '/') uncertain = true;
+      continue;
+    }
+
+    if (ctx.k === 'str') {
+      tags[i] = 's';
+      if (c === '\\') { i++; if (i < s.length) tags[i] = 's'; continue; }
+      if (c === ctx.q) { stack.pop(); continue; }
+      continue;
+    }
+
+    if (ctx.k === 'tmpl') {
+      tags[i] = 's';
+      if (c === '\\') { i++; if (i < s.length) tags[i] = 's'; continue; }
+      if (c === '`') { stack.pop(); continue; }
+      if (c === '$' && s[i + 1] === '{') {
+        tags[i] = 's'; i++; tags[i] = 's';
+        stack.push({ k: 'hole', depth: 0 });
+        continue;
+      }
+      continue;
+    }
+
+    if (ctx.k === 'hole') {
+      if (c === "'" || c === '"') { tags[i] = 's'; stack.push({ k: 'str', q: c }); continue; }
+      if (c === '`') { tags[i] = 's'; stack.push({ k: 'tmpl' }); continue; }
+      if (c === '<' && s[i + 1] === '!' && s[i + 2] === '-' && s[i + 3] === '-') {
+        tags[i] = tags[i + 1] = tags[i + 2] = tags[i + 3] = 'm'; i += 3;
+        stack.push({ k: 'html' }); continue;
+      }
+      if (c === '/' && s[i + 1] === '*') { tags[i] = tags[i + 1] = 'm'; i++; stack.push({ k: 'block' }); continue; }
+      if (c === '/' && s[i + 1] === '/') { tags[i] = tags[i + 1] = 'm'; i++; stack.push({ k: 'line' }); continue; }
+      if (c === '/') { uncertain = true; continue; }
+      if (c === '{') { ctx.depth++; continue; }
+      if (c === '}') {
+        if (ctx.depth > 0) { ctx.depth--; continue; }
+        tags[i] = 's'; // the hole's own closing brace — punctuation, not code
+        stack.pop();
+        continue;
+      }
+      continue;
+    }
+
+    if (ctx.k === 'line') {
+      if (c === '\n') { stack.pop(); continue; } // the newline ends it but is not itself part of it
+      tags[i] = 'm';
+      continue;
+    }
+
+    if (ctx.k === 'block') {
+      tags[i] = 'm';
+      if (c === '*' && s[i + 1] === '/') { tags[i + 1] = 'm'; i++; stack.pop(); continue; }
+      continue;
+    }
+
+    // ctx.k === 'html'
+    tags[i] = 'm';
+    if (c === '-' && s[i + 1] === '-' && s[i + 2] === '>') { tags[i + 1] = tags[i + 2] = 'm'; i += 2; stack.pop(); continue; }
+  }
+
+  return { tags, uncertain };
+}
+
+// Replaces every position whose tag satisfies `pick` with a space, except a
+// literal newline, which is always kept — this is what stops a stripped
+// multi-line comment or string from gluing the tokens on either side of it
+// into one, while keeping line numbers in the result meaningful.
+function maskTags(s, tags, pick) {
+  const out = s.split('');
+  for (let i = 0; i < s.length; i++) {
+    if (pick(tags[i]) && s[i] !== '\n') out[i] = ' ';
+  }
+  return out.join('');
+}
+
 // Every check in the `pages` phase reads source text, and source text has
 // comments. Checks there have now been defeated three separate times by
 // deleting the real code and leaving the word behind in a comment — once
@@ -84,33 +217,32 @@ const PAGES = ['home.html', 'story.html', 'gallery.html', 'contact.html', 'event
 // Replaced with a space, not nothing, so a stripped comment cannot glue
 // two identifiers into one.
 //
-// The // branch's guard — the character immediately before it must be
-// none of colon, a word character, a quote, or a backslash — is what
-// keeps it from eating a real "https://" (preceded by ':', excluded) or a
-// protocol-relative "//example.com" (typically preceded by a quote,
-// excluded). Proven, not assumed: task-6-report.md round-trips a real
-// https://wa.me/972547382282 URL through this exact function inside both
-// a <script> and a <style> block and confirms it survives intact, and
-// separately confirms a genuine trailing same-line comment placed AFTER
-// such a URL on the same line is still stripped correctly.
-//
-// What this deliberately does NOT attempt: telling a trailing `//` inside
-// a string literal from one that opens a real comment when the string
-// itself contains something other than "://" or an opening quote right
-// before the slashes — e.g. a string literal like "` //x`" opens with a
-// space, which the guard cannot distinguish from a real comment without a
-// full lexer. No content in these four pages currently has that shape;
-// this is named here so nobody mistakes the guard for a general one.
+// Built on classify() (above), a real string/template/comment walker, not
+// the three lookbehind-guarded regexes this function used through fix round
+// 2 of the events board task. Those regexes decided a `/` opened a real
+// comment by checking ONE character before it — none of colon, a word
+// character, a quote, or a backslash — a proxy for "probably not inside a
+// string", never the real thing. Measured live to fail in both directions:
+// `grid.innerHTML = '<a href=" // ">' + location.hash;` in gallery.html
+// passed the escaping check clean, exit 0 — a space (not one of the four
+// excluded characters) sits right before the `//`, so the old guard read it
+// as a real comment, truncated the statement there, and the actual
+// unescaped concatenation after it was never seen by anything downstream.
+// The other direction is just as real: a benign string merely containing
+// ` // ` could turn an unrelated, correct check red. classify() tracks
+// whether a position is actually inside a string or template instead of
+// guessing from its neighbours, so `//`, `/*`, and `<!--` are only ever read
+// as comments where they truly could be one — top-level code, or a template
+// literal's own `${ }` hole — never inside a string, whatever that string
+// happens to contain. See task-4-report.md, fix round 3, for both
+// directions measured before and after this rewrite.
 //
 // Hoisted to module scope, next to PAGES and inlineScripts(): Task 5 calls
 // unsafeHtmlWrites() (below) from the `features` phase, on a slice of
 // index.html's own application script, and CI runs every phase separately —
 // the same reason PAGES and inlineScripts() already live up here rather than
 // inside the `pages` block that used to be this function's only home.
-const uncommented = s => s
-  .replace(/<!--[\s\S]*?-->/g, ' ')
-  .replace(/\/\*[\s\S]*?\*\//g, ' ')
-  .replace(/(^|[^:\w"'\\])\/\/[^\n]*/g, '$1 ');
+const uncommented = s => maskTags(s, classify(s).tags, t => t === 'm');
 
 // Escaping is a property of each write, not of the file. The check these
 // replace looked for the string `esc(` anywhere in the page, so a new
@@ -1484,20 +1616,21 @@ if (want('pages')) {
     //    treats as a real comment opening (see its own doc comment), and a
     //    string like '<a href=" // ">' carries exactly that shape.
     //
-    //    classifyForScan() below replaces the quote-only mask with a real
-    //    stack machine: `'`, `"`, and `` ` `` all open a string, but a
-    //    backtick's `${` additionally opens a HOLE, which is code — tracked
-    //    with its own brace depth so a nested object literal's `{`/`}`
-    //    inside a hole is not mistaken for the hole's own closing `}`, and a
-    //    further nested string or template inside a hole is handled by the
-    //    same machine recursively (via the same stack). Only the characters
+    //    classify() (module scope, shared with uncommented() — see its own
+    //    doc comment there) replaces the quote-only mask with a real stack
+    //    machine: `'`, `"`, and `` ` `` all open a string, but a backtick's
+    //    `${` additionally opens a HOLE, which is code — tracked with its
+    //    own brace depth so a nested object literal's `{`/`}` inside a hole
+    //    is not mistaken for the hole's own closing `}`, and a further
+    //    nested string or template inside a hole is handled by the same
+    //    machine recursively (via the same stack). Only the characters
     //    genuinely inside string TEXT — never a hole — are masked.
     //
     //    A regex literal is where this stops trying to be clever: telling
     //    `/don't/` apart from a division sign is genuinely undecided without
     //    a real parser, and guessing wrong is exactly how the previous
-    //    version got desynced. So classifyForScan() does not guess — ANY `/`
-    //    it meets outside an already-open string sets `uncertain`, and this
+    //    version got desynced. So classify() does not guess — ANY `/` it
+    //    meets outside an already-open string sets `uncertain`, and this
     //    check FAILs outright rather than trust a scan it cannot vouch for.
     //    cardHTML contains no regex and no division today, so this costs
     //    nothing now; it exists so that if either is ever added, the check
@@ -1512,12 +1645,43 @@ if (want('pages')) {
     //    escaped...`, because there was no longer any `ev` in the body at
     //    all for the scan to find — confident and wrong at once. Two fixes:
     //    the signature is now pinned to literally `(ev)`, with its own
-    //    message naming the actual parameter when it is anything else; and
-    //    the scan now asserts it found at least one `ev` reference before
-    //    trusting a clean result — zero references in a function that
+    //    message naming the actual parameter when it is anything else — the
+    //    body is never even reached once the signature does not match,
+    //    verified both with every field left unescaped and with every field
+    //    correctly escaped, identical FAIL either way; and the scan asserts
+    //    it found at least one `ev` reference before trusting a clean
+    //    result, for the narrower case a renamed-but-still-`(ev)` signature
+    //    could not itself catch — zero references in a function that
     //    renders seven fields means this check stopped looking at what it
     //    thinks it is looking at, for whatever reason, and must say so
     //    rather than pass by default.
+    //
+    // Fix round 3 found two more problems, both inherited rather than
+    // introduced by round 2, both the same class as everything above: a
+    // scanner that cannot parse its own input reporting "ok" regardless.
+    //
+    // 3. The backslash bug described on classify()'s own doc comment (module
+    //    scope, above uncommented()) applied here too: a title ending in an
+    //    escaped backslash, `` `x\\` ``, made this check's own scanner treat
+    //    the rest of cardHTML() as unterminated string text, hiding a
+    //    genuinely unescaped field after it. Fixed by moving to classify(),
+    //    which consumes forward past any `\` rather than looking backward at
+    //    a possible closing quote — see its own doc comment for the measured
+    //    incident. The identical bug in the simpler quote-tracker just below
+    //    (extracting cardHTML()'s own body) is fixed the same way, in place,
+    //    since that walk does not need holes or comments, only a correct
+    //    idea of where a string ends.
+    //
+    // 4. uncommented() (module scope) used to decide a `//` opened a real
+    //    comment by checking one preceding character — not by knowing
+    //    whether it was actually inside a string. A crafted `'<a href=" // "
+    //    >' + ev.title` never reached this check as a violation, because
+    //    uncommented() had already truncated the statement at the `//`
+    //    before this check's scanner ever ran. classify() (module scope) now
+    //    backs uncommented() too, so a `//` inside a string is never mistaken
+    //    for a comment regardless of what precedes it — see uncommented()'s
+    //    own doc comment for the measured incident (gallery.html, not just
+    //    this page).
     //
     // The parameter declaration itself (`function cardHTML(ev)`) is outside
     // `cardBody` already, since the slice below starts after the opening `{`.
@@ -1530,89 +1694,48 @@ if (want('pages')) {
         fail('events.html: no function cardHTML(ev) — cannot verify it escapes what it renders');
       }
     } else {
+      // Finds cardHTML()'s matching closing brace. Quote-aware only (no
+      // hole/comment tracking needed here — a backtick is treated as one
+      // opaque span end-to-end, which is enough to find the right closing
+      // brace as long as string escapes are read correctly, which fix round
+      // 3 corrects: on meeting `\`, the next character is always consumed
+      // without being tested as a possible closing quote, never by checking
+      // whether the character already passed was a backslash (see
+      // classify()'s doc comment, module scope, for why that lookbehind is
+      // wrong on a literal ending in an escaped backslash, and for the
+      // measured incident — this exact walk over-ran to the end of the file
+      // on the identical shape before this fix).
       let cdepth = 1, cq = null, ci = cardOpen.index + cardOpen[0].length;
       for (; ci < evCode.length && cdepth > 0; ci++) {
         const c = evCode[ci];
-        if (cq) { if (c === cq && evCode[ci - 1] !== '\\') cq = null; continue; }
+        if (cq) {
+          if (c === '\\') { ci++; continue; }
+          if (c === cq) cq = null;
+          continue;
+        }
         if (c === "'" || c === '"' || c === '`') { cq = c; continue; }
         else if (c === '{') cdepth++;
         else if (c === '}') cdepth--;
       }
       const cardBody = evCode.slice(cardOpen.index + cardOpen[0].length, ci - 1);
 
-      // Classifies every character of `body` as string TEXT (masked to a
-      // space) or CODE (left as-is) — where a template literal's `${ }` hole
-      // is code, not text, however deeply it nests further strings or
-      // templates of its own. Sets `uncertain` and stops trusting anything
-      // it has seen so far the moment it meets a `/` outside an
-      // already-open string: that character is either a division sign or
-      // the start of a regex literal, and nothing short of a real parser can
-      // tell those apart. Length-preserving throughout, so every position
-      // recorded by a caller still points at the same place in `body`.
-      function classifyForScan(body) {
-        const out = body.split('');
-        const stack = []; // {kind:'str',q} | {kind:'tmpl'} | {kind:'hole',depth}
-        let uncertain = false;
-        const top = () => stack[stack.length - 1];
-
-        for (let i = 0; i < body.length; i++) {
-          const c = body[i];
-          const ctx = top();
-
-          if (!ctx) {
-            if (c === "'" || c === '"') { out[i] = ' '; stack.push({ kind: 'str', q: c }); continue; }
-            if (c === '`') { out[i] = ' '; stack.push({ kind: 'tmpl' }); continue; }
-            if (c === '/') uncertain = true;
-            continue; // top-level code: leave as-is
-          }
-
-          if (ctx.kind === 'str') {
-            if (c === ctx.q && body[i - 1] !== '\\') { out[i] = ' '; stack.pop(); continue; }
-            out[i] = c === '\n' ? '\n' : ' ';
-            continue;
-          }
-
-          if (ctx.kind === 'tmpl') {
-            if (c === '`' && body[i - 1] !== '\\') { out[i] = ' '; stack.pop(); continue; }
-            if (c === '$' && body[i + 1] === '{') {
-              out[i] = ' ';
-              i++;
-              out[i] = ' '; // the hole's opening brace — punctuation, not code
-              stack.push({ kind: 'hole', depth: 0 });
-              continue;
-            }
-            out[i] = c === '\n' ? '\n' : ' '; // template literal TEXT
-            continue;
-          }
-
-          // ctx.kind === 'hole': inside ${ ... } — this is code.
-          if (c === "'" || c === '"') { out[i] = ' '; stack.push({ kind: 'str', q: c }); continue; }
-          if (c === '`') { out[i] = ' '; stack.push({ kind: 'tmpl' }); continue; }
-          if (c === '/') { uncertain = true; continue; }
-          if (c === '{') { ctx.depth++; continue; } // a nested object/block, not the hole's own close
-          if (c === '}') {
-            if (ctx.depth > 0) { ctx.depth--; continue; }
-            out[i] = ' '; // the hole's own closing brace
-            stack.pop();
-            continue;
-          }
-          continue; // hole content: leave as-is
-        }
-
-        return { masked: out.join(''), uncertain };
-      }
-
-      const { masked: maskedBody, uncertain } = classifyForScan(cardBody);
+      const { tags, uncertain } = classify(cardBody);
 
       if (uncertain) {
         fail('events.html: cardHTML() contains a "/" outside any string — this checker cannot tell a regex literal from division without a real parser, and guessing is how a real regex literal (e.g. /don\'t/) previously hid an unescaped field after it; remove the "/" from cardHTML(), or this check needs to grow before it can vouch for this file again');
       } else {
+        // Everything classify() marked string text OR comment is blanked —
+        // cardBody should carry no comments at all by this point (the whole
+        // file already went through uncommented() above), but masking both
+        // costs nothing and stays correct if that ever stops being true.
+        const maskedBody = maskTags(cardBody, tags, t => t === 's' || t === 'm');
+
         // [start, end) ranges within cardBody already accounted for by one
         // of the three allowed shapes. A `||` fallback is credited whether
         // its right-hand side is another ev.<field> (visible as text) or a
-        // literal, which classifyForScan() has already masked to blank
-        // space — either way the matched call is still exactly one of the
-        // three allowed shapes and nothing else.
+        // literal, which classify() has already masked to blank space —
+        // either way the matched call is still exactly one of the three
+        // allowed shapes and nothing else.
         const allowed = [];
         const markAt = (base, localIndex, text) => allowed.push([base + localIndex, base + localIndex + text.length]);
         const TAIL = `(?:\\s*\\|\\|\\s*(?:ev\\.\\w+)?)*\\s*\\)+`;
