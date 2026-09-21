@@ -22,6 +22,33 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SITE = 'https://nuika.co.il';
 const EXPECTED_REMOTE = 'shaharazmon24/NUIKA';
 
+// The shop is index.html until the cutover and shop.html after it. Resolve it
+// rather than hardcoding, so every tool is correct on both sides of the rename.
+//
+// This tool is the reason the resolver exists at all. Hardcoded, it would
+// have gone on comparing index.html after the cutover moved the shop out of
+// it — comparing the film page, which barely changes, finding it identical in
+// all three places, and reporting "everything is in sync" while the shop
+// diverged between Noy's phone and Shahar's laptop. That is the exact failure
+// this file was written to prevent.
+//
+// Both present means the cutover is half-applied — a state in which every
+// later answer would be a guess. Neither present means the checkout is not
+// this project. Both throw rather than pick.
+//
+// Copied verbatim from validate.mjs; ship.mjs has the same copy. There is no
+// shared module between the three scripts and this is not the change that
+// should invent one.
+function shopFile(root) {
+  const a = existsSync(join(root, 'shop.html'));
+  const b = existsSync(join(root, 'index.html'));
+  if (a && b) throw new Error('both shop.html and index.html exist — the cutover is half-applied; finish it or revert it before running this');
+  if (a) return 'shop.html';
+  if (b) return 'index.html';
+  throw new Error('neither shop.html nor index.html exists — this is not the NUIKA checkout');
+}
+const SHOP = shopFile(ROOT);
+
 const say  = m => console.log(m);
 const line = () => say('─'.repeat(58));
 
@@ -89,10 +116,41 @@ const ahead   = trySh('git rev-list --count origin/main..HEAD') || '0';
 const behind  = trySh('git rev-list --count HEAD..origin/main') || '0';
 
 // ── 2. The three versions ───────────────────────────────────
-const localV  = versionOf(existsSync(join(ROOT, 'index.html'))
-  ? readFileSync(join(ROOT, 'index.html'), 'utf8') : null);
-const originV = versionOf(trySh('git show origin/main:index.html'));
-const liveV   = versionOf(trySh(`curl -s --max-time 25 "${SITE}/index.html?cb=${Date.now()}"`));
+// shopFile() has already proved SHOP exists, so this read cannot ENOENT.
+const localV  = versionOf(readFileSync(join(ROOT, SHOP), 'utf8'));
+
+// Deliberately the folder's name, not a second resolution against origin. If
+// the two disagree this returns nothing and the version reads "לא זמין" —
+// which is honest: one side has the cutover and the other does not, and the
+// ahead/behind counts below already say so in words Noy can act on.
+const originV = versionOf(trySh(`git show origin/main:${SHOP}`));
+
+// A cutover is two files changing name at once. Until the deploy lands, the
+// folder and the live site can disagree about which file IS the shop — and
+// comparing the folder's shop against the live film page produces a version
+// mismatch that looks like drift and is not. Say which it is.
+//
+// Only the real shop carries a version tag, and that is the whole test. A
+// test on "the response was not empty" would have been wrong: GitHub Pages
+// answers a missing path with a styled 404 page that is valid HTML —
+// measured at 9,379 bytes for /shop.html against the live site today — so an
+// emptiness check reads that 404 as proof the file exists. Resolving the live
+// shop is the same job shopFile() does for the folder, so it is written the
+// same way, as a named resolver rather than a bare ternary.
+function liveShopFile(html) {
+  return versionOf(html).ok ? 'shop.html' : 'index.html';
+}
+const liveShopHtml = trySh(`curl -s --max-time 25 "${SITE}/shop.html?cb=${Date.now()}"`);
+const liveShop     = liveShopFile(liveShopHtml);
+
+// Read the live version out of whichever file is the shop UP THERE, not
+// whichever one is the shop down here. Asking for the folder's name during a
+// half-landed deploy fetches a 404, reports "לא זמין", and hides the version
+// the site is in fact still serving. When the live shop is shop.html its body
+// is already in hand — no second request.
+const liveV = liveShop === 'shop.html'
+  ? versionOf(liveShopHtml)
+  : versionOf(trySh(`curl -s --max-time 25 "${SITE}/index.html?cb=${Date.now()}"`));
 
 say('');
 say('  ┌─ התיקייה שלך');
@@ -106,6 +164,16 @@ say('  │');
 say('  └─ האתר החי (מה שהלקוחות רואים)');
 say(`       גרסה:  ${liveV.text}`);
 say('');
+
+// Only worth saying when the live site actually answered. With no internet
+// the probe comes back empty, liveShopFile() falls to the pre-cutover name,
+// and announcing a half-applied cutover on that silence would be inventing a
+// diagnosis out of a failed request.
+if (liveShop !== SHOP && liveV.ok) {
+  say(`  ⚠  בתיקייה החנות נקראת ${SHOP} ובאתר החי ${liveShop} — ההחלפה באמצע.`);
+  say('     זה תקין בדקה שאחרי פרסום. אם זה נמשך — תגידי לקלוד.');
+  say('');
+}
 
 // ── 3. Verdict ──────────────────────────────────────────────
 line();

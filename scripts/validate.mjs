@@ -27,7 +27,29 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const html = readFileSync(join(ROOT, 'index.html'), 'utf8');
+
+// The shop is index.html until the cutover and shop.html after it. Resolve it
+// rather than hardcoding, so every tool is correct on both sides of the rename.
+//
+// Both present means the cutover is half-applied — a state in which every
+// later answer would be a guess. Neither present means the checkout is not
+// this project. Both throw rather than pick.
+//
+// Copied verbatim into status.mjs and ship.mjs. There is no shared module
+// between the three scripts and this is not the change that should invent
+// one: a module the other two would have to import is a bigger, riskier edit
+// than the nine lines it would save, in a project with no build step.
+function shopFile(root) {
+  const a = existsSync(join(root, 'shop.html'));
+  const b = existsSync(join(root, 'index.html'));
+  if (a && b) throw new Error('both shop.html and index.html exist — the cutover is half-applied; finish it or revert it before running this');
+  if (a) return 'shop.html';
+  if (b) return 'index.html';
+  throw new Error('neither shop.html nor index.html exists — this is not the NUIKA checkout');
+}
+const SHOP = shopFile(ROOT);
+
+const html = readFileSync(join(ROOT, SHOP), 'utf8');
 
 // The five phases, declared once. `want()` reads this to decide what runs;
 // the argument check below reads the same list to decide what is a real flag,
@@ -861,7 +883,7 @@ if (want('features')) {
   // each line below is a way this project has already lost data once.
   const app = appScript();
   if (!app) {
-    fail('index.html: could not find the application script');
+    fail(`${SHOP}: could not find the application script`);
   } else {
     // The events section, bounded by the file's own `// ───` section-marker
     // convention rather than by a character count. The brief specified a
@@ -1320,9 +1342,9 @@ if (want('assets')) {
   // scripts agree on.
   const versionTag = html.match(/<meta name="nuika-version" content="([^"]*)"/);
   if (!versionTag) {
-    fail('index.html has no nuika-version meta tag — ship.mjs cannot stamp it and status.mjs cannot compare anything');
+    fail(`${SHOP} has no nuika-version meta tag — ship.mjs cannot stamp it and status.mjs cannot compare anything`);
   } else if (/^\d{4}-\d\d-\d\dT[\d:.]+Z\|[0-9a-f]{7,}$/.test(versionTag[1])) {
-    pass('index.html carries a version stamp in the shape ship.mjs writes');
+    pass(`${SHOP} carries a version stamp in the shape ship.mjs writes`);
   } else {
     fail(`the nuika-version tag reads "${versionTag[1]}" — expected <ISO timestamp>|<commit>, which is what status.mjs parses`);
   }
@@ -1358,6 +1380,38 @@ if (want('assets')) {
     const pushAt  = publishFn[1].indexOf('git push');
     if (stampAt >= 0 && pushAt >= 0 && stampAt < pushAt) pass('publish() stamps the version before it pushes');
     else fail('publish() must call stampVersion() before it pushes, or a release goes out under the previous version tag');
+  }
+
+  // The three safety tools all hunted for the shop by the literal name
+  // index.html. After the cutover that name belongs to the film page, and
+  // status.mjs would have compared the film — which barely changes — and
+  // reported "everything is in sync" while the shop diverged between two
+  // machines. That is the exact failure it was written to prevent, after it
+  // had already cost this project its data-sync layer once.
+  //
+  // The resolvers are the one exception, and they are not a loophole: naming
+  // both candidates is the entire job of a function called ...shopFile().
+  // Written without that carve-out this check can never pass, because the fix
+  // it demands puts the literal straight back inside the resolver. Measured,
+  // not assumed: with shopFile() written and every other use converted, it
+  // still reported "scripts/validate.mjs names index.html directly 2 time(s)"
+  // — both hits the resolver's own two lines.
+  //
+  // So the resolvers are cut out before the scan, and shopFile() is then
+  // required to exist. Without that second half a script could pass by
+  // deleting its resolver and going back to a hardcoded name, which is the
+  // exact failure this check exists to stop.
+  for (const script of ['validate.mjs', 'status.mjs', 'ship.mjs']) {
+    const src = readFileSync(join(ROOT, 'scripts', script), 'utf8')
+      .split('\n').filter(l => !l.trimStart().startsWith('//')).join('\n');
+    if (!/function shopFile\s*\(/.test(src)) {
+      fail(`scripts/${script} has no shopFile() — it cannot tell which file is the shop once the name moves`);
+      continue;
+    }
+    const scanned = src.replace(/function \w*[Ss]hopFile\s*\([^)]*\)\s*\{[\s\S]*?\n\}/g, '');
+    const hard = [...scanned.matchAll(/['"`]\.?\/?index\.html['"`]/g)];
+    if (hard.length) fail(`scripts/${script} names index.html directly ${hard.length} time(s) outside its resolver — resolve the shop with shopFile() so the cutover cannot silently point it at the film page`);
+    else pass(`scripts/${script} resolves the shop instead of hardcoding its name`);
   }
 
   // The rules are the only thing between a public database handle and Noy's
@@ -2152,9 +2206,9 @@ if (want('pages')) {
 
   // Until Plan 5 renames things, nothing may link the new pages from the shop.
   // A customer who finds a half-built page has found a bug, not a preview.
-  const shop = readFileSync(join(ROOT, 'index.html'), 'utf8');
+  const shop = readFileSync(join(ROOT, SHOP), 'utf8');
   const leaked = PAGES.filter(p => shop.includes(p));
-  if (leaked.length) fail(`index.html links to ${leaked.join(', ')} — the new pages are not public yet`);
+  if (leaked.length) fail(`${SHOP} links to ${leaked.join(', ')} — the new pages are not public yet`);
   else pass('the shop links to none of the new pages');
 
   console.log('The story:');

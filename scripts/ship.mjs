@@ -7,12 +7,39 @@
 // project its entire data-sync layer once.
 
 import { execSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { ensureHooks } from './ensure-hooks.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+// The shop is index.html until the cutover and shop.html after it. Resolve it
+// rather than hardcoding, so every tool is correct on both sides of the rename.
+//
+// This file stamps the version into the shop on every publish. Hardcoded, it
+// would go on stamping index.html after the cutover moved the shop out of it
+// — stamping the film page — and status.mjs reads that one tag to compare the
+// folder, GitHub and the live site. Every release after that would be
+// invisible to the one tool whose job is to refuse to pretend all is well.
+//
+// Both present means the cutover is half-applied — a state in which every
+// later answer would be a guess. Neither present means the checkout is not
+// this project. Both throw rather than pick, and throwing here stops the
+// publish before ensureHooks() and before anything is pushed.
+//
+// Copied verbatim from validate.mjs; status.mjs has the same copy. There is
+// no shared module between the three scripts and this is not the change that
+// should invent one.
+function shopFile(root) {
+  const a = existsSync(join(root, 'shop.html'));
+  const b = existsSync(join(root, 'index.html'));
+  if (a && b) throw new Error('both shop.html and index.html exist — the cutover is half-applied; finish it or revert it before running this');
+  if (a) return 'shop.html';
+  if (b) return 'index.html';
+  throw new Error('neither shop.html nor index.html exists — this is not the NUIKA checkout');
+}
+const SHOP = shopFile(ROOT);
 
 // Install the safety hooks if this machine has never had them.
 ensureHooks();
@@ -44,8 +71,8 @@ const message = process.argv.slice(2).join(' ').trim();
 // pretend everything is fine could not see the change at all.
 function stampVersion() {
   try {
-    const idxPath = join(ROOT, 'index.html');
-    const before  = readFileSync(idxPath, 'utf8');
+    const shopPath = join(ROOT, SHOP);
+    const before  = readFileSync(shopPath, 'utf8');
     const stamp   = new Date().toISOString();
     const parent  = git('rev-parse --short HEAD', true);
     const after   = before.replace(
@@ -53,10 +80,10 @@ function stampVersion() {
       `$1${stamp}|${parent}$2`
     );
     if (after === before) {
-      say('     ⚠  לא מצאתי את תג הגרסה ב-index.html — ממשיך בלי לחתום.');
+      say(`     ⚠  לא מצאתי את תג הגרסה ב-${SHOP} — ממשיך בלי לחתום.`);
     } else {
-      writeFileSync(idxPath, after);
-      execSync('git add index.html', { cwd: ROOT });
+      writeFileSync(shopPath, after);
+      execSync(`git add ${SHOP}`, { cwd: ROOT });
       execSync(`git commit -q -m "גרסה ${stamp.slice(0, 16).replace('T', ' ')}"`, { cwd: ROOT });
       say(`     גרסה: ${stamp.slice(0, 16).replace('T', ' ')}`);
     }
