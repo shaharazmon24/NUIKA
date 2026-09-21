@@ -456,15 +456,58 @@ if (want('assets')) {
       if (item['$other'] && item['$other']['.validate'] === false) pass('nuika/events rejects unknown fields');
       else fail('nuika/events must carry "$other": { ".validate": false } — an unknown field is an injection route');
 
-      if (typeof item['.validate'] === 'string' && /date/.test(item['.validate']) && /title/.test(item['.validate'])) {
+      // A regex/substring test here is not a logic check: newData.hasChildren(['date']) ||
+      // newData.hasChildren(['title']) contains the literal words "date" and "title", so
+      // /date/.test(...) && /title/.test(...) reported "ok an event must carry date and
+      // title" on a rule that requires only ONE of the two mandatory fields, not both —
+      // an AND-to-OR slip that mutation testing caught and reading did not. Compare the
+      // normalised rule against the exact text the plan requires instead of looking for
+      // words inside it.
+      const normalize = s => s.replace(/\s+/g, '');
+      if (typeof item['.validate'] === 'string' && normalize(item['.validate']) === normalize("newData.hasChildren(['date','title'])")) {
         pass('an event must carry date and title');
       } else {
-        fail('nuika/events/$eventId must require date and title — the page sorts on date and titles the card');
+        fail(`nuika/events/$eventId must be exactly newData.hasChildren(['date','title']) — got ${JSON.stringify(item['.validate'])}; an OR here lets an event through with only one of the two fields the page sorts and titles by`);
       }
 
-      for (const f of ['date', 'title', 'place', 'time', 'body', 'ctaLabel', 'ctaText', 'created']) {
-        if (item[f] && typeof item[f]['.validate'] === 'string') pass(`nuika/events.${f} is typed`);
-        else fail(`nuika/events.${f} has no .validate — an untyped field reaches the admin panel's innerHTML`);
+      // typeof item[f]['.validate'] === 'string' only proves a rule exists, not that it
+      // enforces the right thing: it still printed "ok nuika/events.created is typed"
+      // after created's rule was changed from newData.isNumber() to newData.isString(),
+      // the wrong type per the plan's field table (§6.1). Trading it for a plain
+      // substring check would only move the hole to a different field: "length <= 120"
+      // is itself a substring of "length <= 1200", so widening title's cap would still
+      // read as present under a naive .includes(). Each field below is checked against
+      // what its rule must actually require — the right type function, and for capped
+      // strings, the exact numeric bound compared as a number, not as text.
+      const isStringWithCap = (rule, { min, max }) => {
+        if (typeof rule !== 'string' || !rule.includes('newData.isString()')) return false;
+        if (min != null) {
+          const minMatch = rule.match(/length\s*>\s*(\d+)/);
+          if (!minMatch || Number(minMatch[1]) !== min) return false;
+        }
+        const maxMatch = rule.match(/length\s*<=\s*(\d+)/);
+        return !!maxMatch && Number(maxMatch[1]) === max;
+      };
+
+      const fieldChecks = {
+        date:     rule => typeof rule === 'string' && rule.includes('newData.isString()') && rule.includes('[0-9]{4}-[0-9]{2}-[0-9]{2}'),
+        title:    rule => isStringWithCap(rule, { min: 0, max: 120 }),
+        place:    rule => isStringWithCap(rule, { max: 120 }),
+        time:     rule => isStringWithCap(rule, { max: 60 }),
+        body:     rule => isStringWithCap(rule, { max: 600 }),
+        ctaLabel: rule => isStringWithCap(rule, { max: 40 }),
+        ctaText:  rule => isStringWithCap(rule, { max: 300 }),
+        created:  rule => rule === 'newData.isNumber()',
+      };
+
+      for (const [f, checkRule] of Object.entries(fieldChecks)) {
+        if (!item[f]) {
+          fail(`nuika/events.${f} is missing entirely — the plan's field table (§6.1) requires a typed rule for it`);
+        } else if (checkRule(item[f]['.validate'])) {
+          pass(`nuika/events.${f} is typed correctly`);
+        } else {
+          fail(`nuika/events.${f}'s .validate does not match what the plan requires (got ${JSON.stringify(item[f]['.validate'])}) — a wrong type or a widened cap reaches the admin panel's innerHTML unchecked`);
+        }
       }
     }
   }
