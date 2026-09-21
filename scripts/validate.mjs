@@ -74,6 +74,44 @@ function inlineScripts(src) {
 // having run first to define the list.
 const PAGES = ['home.html', 'story.html', 'gallery.html', 'contact.html'];
 
+// Every check in the `pages` phase reads source text, and source text has
+// comments. Checks there have now been defeated three separate times by
+// deleting the real code and leaving the word behind in a comment — once
+// in HTML, once in a // line, once in a /* */ block inside <style> (see
+// task-6-report.md for all three, each broken and reverted in turn).
+// Strip all three forms, once, in one shared function every simple
+// presence check in that phase runs against, and check what is left.
+// Replaced with a space, not nothing, so a stripped comment cannot glue
+// two identifiers into one.
+//
+// The // branch's guard — the character immediately before it must be
+// none of colon, a word character, a quote, or a backslash — is what
+// keeps it from eating a real "https://" (preceded by ':', excluded) or a
+// protocol-relative "//example.com" (typically preceded by a quote,
+// excluded). Proven, not assumed: task-6-report.md round-trips a real
+// https://wa.me/972547382282 URL through this exact function inside both
+// a <script> and a <style> block and confirms it survives intact, and
+// separately confirms a genuine trailing same-line comment placed AFTER
+// such a URL on the same line is still stripped correctly.
+//
+// What this deliberately does NOT attempt: telling a trailing `//` inside
+// a string literal from one that opens a real comment when the string
+// itself contains something other than "://" or an opening quote right
+// before the slashes — e.g. a string literal like "` //x`" opens with a
+// space, which the guard cannot distinguish from a real comment without a
+// full lexer. No content in these four pages currently has that shape;
+// this is named here so nobody mistakes the guard for a general one.
+//
+// Hoisted to module scope, next to PAGES and inlineScripts(): Task 5 calls
+// unsafeHtmlWrites() (below) from the `features` phase, on a slice of
+// index.html's own application script, and CI runs every phase separately —
+// the same reason PAGES and inlineScripts() already live up here rather than
+// inside the `pages` block that used to be this function's only home.
+const uncommented = s => s
+  .replace(/<!--[\s\S]*?-->/g, ' ')
+  .replace(/\/\*[\s\S]*?\*\//g, ' ')
+  .replace(/(^|[^:\w"'\\])\/\/[^\n]*/g, '$1 ');
+
 // Escaping is a property of each write, not of the file. The check these
 // replace looked for the string `esc(` anywhere in the page, so a new
 // unescaped write sitting next to escaped ones passed — which is exactly the
@@ -125,6 +163,34 @@ const htmlLiteralOnly = s =>
 
 const htmlEscapes = s => /\besc\s*\(/.test(s) || /\bencodeURIComponent\s*\(/.test(s);
 
+// Finds the `;` that actually ends a statement starting at `from` in `s`.
+// The matcher used to find this with `([^;]*);` — a character class with no
+// idea what a quote is, so it stopped at the first `;` anywhere, including
+// the one inside every HTML entity: `&nbsp;`, `&amp;`, `&mdash;`. That
+// truncated `esc('&nbsp;') + ev.title;` down to `esc('&nbsp`, which still
+// contains the substring `esc(` and made the whole statement — the
+// unescaped `ev.title` included — read as escaped; and it truncated the
+// pure literal `'<p>&nbsp;</p>';` down to an unterminated string that failed
+// htmlLiteralOnly and FAILed a write with nothing to escape at all. Reuses
+// the exact quote-and-depth state machine htmlPieces already tracks —
+// walking forward instead of splitting on `+` — so a `;` inside a string or
+// template literal, or inside an open `(`, `[` or `{`, is never mistaken for
+// the end of the statement. Returns -1 if the statement never terminates
+// before the end of `s` (malformed input; callers treat that as unsafe
+// rather than silently skipping it).
+function statementEnd(s, from) {
+  let depth = 0, q = null;
+  for (let i = from; i < s.length; i++) {
+    const c = s[i];
+    if (q) { if (c === q && s[i - 1] !== '\\') q = null; continue; }
+    if (c === "'" || c === '"' || c === '`') { q = c; continue; }
+    if (c === '(' || c === '[' || c === '{') depth++;
+    else if (c === ')' || c === ']' || c === '}') depth--;
+    else if (c === ';' && depth === 0) return i;
+  }
+  return -1;
+}
+
 // Every unescaped write to innerHTML/outerHTML in `code`. `raw` is the same
 // file before comments were stripped, and is used only to read the
 // /* esc-ok: */ markers back off it: uncommented() collapses a block comment
@@ -133,6 +199,10 @@ const htmlEscapes = s => /\besc\s*\(/.test(s) || /\bencodeURIComponent\s*\(/.tes
 // statement's own opening text is the anchor instead. Statements themselves
 // come from the stripped text, so a write that appears only inside a comment
 // is never considered at all.
+//
+// The regex below only finds where a statement STARTS — `.innerHTML =` or
+// `.outerHTML +=` — never how long it runs; statementEnd() (above) finds
+// where it actually ends, for the reason documented there.
 //
 // `raw.indexOf(anchor)` alone breaks the moment two different statements
 // share the same anchor text. The regex's own `\.` never includes the
@@ -151,20 +221,46 @@ const htmlEscapes = s => /\besc\s*\(/.test(s) || /\bencodeURIComponent\s*\(/.tes
 // first, so same-shaped writes can no longer borrow each other's marker.
 function unsafeHtmlWrites(code, raw) {
   let cursor = 0;
-  return [...code.matchAll(/\.(innerHTML|outerHTML)\s*\+?=\s*([^;]*);/g)].filter(m => {
-    const anchor = m[0].trim().slice(0, 40);
+  const out = [];
+  for (const m of code.matchAll(/\.(innerHTML|outerHTML)\s*\+?=\s*/g)) {
+    const rhsStart = m.index + m[0].length;
+    const semi = statementEnd(code, rhsStart);
+    const rhsEnd = semi === -1 ? code.length : semi;
+    const rhs = code.slice(rhsStart, rhsEnd);
+    const full = code.slice(m.index, semi === -1 ? rhsEnd : semi + 1);
+
+    let safe;
+    if (/\$\{/.test(rhs)) {
+      // A template literal: the splitter cannot see its holes.
+      safe = htmlEscapes(rhs);
+    } else {
+      const risky = htmlPieces(rhs).filter(p => !htmlLiteralOnly(p) && !htmlEscapes(p));
+      safe = risky.length === 0;
+    }
+    if (safe) continue;
+
+    const anchor = full.trim().slice(0, 40);
     const at = raw.indexOf(anchor, cursor);
     if (at >= 0) cursor = at + anchor.length;
-    if (/\$\{/.test(m[2])) {
-      // A template literal: the splitter cannot see its holes.
-      if (htmlEscapes(m[2])) return false;
-    } else {
-      const risky = htmlPieces(m[2]).filter(p => !htmlLiteralOnly(p) && !htmlEscapes(p));
-      if (!risky.length) return false;
-    }
     const before = at > 0 ? raw.slice(Math.max(0, at - 220), at) : '';
-    return !/esc-ok:/.test(before);
-  });
+    // "Anywhere in the last 220 characters" is not "the line above it": the
+    // anchor excludes the receiver (`box`, `filterRow`, ...), so `before`
+    // ends a few characters short of the statement's real start, and a
+    // 220-character window reaches well past one whole neighbouring
+    // statement. Found adversarially: an unmarked `box.innerHTML = html;`
+    // placed after buildFilters()'s real, marked `filterRow.innerHTML =
+    // html;` read as marked too — the closing `*/`, the marked statement
+    // itself, `filterRow.hidden = false;` and the function's `}` all fit
+    // inside 220 characters, so the unrelated marker leaked across a
+    // complete statement boundary onto an unmarked one. A marker only
+    // counts when its closing `*/` is the last thing before the statement,
+    // give or take whitespace and the receiver expression itself (the bit
+    // the anchor already excludes) — never an entire other statement.
+    if (/\/\*\s*esc-ok:[^*]*\*\/\s*[\w$.[\]'"]*\s*$/.test(before)) continue;
+
+    out.push([full, m[1], rhs]);
+  }
+  return out;
 }
 
 if (want('syntax')) {
@@ -674,38 +770,6 @@ if (want('design')) {
 if (want('pages')) {
   console.log('New pages:');
 
-  // Every check in this phase reads source text, and source text has
-  // comments. Checks here have now been defeated three separate times by
-  // deleting the real code and leaving the word behind in a comment — once
-  // in HTML, once in a // line, once in a /* */ block inside <style> (see
-  // task-6-report.md for all three, each broken and reverted in turn).
-  // Strip all three forms, once, in one shared function every simple
-  // presence check in this phase runs against, and check what is left.
-  // Replaced with a space, not nothing, so a stripped comment cannot glue
-  // two identifiers into one.
-  //
-  // The // branch's guard — the character immediately before it must be
-  // none of colon, a word character, a quote, or a backslash — is what
-  // keeps it from eating a real "https://" (preceded by ':', excluded) or a
-  // protocol-relative "//example.com" (typically preceded by a quote,
-  // excluded). Proven, not assumed: task-6-report.md round-trips a real
-  // https://wa.me/972547382282 URL through this exact function inside both
-  // a <script> and a <style> block and confirms it survives intact, and
-  // separately confirms a genuine trailing same-line comment placed AFTER
-  // such a URL on the same line is still stripped correctly.
-  //
-  // What this deliberately does NOT attempt: telling a trailing `//` inside
-  // a string literal from one that opens a real comment when the string
-  // itself contains something other than "://" or an opening quote right
-  // before the slashes — e.g. a string literal like "` //x`" opens with a
-  // space, which the guard cannot distinguish from a real comment without a
-  // full lexer. No content in these four pages currently has that shape;
-  // this is named here so nobody mistakes the guard for a general one.
-  const uncommented = s => s
-    .replace(/<!--[\s\S]*?-->/g, ' ')
-    .replace(/\/\*[\s\S]*?\*\//g, ' ')
-    .replace(/(^|[^:\w"'\\])\/\/[^\n]*/g, '$1 ');
-
   // Every page of the new site shares one skeleton. These are not style
   // preferences: each line below is something that silently breaks the page
   // for somebody if it is missing. PAGES itself is declared once, at module
@@ -1104,7 +1168,7 @@ if (want('pages')) {
   const ct = existsSync(contactPath) ? readFileSync(contactPath, 'utf8') : '';
 
   // Every check below runs against this comment-stripped copy, not the raw
-  // file — the shared `uncommented()` defined at the top of this phase.
+  // file — the shared `uncommented()` defined at module scope, near PAGES.
   // Proven necessary, not theoretical: FOUR of the six checks here stayed
   // green while deliberately wrong — the real wa.me number, the real
   // Instagram handle, the real encodeURIComponent( call, and the real
