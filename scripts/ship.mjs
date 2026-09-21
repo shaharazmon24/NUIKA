@@ -23,23 +23,41 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 // folder, GitHub and the live site. Every release after that would be
 // invisible to the one tool whose job is to refuse to pretend all is well.
 //
-// Both present means the cutover is half-applied — a state in which every
-// later answer would be a guess. Neither present means the checkout is not
-// this project. Both throw rather than pick, and throwing here stops the
-// publish before ensureHooks() and before anything is pushed.
+// Resolve by name, then confirm by content — the name alone cannot answer
+// this. The cutover's FINISHED state is both files present: `git mv
+// index.html shop.html` then `git mv home.html index.html`, after which
+// shop.html is the shop and index.html is the home page serving the root.
+// Throwing on "both exist" would have called the destination a fault, and
+// this file is the one that pushes: it would have refused to publish the
+// finished cutover and refused to publish the revert of it too.
 //
-// Copied verbatim from validate.mjs; status.mjs has the same copy. There is
-// no shared module between the three scripts and this is not the change that
-// should invent one.
+// Copied from validate.mjs; status.mjs and enable-deploy-gate.mjs have the
+// same copy. There is no shared module between these scripts and this is not
+// the change that should invent one.
+const SHOP_MARKERS = ['firebase.initializeApp', 'getCartTotal()'];
+
 function shopFile(root) {
-  const a = existsSync(join(root, 'shop.html'));
-  const b = existsSync(join(root, 'index.html'));
-  if (a && b) throw new Error('both shop.html and index.html exist — the cutover is half-applied; finish it or revert it before running this');
-  if (a) return 'shop.html';
-  if (b) return 'index.html';
-  throw new Error('neither shop.html nor index.html exists — this is not the NUIKA checkout');
+  const at = n => join(root, n);
+  const hasShop = existsSync(at('shop.html'));
+
+  if (!hasShop && !existsSync(at('index.html'))) {
+    throw new Error('neither shop.html nor index.html exists — this is not the NUIKA checkout');
+  }
+
+  // The cutover is two renames. shop.html here while home.html is still here
+  // means only the first one ran, and nothing has taken over the site root.
+  if (hasShop && existsSync(at('home.html'))) {
+    throw new Error('shop.html exists but home.html is still here — the cutover is half-applied: "git mv home.html index.html" never ran, so nothing serves the site root');
+  }
+
+  const name = hasShop ? 'shop.html' : 'index.html';
+  const body = readFileSync(at(name), 'utf8');
+  const missing = SHOP_MARKERS.filter(m => !body.includes(m));
+  if (missing.length) {
+    throw new Error(`${name} is the shop by name but not by content — missing ${missing.join(' and ')}. Either the rename put the wrong file at that name, or the shop itself is damaged.`);
+  }
+  return name;
 }
-const SHOP = shopFile(ROOT);
 
 // Install the safety hooks if this machine has never had them.
 ensureHooks();
@@ -48,6 +66,26 @@ const run = a => execSync(a, { cwd: ROOT, stdio: 'inherit' });
 
 const line = '─'.repeat(52);
 const say  = m => console.log(m);
+
+// Noy runs this one. Every other failure path here speaks Hebrew, says what
+// to do and exits cleanly; a raw English Node stack would be the one place
+// the tool stops talking to the person using it. The English detail stays on
+// its own line for whoever fixes it. This sits before any git work, so an
+// unresolvable shop stops the publish rather than stamping the wrong file.
+let SHOP;
+try {
+  SHOP = shopFile(ROOT);
+} catch (err) {
+  say('\n' + line);
+  say('  ❌ לא הצלחתי לזהות איזה קובץ הוא החנות — לא שלחתי כלום.');
+  say('');
+  say(`     ${err.message}`);
+  say('');
+  say('     תגידי לקלוד: "תסדר את קובץ החנות".');
+  say(line);
+  process.exit(1);
+}
+
 const message = process.argv.slice(2).join(' ').trim();
 
 // Stamp the version AFTER the merge, never before it.

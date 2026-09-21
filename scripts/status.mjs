@@ -22,35 +22,73 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SITE = 'https://nuika.co.il';
 const EXPECTED_REMOTE = 'shaharazmon24/NUIKA';
 
+const say  = m => console.log(m);
+const line = () => say('─'.repeat(58));
+
 // The shop is index.html until the cutover and shop.html after it. Resolve it
 // rather than hardcoding, so every tool is correct on both sides of the rename.
 //
 // This tool is the reason the resolver exists at all. Hardcoded, it would
 // have gone on comparing index.html after the cutover moved the shop out of
-// it — comparing the film page, which barely changes, finding it identical in
+// it — comparing the home page, which barely changes, finding it identical in
 // all three places, and reporting "everything is in sync" while the shop
 // diverged between Noy's phone and Shahar's laptop. That is the exact failure
 // this file was written to prevent.
 //
-// Both present means the cutover is half-applied — a state in which every
-// later answer would be a guess. Neither present means the checkout is not
-// this project. Both throw rather than pick.
+// Resolve by name, then confirm by content — the name alone cannot answer
+// this. The cutover's FINISHED state is both files present: `git mv
+// index.html shop.html` then `git mv home.html index.html`, after which
+// shop.html is the shop and index.html is the home page serving the root.
+// Throwing on "both exist" would have called the destination a fault.
 //
-// Copied verbatim from validate.mjs; ship.mjs has the same copy. There is no
-// shared module between the three scripts and this is not the change that
-// should invent one.
-function shopFile(root) {
-  const a = existsSync(join(root, 'shop.html'));
-  const b = existsSync(join(root, 'index.html'));
-  if (a && b) throw new Error('both shop.html and index.html exist — the cutover is half-applied; finish it or revert it before running this');
-  if (a) return 'shop.html';
-  if (b) return 'index.html';
-  throw new Error('neither shop.html nor index.html exists — this is not the NUIKA checkout');
-}
-const SHOP = shopFile(ROOT);
+// Copied from validate.mjs; ship.mjs and enable-deploy-gate.mjs have the same
+// copy. There is no shared module between these scripts and this is not the
+// change that should invent one.
+const SHOP_MARKERS = ['firebase.initializeApp', 'getCartTotal()'];
 
-const say  = m => console.log(m);
-const line = () => say('─'.repeat(58));
+function shopFile(root) {
+  const at = n => join(root, n);
+  const hasShop = existsSync(at('shop.html'));
+
+  if (!hasShop && !existsSync(at('index.html'))) {
+    throw new Error('neither shop.html nor index.html exists — this is not the NUIKA checkout');
+  }
+
+  // The cutover is two renames. shop.html here while home.html is still here
+  // means only the first one ran, and nothing has taken over the site root.
+  if (hasShop && existsSync(at('home.html'))) {
+    throw new Error('shop.html exists but home.html is still here — the cutover is half-applied: "git mv home.html index.html" never ran, so nothing serves the site root');
+  }
+
+  const name = hasShop ? 'shop.html' : 'index.html';
+  const body = readFileSync(at(name), 'utf8');
+  const missing = SHOP_MARKERS.filter(m => !body.includes(m));
+  if (missing.length) {
+    throw new Error(`${name} is the shop by name but not by content — missing ${missing.join(' and ')}. Either the rename put the wrong file at that name, or the shop itself is damaged.`);
+  }
+  return name;
+}
+
+// Noy runs this. Every other failure path in this file speaks Hebrew, says
+// what to do and exits cleanly — a raw English Node stack would be the one
+// place the tool stops talking to the person using it. The English detail
+// stays on its own line for whoever fixes it.
+let SHOP;
+try {
+  SHOP = shopFile(ROOT);
+} catch (err) {
+  say('');
+  line();
+  say('  ❌ לא הצלחתי לזהות איזה קובץ הוא החנות.');
+  say('');
+  say(`     ${err.message}`);
+  say('');
+  say('     זה קורה באמצע החלפת השם של קובץ החנות.');
+  say('     תגידי לקלוד: "תסדר את קובץ החנות".');
+  line();
+  say('');
+  process.exit(1);
+}
 
 function trySh(cmd) {
   try {
@@ -125,32 +163,28 @@ const localV  = versionOf(readFileSync(join(ROOT, SHOP), 'utf8'));
 // ahead/behind counts below already say so in words Noy can act on.
 const originV = versionOf(trySh(`git show origin/main:${SHOP}`));
 
-// A cutover is two files changing name at once. Until the deploy lands, the
-// folder and the live site can disagree about which file IS the shop — and
-// comparing the folder's shop against the live film page produces a version
-// mismatch that looks like drift and is not. Say which it is.
+// Which file is the shop on the LIVE site? Ask for the post-cutover name; if
+// a version tag comes back, the cutover has landed up there. Otherwise the
+// shop is whatever the site root serves — and the root is asked for as the
+// root, not by filename, which is correct on either side of the rename and is
+// also exactly what a customer's browser requests.
 //
 // Only the real shop carries a version tag, and that is the whole test. A
-// test on "the response was not empty" would have been wrong: GitHub Pages
-// answers a missing path with a styled 404 page that is valid HTML —
-// measured at 9,379 bytes for /shop.html against the live site today — so an
-// emptiness check reads that 404 as proof the file exists. Resolving the live
-// shop is the same job shopFile() does for the folder, so it is written the
-// same way, as a named resolver rather than a bare ternary.
-function liveShopFile(html) {
-  return versionOf(html).ok ? 'shop.html' : 'index.html';
-}
-const liveShopHtml = trySh(`curl -s --max-time 25 "${SITE}/shop.html?cb=${Date.now()}"`);
-const liveShop     = liveShopFile(liveShopHtml);
-
+// test on "the response was not empty" would be wrong: GitHub Pages answers a
+// missing path with a styled 404 page that is valid HTML — measured at 9,379
+// bytes for /shop.html against the live site today — so an emptiness check
+// reads that 404 as proof the file exists.
+//
 // Read the live version out of whichever file is the shop UP THERE, not
 // whichever one is the shop down here. Asking for the folder's name during a
 // half-landed deploy fetches a 404, reports "לא זמין", and hides the version
-// the site is in fact still serving. When the live shop is shop.html its body
-// is already in hand — no second request.
-const liveV = liveShop === 'shop.html'
+// the site is in fact still serving. When the live shop is the post-cutover
+// file its body is already in hand — no second request.
+const liveShopHtml = trySh(`curl -s --max-time 25 "${SITE}/shop.html?cb=${Date.now()}"`);
+const liveIsPostCutover = versionOf(liveShopHtml).ok;
+const liveV = liveIsPostCutover
   ? versionOf(liveShopHtml)
-  : versionOf(trySh(`curl -s --max-time 25 "${SITE}/index.html?cb=${Date.now()}"`));
+  : versionOf(trySh(`curl -s --max-time 25 "${SITE}/?cb=${Date.now()}"`));
 
 say('');
 say('  ┌─ התיקייה שלך');
@@ -165,12 +199,19 @@ say('  └─ האתר החי (מה שהלקוחות רואים)');
 say(`       גרסה:  ${liveV.text}`);
 say('');
 
+// A cutover is two files changing name at once. Until the deploy lands, the
+// folder and the live site can disagree about which file IS the shop, and
+// comparing the folder's shop against the live home page produces a version
+// mismatch that looks like drift and is not. Say which it is.
+//
 // Only worth saying when the live site actually answered. With no internet
-// the probe comes back empty, liveShopFile() falls to the pre-cutover name,
-// and announcing a half-applied cutover on that silence would be inventing a
+// the probes come back empty, the live side reads as pre-cutover, and
+// announcing a half-applied cutover on that silence would be inventing a
 // diagnosis out of a failed request.
-if (liveShop !== SHOP && liveV.ok) {
-  say(`  ⚠  בתיקייה החנות נקראת ${SHOP} ובאתר החי ${liveShop} — ההחלפה באמצע.`);
+if (liveIsPostCutover !== (SHOP === 'shop.html') && liveV.ok) {
+  say(liveIsPostCutover
+    ? `  ⚠  בתיקייה החנות היא ${SHOP}, ובאתר החי היא כבר shop.html — ההחלפה באמצע.`
+    : `  ⚠  בתיקייה החנות היא ${SHOP}, ובאתר החי היא עדיין בשורש — ההחלפה באמצע.`);
   say('     זה תקין בדקה שאחרי פרסום. אם זה נמשך — תגידי לקלוד.');
   say('');
 }

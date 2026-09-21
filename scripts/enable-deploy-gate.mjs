@@ -18,7 +18,7 @@
 // restored automatically.
 
 import { execSync, spawnSync } from 'node:child_process';
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync, writeFileSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -29,6 +29,62 @@ const BACKUP = join(ROOT, '.pages-config-backup.json');
 
 const say  = m => console.log(m);
 const line = () => say('─'.repeat(56));
+
+// The shop is index.html until the cutover and shop.html after it. Resolve it
+// rather than hardcoding, so every tool is correct on both sides of the
+// rename.
+//
+// This file's stake is the largest of the four. Its post-deploy health loop
+// fetches the shop and requires the word "firebase" in the body; home.html,
+// the page that takes over index.html's name, contains it zero times. Pinned
+// to the old name, the loop could never go healthy after the cutover, and its
+// failure branch does not merely report — it PUTs the previous GitHub Pages
+// configuration back and dies, taking the live site's publishing setup with
+// it. Measured: `grep -ci firebase home.html` is 0.
+//
+// Copied from validate.mjs; status.mjs and ship.mjs have the same copy. There
+// is no shared module between these scripts and this is not the change that
+// should invent one.
+const SHOP_MARKERS = ['firebase.initializeApp', 'getCartTotal()'];
+
+function shopFile(root) {
+  const at = n => join(root, n);
+  const hasShop = existsSync(at('shop.html'));
+
+  if (!hasShop && !existsSync(at('index.html'))) {
+    throw new Error('neither shop.html nor index.html exists — this is not the NUIKA checkout');
+  }
+
+  // The cutover is two renames. shop.html here while home.html is still here
+  // means only the first one ran, and nothing has taken over the site root.
+  if (hasShop && existsSync(at('home.html'))) {
+    throw new Error('shop.html exists but home.html is still here — the cutover is half-applied: "git mv home.html index.html" never ran, so nothing serves the site root');
+  }
+
+  const name = hasShop ? 'shop.html' : 'index.html';
+  const body = readFileSync(at(name), 'utf8');
+  const missing = SHOP_MARKERS.filter(m => !body.includes(m));
+  if (missing.length) {
+    throw new Error(`${name} is the shop by name but not by content — missing ${missing.join(' and ')}. Either the rename put the wrong file at that name, or the shop itself is damaged.`);
+  }
+  return name;
+}
+
+let SHOP;
+try {
+  SHOP = shopFile(ROOT);
+} catch (err) {
+  say('');
+  line();
+  say('  ❌ לא הצלחתי לזהות איזה קובץ הוא החנות — לא נגעתי בהגדרות.');
+  say('');
+  say(`     ${err.message}`);
+  say('');
+  say('     תגידי לקלוד: "תסדר את קובץ החנות".');
+  line();
+  say('');
+  process.exit(1);
+}
 
 // execSync returns null — not a string — when stdio is 'inherit', because the
 // output went straight to the terminal instead of being captured. Calling
@@ -174,7 +230,7 @@ say('  בודק את האתר החי...');
 
 let healthy = false;
 for (let i = 0; i < 20; i++) {
-  const html = trySh(`curl -s --max-time 20 "${SITE}/index.html?cb=${Date.now()}"`);
+  const html = trySh(`curl -s --max-time 20 "${SITE}/${SHOP}?cb=${Date.now()}"`);
   if (html && /firebase/i.test(html) && !/const ADMIN_PASSWORD/.test(html)) { healthy = true; break; }
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10000);
 }

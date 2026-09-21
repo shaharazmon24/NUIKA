@@ -31,23 +31,59 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 // The shop is index.html until the cutover and shop.html after it. Resolve it
 // rather than hardcoding, so every tool is correct on both sides of the rename.
 //
-// Both present means the cutover is half-applied — a state in which every
-// later answer would be a guess. Neither present means the checkout is not
-// this project. Both throw rather than pick.
+// Resolve by name, then confirm by content — the name alone cannot answer
+// this. The cutover's FINISHED state is both files present: `git mv
+// index.html shop.html` then `git mv home.html index.html`, after which
+// shop.html is the shop and index.html is the home page serving the root.
+// An earlier version of this function threw on "both exist", calling it a
+// half-applied cutover. It is the destination. That version would have
+// blocked every push — .githooks/pre-push:13 runs this file — including the
+// push of the revert, and blocked deploy.yml's gate, so a finished cutover
+// could neither have reached a customer nor been undone.
 //
-// Copied verbatim into status.mjs and ship.mjs. There is no shared module
-// between the three scripts and this is not the change that should invent
-// one: a module the other two would have to import is a bigger, riskier edit
-// than the nine lines it would save, in a project with no build step.
+// What distinguishes the shop is that it IS the shop. Both markers below are
+// already in this file's critical-features list, and the page that takes over
+// index.html's name has neither: measured, firebase.initializeApp and
+// getCartTotal() appear 1 and 5 times in the shop, 0 and 0 in home.html.
+//
+// Copied into status.mjs, ship.mjs and enable-deploy-gate.mjs. There is no
+// shared module between these scripts and this is not the change that should
+// invent one.
+const SHOP_MARKERS = ['firebase.initializeApp', 'getCartTotal()'];
+
 function shopFile(root) {
-  const a = existsSync(join(root, 'shop.html'));
-  const b = existsSync(join(root, 'index.html'));
-  if (a && b) throw new Error('both shop.html and index.html exist — the cutover is half-applied; finish it or revert it before running this');
-  if (a) return 'shop.html';
-  if (b) return 'index.html';
-  throw new Error('neither shop.html nor index.html exists — this is not the NUIKA checkout');
+  const at = n => join(root, n);
+  const hasShop = existsSync(at('shop.html'));
+
+  if (!hasShop && !existsSync(at('index.html'))) {
+    throw new Error('neither shop.html nor index.html exists — this is not the NUIKA checkout');
+  }
+
+  // The cutover is two renames. shop.html here while home.html is still here
+  // means only the first one ran, and nothing has taken over the site root.
+  if (hasShop && existsSync(at('home.html'))) {
+    throw new Error('shop.html exists but home.html is still here — the cutover is half-applied: "git mv home.html index.html" never ran, so nothing serves the site root');
+  }
+
+  const name = hasShop ? 'shop.html' : 'index.html';
+  const body = readFileSync(at(name), 'utf8');
+  const missing = SHOP_MARKERS.filter(m => !body.includes(m));
+  if (missing.length) {
+    throw new Error(`${name} is the shop by name but not by content — missing ${missing.join(' and ')}. Either the rename put the wrong file at that name, or the shop itself is damaged.`);
+  }
+  return name;
 }
-const SHOP = shopFile(ROOT);
+
+// Same register as the unknown-argument guard below: one clear line and a
+// non-zero exit, never a raw stack. CI and the deploy gate read this.
+let SHOP;
+try {
+  SHOP = shopFile(ROOT);
+} catch (err) {
+  console.error(`  FAIL  ${err.message}`);
+  console.error('Refusing to run: every check below reads the shop, and this cannot tell which file that is.');
+  process.exit(1);
+}
 
 const html = readFileSync(join(ROOT, SHOP), 'utf8');
 
@@ -1382,36 +1418,55 @@ if (want('assets')) {
     else fail('publish() must call stampVersion() before it pushes, or a release goes out under the previous version tag');
   }
 
-  // The three safety tools all hunted for the shop by the literal name
-  // index.html. After the cutover that name belongs to the film page, and
-  // status.mjs would have compared the film — which barely changes — and
-  // reported "everything is in sync" while the shop diverged between two
-  // machines. That is the exact failure it was written to prevent, after it
-  // had already cost this project its data-sync layer once.
+  // The safety tools all hunted for the shop by the literal pre-cutover name.
+  // After the cutover that name belongs to the home page, and status.mjs
+  // would have compared the home page — which barely changes — found it
+  // identical in all three places, and reported "everything is in sync" while
+  // the shop diverged between two machines. That is the exact failure it was
+  // written to prevent, after it had already cost this project its data-sync
+  // layer once.
   //
-  // The resolvers are the one exception, and they are not a loophole: naming
-  // both candidates is the entire job of a function called ...shopFile().
-  // Written without that carve-out this check can never pass, because the fix
-  // it demands puts the literal straight back inside the resolver. Measured,
-  // not assumed: with shopFile() written and every other use converted, it
-  // still reported "scripts/validate.mjs names index.html directly 2 time(s)"
-  // — both hits the resolver's own two lines.
+  // The match is on the bare name, not on a quoted string. The first version
+  // of this check looked for a quote-delimited literal and could not see
+  // either form this repo actually uses: the name inside a URL, which was
+  // live in status.mjs's own live probe while this check certified that file
+  // clean, or the name inside a built path. A check that vouches for a file
+  // it cannot read is worse than no check.
   //
-  // So the resolvers are cut out before the scan, and shopFile() is then
-  // required to exist. Without that second half a script could pass by
-  // deleting its resolver and going back to a hardcoded name, which is the
-  // exact failure this check exists to stop.
-  for (const script of ['validate.mjs', 'status.mjs', 'ship.mjs']) {
+  // shopFile() is the one exemption — naming both candidates is that
+  // function's entire job — and it is cut out by matching its braces, not by
+  // a name pattern. An earlier /function \w*[Ss]hopFile/ carve-out exempted
+  // anything plausibly named, and its non-greedy stop at the first column-0
+  // brace would have hidden the whole remainder of a file whose resolver sat
+  // inside a block.
+  //
+  // Requiring shopFile() to exist is the other half: without it a script
+  // could pass by deleting its resolver and going back to a hardcoded name,
+  // which is the exact failure this check exists to stop.
+  const cutResolver = src => {
+    const m = /function shopFile\s*\(/.exec(src);
+    if (!m) return null;
+    const open = src.indexOf('{', m.index + m[0].length);
+    if (open < 0) return null;
+    let depth = 0;
+    for (let i = open; i < src.length; i++) {
+      if (src[i] === '{') depth++;
+      else if (src[i] === '}' && --depth === 0) return src.slice(0, m.index) + src.slice(i + 1);
+    }
+    return null;
+  };
+
+  for (const script of ['validate.mjs', 'status.mjs', 'ship.mjs', 'enable-deploy-gate.mjs']) {
     const src = readFileSync(join(ROOT, 'scripts', script), 'utf8')
       .split('\n').filter(l => !l.trimStart().startsWith('//')).join('\n');
-    if (!/function shopFile\s*\(/.test(src)) {
-      fail(`scripts/${script} has no shopFile() — it cannot tell which file is the shop once the name moves`);
+    const cut = cutResolver(src);
+    if (!cut) {
+      fail(`scripts/${script} has no shopFile() with a readable body — it cannot tell which file is the shop once the name moves`);
       continue;
     }
-    const scanned = src.replace(/function \w*[Ss]hopFile\s*\([^)]*\)\s*\{[\s\S]*?\n\}/g, '');
-    const hard = [...scanned.matchAll(/['"`]\.?\/?index\.html['"`]/g)];
-    if (hard.length) fail(`scripts/${script} names index.html directly ${hard.length} time(s) outside its resolver — resolve the shop with shopFile() so the cutover cannot silently point it at the film page`);
-    else pass(`scripts/${script} resolves the shop instead of hardcoding its name`);
+    const hard = [...cut.matchAll(/index\.html/g)];
+    if (hard.length) fail(`scripts/${script} names the pre-cutover shop file ${hard.length} time(s) outside shopFile() — resolve it with shopFile() so the cutover cannot silently point this tool at the home page`);
+    else pass(`scripts/${script} names the pre-cutover shop file only inside shopFile()`);
   }
 
   // The rules are the only thing between a public database handle and Noy's
@@ -1779,7 +1834,7 @@ if (want('design')) {
     else
       fail(lcBodies.length === 0
         ? 'no lang-content rule exists in site.css — the bilingual hide mechanism is missing entirely'
-        : 'a lang-content rule carries !important — it would outrank the shop\'s own display rules once this stylesheet shares a page with index.html');
+        : `a lang-content rule carries !important — it would outrank the shop's own display rules once this stylesheet shares a page with ${SHOP}`);
 
     // display:revert rolls an element back past the author origin entirely —
     // on an English page a .btn would lose its inline-block and collapse to
