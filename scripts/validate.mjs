@@ -25,6 +25,11 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+// Only for the CACHE-bump check in the assets phase, which needs a baseline
+// to compare against. Every other check in this file reads the working tree
+// and nothing else; keep it that way, so a broken or absent git can never be
+// the reason the shop fails to validate.
+import { execFileSync } from 'node:child_process';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -1350,12 +1355,187 @@ if (want('assets')) {
   }
   // The precache swallows failures by design, so a typo'd path is invisible
   // at runtime and stays broken forever.
+  //
+  // A cache-busting query is stripped before the file is looked for. ASSETS
+  // holds './site.js?v=2' because that is the URL every page requests and a
+  // cache entry is keyed on the URL, not on the file — but there is no file
+  // named "site.js?v=2" on disk, so testing the raw string reported a missing
+  // file that is in fact committed and served. The nav-link check at the
+  // bottom of this script already splits on [?#] for the same reason.
   const assetList = sw.match(/const ASSETS = \[([\s\S]*?)\]/);
-  if (assetList) {
-    for (const m of assetList[1].matchAll(/'\.\/([^']*)'/g)) {
-      const rel = m[1];
-      if (!rel || existsSync(join(ROOT, rel))) pass(`precache ./${rel}`);
-      else fail(`sw.js precaches a file that does not exist: ./${rel}`);
+  const assetPaths = assetList
+    ? [...assetList[1].matchAll(/'\.\/([^']*)'/g)].map(m => m[1])
+    : [];
+  for (const rel of assetPaths) {
+    const onDisk = rel.split(/[?#]/)[0];
+    if (!onDisk || existsSync(join(ROOT, onDisk))) pass(`precache ./${rel}`);
+    else fail(`sw.js precaches a file that does not exist: ./${rel}`);
+  }
+
+  // The other direction, and the reason './shop.html' is not in ASSETS today.
+  //
+  // shop.html does not exist until the cutover renames index.html to it, so
+  // precaching it now would be precaching a 404 — install swallows the
+  // failure, nothing breaks, and nothing is gained either. The alternative
+  // was to teach the check above that this one path is "expected in flight",
+  // which puts a permanent hole in the only check that catches a typo'd path,
+  // to buy an entry that does nothing until the rename lands.
+  //
+  // So it waits for the commit that creates the file — and this makes that
+  // commit's job non-optional rather than a note in a report. Pre-cutover it
+  // is silent; the moment shop.html exists it demands its precache entry.
+  const shopOnDisk = existsSync(join(ROOT, 'shop.html'));
+  if (!shopOnDisk) {
+    pass('sw.js precaches no shop.html — the file arrives with the cutover, and this check turns on with it');
+  } else if (assetPaths.includes('shop.html')) {
+    pass('sw.js precaches ./shop.html');
+  } else {
+    fail('shop.html exists but sw.js does not precache it — the cutover renamed the shop and left the worker precaching the film page instead; add \'./shop.html\' to ASSETS and bump CACHE');
+  }
+
+  console.log('Service worker and the film:');
+
+  // Two separate problems, both real. STORAGE: a request without a Range
+  // header returns 200, so the whole file — 13.7MB desktop, 10.5MB phone —
+  // is written into the same cache the shop lives in. PLAYBACK: a request
+  // WITH a Range returns 206, caches.put() rejects a partial response by
+  // spec, and the existing .catch(() => {}) swallows it — but once a full
+  // 200 copy is cached, the cache-first branch serves THAT in answer to a
+  // range request, which breaks seeking in Safari.
+  //
+  // Each of these matches the MECHANISM, not a word. A looser version was
+  // written first and measured dead: /\.mp4|video|film/ passes on the string
+  // './media/film-poster.jpg', which ASSETS now carries — so deleting the
+  // exclusion entirely would still have printed ok. Same for the fallback:
+  // /shop\.html/ passes on './shop.html' in ASSETS.
+  //
+  // Whole-line comments are dropped first, so prose about the film — this
+  // file asked for a lot of it — can never be what makes a check go green.
+  // That covers the four checks below that read swCode or swFlat: the video
+  // exclusion, the 206 refusal, the per-URL fallback and ignoreSearch. All
+  // four were measured with their code deleted and an identical whole-line
+  // comment left behind, and all four still failed. The ASSETS check further
+  // down reads the raw array instead, deliberately — see its own comment.
+  const swCode = sw.split('\n').filter(l => !l.trimStart().startsWith('//')).join('\n');
+  const swFlat = swCode.replace(/\s+/g, ' ');
+
+  // The exclusion must be an early return keyed on a video extension.
+  //
+  // The first version of this check could not pass. It was
+  //   /\.(?:mp4|webm|mov)\$?\s*\/i?\s*\.test\(/  ||  /if\s*\([^)]*\bmp4\b[^)]*\)\s*return/
+  // and both halves were measured against the real fix and matched nothing:
+  // the first wants a dot immediately before the extension, but in
+  // `/\.(mp4|webm|mov)$/i` the dot sits before the GROUP and the character in
+  // front of `mp4` is `(`; the second cannot reach the `) return` because
+  // [^)] refuses to cross the `)` that closes that same group. A check that
+  // fails against its own fix is not strict, it is broken — it would have been
+  // "fixed" by weakening it to something the poster filename satisfies.
+  //
+  // What is required instead: one `if` whose condition names a video
+  // extension and whose body is a bare `return`. [^;] may cross parentheses
+  // but not a statement boundary, so the condition and the return have to be
+  // the same statement, and `mp4` has to be a word of its own — which no
+  // filename in ASSETS is, poster or otherwise.
+  if (/\bif\s*\([^;]{0,160}\bmp4\b[^;]{0,160}\)\s*return\s*;/.test(swFlat)) {
+    pass('sw.js returns early for video, so the film never enters the cache');
+  } else {
+    fail('sw.js caches the film — 13.7MB desktop, 10.5MB phone, into the same cache the shop lives in, on a device with a storage quota that throws everything away when it is hit');
+  }
+
+  // A partial response must be refused where storing is decided.
+  //
+  // Measured against a Range-capable origin, with and without the clause,
+  // nothing partial reached the cache either way — caches.put() already
+  // rejects a partial by spec. So this is defence in depth, not the thing
+  // that protects seeking; the video exclusion checked above is. Both checks
+  // exist, and neither message should let a reader think the other is
+  // redundant.
+  if (/cacheable[\s\S]{0,200}?206/.test(swCode)) pass('sw.js refuses to store a partial (206) response');
+  else fail('sw.js must refuse a 206 in cacheable() — caches.put() rejects a partial by spec anyway, so this is defence in depth against a future route into put(), not the seeking fix; the video exclusion is that');
+
+  // The fallback must branch, not be a constant.
+  if (/caches\.match\(\s*(?:isShopUrl|[A-Za-z_$][\w$]*\s*\?)/.test(swFlat)) {
+    pass('sw.js chooses its offline fallback per URL');
+  } else {
+    fail('sw.js falls back to one fixed page for every HTML URL — after the cutover that page is the film, so a customer who loses signal lands on a video instead of their cart');
+  }
+
+  // ASSETS must never precache the film itself.
+  //
+  // This one reads the RAW array, unlike the three above it — so a comment
+  // written inside the brackets that happens to say ".mp4" turns it red. That
+  // is the safe direction (it over-reports, it cannot miss a real entry), so
+  // it stays, but keep prose about the film outside the brackets.
+  const assetsBlock = assetList ? assetList[1] : '';
+  if (/\.(?:mp4|webm|mov)/i.test(assetsBlock)) fail('sw.js precaches a video file in ASSETS — that is the 13.7MB problem, installed deliberately');
+  else pass('sw.js precaches no video');
+
+  // The admin panel is a query string on the shop's own URL ('?admin'), and a
+  // cache entry is keyed on the full URL including the search — so offline,
+  // 'index.html?admin' misses the precached './index.html' and drops through
+  // to the per-URL fallback, which resolves '?admin' to './shop.html'. That
+  // file does not exist until the cutover, so the fallback resolves to
+  // undefined and Noy gets the browser's network-error page instead of her
+  // own admin. Before the per-URL fallback existed the same miss landed on
+  // './index.html' and worked, which is what makes this a regression rather
+  // than a pre-existing gap. The origin serves identical HTML for either URL.
+  if (/caches\.match\(\s*e\.request\s*,\s*\{[^}]*ignoreSearch\s*:\s*true/.test(swFlat)) {
+    pass("sw.js ignores the query string when it falls back, so '?admin' finds the cached shop");
+  } else {
+    fail(`sw.js's offline fallback matches on the full URL including the search, so the admin panel — which is '?admin' on ${SHOP} — misses its own precached page and falls through to a file that does not exist yet`);
+  }
+
+  // CACHE must be bumped whenever sw.js changes, or the change reaches nobody
+  // who already has the worker: activate() only deletes caches whose key is
+  // not CACHE, so an unchanged key keeps the old entries and the old worker's
+  // precache alive.
+  //
+  // The baseline is origin/main, and this check is honest about when it can
+  // see one. In a normal clone — which is where .githooks/pre-push runs it,
+  // and pre-push is exactly the moment this matters, before the change leaves
+  // the machine — origin/main resolves and the check is real. In CI it does
+  // not: actions/checkout@v4 fetches a single commit by default, so there is
+  // no origin/main ref to read, and on a push to main the checked-out commit
+  // IS origin/main, which would compare a file against itself. Reporting that
+  // plainly beats both alternatives: failing every CI run for a missing ref,
+  // or printing a green line that claims a comparison nobody made.
+  {
+    let baseline = null;
+    try {
+      baseline = execFileSync('git', ['show', 'origin/main:sw.js'],
+        { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    } catch { /* no origin/main here — reported below, not swallowed */ }
+
+    // Line endings are normalised on both sides before anything is compared,
+    // and this is not tidiness — without it the check fails permanently, for
+    // everyone, and cannot be satisfied.
+    //
+    // `git show` emits the blob, which is LF. .gitattributes is `* text=auto`
+    // and core.autocrlf is true on Windows, so git materialises sw.js in the
+    // working tree as CRLF: one byte longer per line than the blob it came
+    // from, every line, while `git status` correctly reports the file
+    // unmodified. (No byte counts here on purpose — they were quoted once and
+    // were stale within two commits, because sw.js grew.) A raw comparison
+    // calls that "changed" and demands a bump that changes nothing — and the
+    // demand is unsatisfiable, because bumping
+    // and pushing makes origin/main carry the new key too, while the working
+    // tree still differs by its endings. FAIL again, forever, on every fresh
+    // clone, worktree and branch switch. .githooks/pre-push runs this file,
+    // so that is every push blocked, ship.mjs included, with --no-verify the
+    // only way out — which is exactly what CLAUDE.md forbids.
+    //
+    // What this check is for is whether the CONTENT changed. Endings are not
+    // content; git itself says so by reporting the file unmodified.
+    const lf = s => s.replace(/\r\n/g, '\n');
+    const keyOf = s => (s.match(/const CACHE = '([^']*)'/) || [, null])[1];
+    if (baseline === null) {
+      pass('sw.js/CACHE: origin/main is not readable here (shallow CI checkout or no remote), so the bump check could not compare — it runs at pre-push, where the comparison exists');
+    } else if (lf(baseline) === lf(sw)) {
+      pass('sw.js is unchanged from origin/main, so CACHE does not need bumping');
+    } else if (keyOf(sw) && keyOf(sw) !== keyOf(baseline)) {
+      pass(`sw.js changed and CACHE was bumped (${keyOf(baseline)} -> ${keyOf(sw)})`);
+    } else {
+      fail(`sw.js changed but CACHE is still ${keyOf(baseline)} — activate() only deletes caches that are not CACHE, so every visitor who already has the worker keeps the old file and never sees this change`);
     }
   }
 
@@ -1443,7 +1623,10 @@ if (want('assets')) {
   // Requiring shopFile() to exist is the other half: without it a script
   // could pass by deleting its resolver and going back to a hardcoded name,
   // which is the exact failure this check exists to stop.
-  const cutResolver = src => {
+  // Returns [before-the-resolver + after-the-resolver, the-resolver-itself].
+  // The first half is what gets scanned for a hardcoded name; the second is
+  // what the four copies have to agree on, below.
+  const splitResolver = src => {
     const m = /function shopFile\s*\(/.exec(src);
     if (!m) return null;
     const open = src.indexOf('{', m.index + m[0].length);
@@ -1451,22 +1634,105 @@ if (want('assets')) {
     let depth = 0;
     for (let i = open; i < src.length; i++) {
       if (src[i] === '{') depth++;
-      else if (src[i] === '}' && --depth === 0) return src.slice(0, m.index) + src.slice(i + 1);
+      else if (src[i] === '}' && --depth === 0) {
+        return [src.slice(0, m.index) + src.slice(i + 1), src.slice(m.index, i + 1)];
+      }
     }
     return null;
   };
 
+  const resolvers = new Map();
   for (const script of ['validate.mjs', 'status.mjs', 'ship.mjs', 'enable-deploy-gate.mjs']) {
-    const src = readFileSync(join(ROOT, 'scripts', script), 'utf8')
-      .split('\n').filter(l => !l.trimStart().startsWith('//')).join('\n');
-    const cut = cutResolver(src);
-    if (!cut) {
+    // enable-deploy-gate.mjs is a run-once setup script, so deleting it after
+    // use looks harmless. Unguarded, this read then threw a raw ENOENT stack
+    // out of the validator — and .githooks/pre-push and deploy.yml both run
+    // the validator, so that stack blocked every push and every deploy with a
+    // Node traceback instead of a sentence. One clean FAIL line instead.
+    const scriptPath = join(ROOT, 'scripts', script);
+    if (!existsSync(scriptPath)) {
+      fail(`scripts/${script} is missing — it is one of the four tools that must resolve the shop by content; restore it from git rather than deleting it`);
+      continue;
+    }
+    const raw = readFileSync(scriptPath, 'utf8');
+    const src = raw.split('\n').filter(l => !l.trimStart().startsWith('//')).join('\n');
+    const split = splitResolver(src);
+    if (!split) {
       fail(`scripts/${script} has no shopFile() with a readable body — it cannot tell which file is the shop once the name moves`);
       continue;
     }
+    const [cut] = split;
+    // The resolver is compared as it is WRITTEN, comments and all, from the
+    // raw file — not from the comment-stripped copy. The comments inside it
+    // are the reasoning for why "both files present" is the destination and
+    // not a half-applied cutover; a copy that quietly loses them is a copy
+    // the next person will edit differently.
+    const rawSplit = splitResolver(raw);
+    resolvers.set(script, rawSplit ? rawSplit[1] : null);
     const hard = [...cut.matchAll(/index\.html/g)];
     if (hard.length) fail(`scripts/${script} names the pre-cutover shop file ${hard.length} time(s) outside shopFile() — resolve it with shopFile() so the cutover cannot silently point this tool at the home page`);
     else pass(`scripts/${script} names the pre-cutover shop file only inside shopFile()`);
+  }
+
+  // And the four bodies must be the same body.
+  //
+  // The check above cuts the resolver out before it scans, which is correct —
+  // naming both candidates is that function's entire job — but it meant the
+  // resolver itself was the one part of these four files nothing ever read.
+  // Demonstrated, not theorised: replacing status.mjs's body with
+  // `const name = 'index.html';` sits inside that carve-out, is never
+  // scanned, and leaves "All checks passed." at exit 0. status.mjs would then
+  // compare the home page across the folder, GitHub and the live site, find
+  // it identical, and report everything in sync while the shop diverged
+  // between Noy's phone and her laptop — the silent-wrong-file failure the
+  // whole resolver exists to prevent, surviving the check meant to stop it.
+  //
+  // There is no shared module between these scripts and this is not the
+  // change that should invent one, so the guarantee is textual equality
+  // instead: four copies, one text. SHOP_MARKERS travels with it, because the
+  // resolver reads that constant and a copy with different markers is a copy
+  // that answers differently while looking identical.
+  //
+  // Line endings are normalised first, for the same reason the CACHE check
+  // above normalises them — and this one was measured failing, not guessed at.
+  // With three of these files materialised by git as CRLF and the fourth
+  // written straight to disk as LF, the four resolver bodies came out
+  // 1037/1058/1058/1058 characters, identical the moment \r\n is folded to
+  // \n, and this check went red telling whoever hit it to "copy it across
+  // verbatim" — when it already WAS verbatim, and no amount of copying would
+  // have made it green. Mixed endings are not hypothetical here: writing a
+  // file without going through git's checkout filter is exactly what GitHub's
+  // web uploader does, and that uploader is the failure this whole repo is
+  // built around. What the check is for is whether it is the same function.
+  {
+    const eol = s => (typeof s === 'string' ? s.replace(/\r\n/g, '\n') : s);
+    const names = [...resolvers.keys()];
+    const ref = names[0];
+    const odd = names.filter(n => eol(resolvers.get(n)) !== eol(resolvers.get(ref)));
+    if (!resolvers.get(ref)) {
+      fail(`scripts/${ref} has no shopFile() to compare the other copies against`);
+    } else if (odd.length) {
+      fail(`shopFile() is not the same function in every tool — ${odd.join(', ')} differ(s) from scripts/${ref}. Copy it across verbatim: a resolver that answers differently in one tool is how the wrong file gets published while every check stays green.`);
+    } else {
+      pass(`shopFile() is identical in all ${names.length} tools`);
+    }
+
+    const markerLines = new Map();
+    for (const script of names) {
+      const raw = readFileSync(join(ROOT, 'scripts', script), 'utf8');
+      // [^\r\n] rather than `.` only to be explicit about where the line ends.
+      // `.` would be correct too: in JavaScript it excludes LineTerminator and
+      // CR is one, so it stops before a CRLF's \r on its own — measured,
+      // /./.test('\r') is false and the two captures come out equal. This is
+      // NOT the line-ending fault the resolver comparison above had. Written
+      // out so the next reader does not have to hold that rule in their head,
+      // and so nobody "fixes" this line back to something that does match CR.
+      markerLines.set(script, (raw.match(/const SHOP_MARKERS = [^\r\n]*/) || [, ])[0] || null);
+    }
+    const missing = names.filter(n => !markerLines.get(n));
+    const differing = names.filter(n => markerLines.get(n) && markerLines.get(n) !== markerLines.get(ref));
+    if (missing.length) fail(`${missing.join(', ')} has no SHOP_MARKERS — shopFile() confirms the shop by content and cannot do it without them`);
+    else if (differing.length) fail(`SHOP_MARKERS differs in ${differing.join(', ')} — the same resolver would accept a different file as the shop`);
+    else pass('SHOP_MARKERS is identical in all four tools');
   }
 
   // The rules are the only thing between a public database handle and Noy's
