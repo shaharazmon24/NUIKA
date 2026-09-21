@@ -7457,6 +7457,14 @@ function saveEvent() {
     if (outcome === 'pending') {
       alert('אין כרגע חיבור לאינטרנט. השמירה ממתינה ותיקלט מעצמה ברגע שיהיה חיבור — אפשר להמשיך לעבוד.');
     }
+  }).catch(err => {
+    // submitOrder() puts a .catch() in the same position, before its
+    // `_submitting = false`, for the same reason: a throw in the handler
+    // above would otherwise skip the release and wedge the tab exactly as
+    // the offline case did. Not reachable today — that handler only calls
+    // clearEventForm() and alert() — but "the lock always releases" has to
+    // be true, not nearly true.
+    console.error('events: save handler failed:', err);
   }).then(() => {
     _eventSaving = false;
     if (saveBtn) saveBtn.disabled = false;

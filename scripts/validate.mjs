@@ -830,17 +830,21 @@ if (want('features')) {
     // The events section, bounded by the file's own `// ───` section-marker
     // convention rather than by a character count. The brief specified a
     // fixed 4000-character window from the marker. Measured on the real
-    // file: the section is 8,053 characters as stored with CRLF endings
-    // (7,892 with LF), so that window stops 4,053 characters SHORT of the
-    // end — it lands in the middle of a comment, and
-    // `box.innerHTML = sorted.map(...)` sits past the cut. The escaping
-    // checks would have scanned the two literal '<p>טוען…</p>' placeholders,
-    // found nothing to complain about, and reported ok having never looked
-    // at the card at all. Had the section been shorter the window would have
-    // overrun the other way, into the next section (READING A SPREADSHEET
-    // FILE), and failed on code the events checks do not own. A character
-    // count is wrong in whichever direction it lands; the marker is the
-    // actual boundary.
+    // file, that window stops SHORT of the end of the section: it lands
+    // inside a comment, and `box.innerHTML = sorted.map(...)` sits past the
+    // cut. The escaping checks would have scanned the two literal
+    // '<p>טוען…</p>' placeholders, found nothing to complain about, and
+    // reported ok having never looked at the card at all. Had the section
+    // been shorter the window would have overrun the other way, into the
+    // next section (READING A SPREADSHEET FILE), and failed on code the
+    // events checks do not own.
+    //
+    // No character counts are quoted here on purpose. Three rounds running,
+    // the very commit that wrote them down also grew this section and made
+    // them wrong — a comment cannot cite a measurement of the file it lives
+    // in. What stays true at any size is the shape of the mistake: a
+    // character count is wrong in whichever direction it lands, so the
+    // section markers are the boundary.
     const EV_MARK = '// ─── ADMIN: EVENTS';
     const evAt    = app.indexOf(EV_MARK);
     const evTo    = evAt < 0 ? -1 : app.indexOf('// ───', evAt + EV_MARK.length);
@@ -991,11 +995,46 @@ if (want('features')) {
       // submitOrder() races its write against 8000 ms for exactly this
       // reason. A lock here has to do the same, so the check asks for the
       // race, not just for the lock.
-      if (saveBody && /_eventSaving\s*=\s*true/.test(saveBody.text)) {
-        if (!/Promise\s*\.\s*race\s*\(/.test(saveBody.text) || !/setTimeout\s*\(/.test(saveBody.text)) {
-          fail('admin events: saveEvent() takes the _eventSaving lock but releases it only from the write\'s own promise chain — a Firebase write never settles while offline, so the lock never releases and no further event can be saved for the rest of the page session; race the write against a timeout the way submitOrder() does');
+      //
+      // This check used to assert only that `Promise.race(` and `setTimeout(`
+      // appeared SOMEWHERE in the body, and then printed "so the save lock
+      // always releases" — a conclusion it had not verified. Three things
+      // passed it at exit 0: keeping the race for the queued-save message
+      // while moving the release back onto write.finally() (which wedges
+      // offline exactly as before), a two-line decoy
+      // (`Promise.race([Promise.resolve(1),Promise.resolve(2)]);
+      // setTimeout(function(){},0);`), and deleting the lock altogether,
+      // which skipped the check entirely because it was conditional on the
+      // lock existing. So it now verifies the three things the message
+      // claims: the lock is taken, it is released, and every release sits
+      // inside the statement that does the racing — not on the write's own
+      // chain, which never settles offline.
+      if (saveBody) {
+        const takes    = /_eventSaving\s*=\s*true/.test(saveBody.text);
+        const releases = [...saveBody.text.matchAll(/_eventSaving\s*=\s*false/g)];
+
+        // Each `Promise.race(...)` statement's full span, so "downstream of
+        // the race" is a position question rather than a guess.
+        const raceSpans = [...saveBody.text.matchAll(/Promise\s*\.\s*race\s*\(/g)].map(m => {
+          const end = statementEnd(saveBody.text, m.index);
+          return [m.index, end === -1 ? saveBody.text.length : end];
+        });
+        const inSomeRace = i => raceSpans.some(([s, e]) => i >= s && i <= e);
+        const racedRelease = releases.filter(m => inSomeRace(m.index));
+        const strayRelease = releases.filter(m => !inSomeRace(m.index));
+        const racedHasTimeout = racedRelease.some(m =>
+          raceSpans.some(([s, e]) => m.index >= s && m.index <= e && /setTimeout\s*\(/.test(saveBody.text.slice(s, e))));
+
+        if (!takes) {
+          fail('admin events: saveEvent() never sets _eventSaving — nothing stops a double click creating two events, which was measured at 9 ms apart');
+        } else if (!releases.length) {
+          fail('admin events: saveEvent() takes the _eventSaving lock and never releases it — the tab locks on the first save');
+        } else if (strayRelease.length) {
+          fail('admin events: saveEvent() releases _eventSaving outside the Promise.race statement — a release hung on the write\'s own chain never runs while offline, because a Firebase write does not settle until the server acknowledges it, and the tab stays locked for the rest of the page session');
+        } else if (!racedHasTimeout) {
+          fail('admin events: saveEvent() releases _eventSaving from a Promise.race that has no setTimeout in it — without a timer the race cannot settle while offline, so the release never runs');
         } else {
-          pass('admin events: saveEvent() races its write against a timeout, so the save lock always releases');
+          pass('admin events: saveEvent() releases the save lock from a timed race, not from the write itself');
         }
       }
 
