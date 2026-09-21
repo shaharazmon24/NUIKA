@@ -67,35 +67,22 @@
   (function () {
     var esc = window.nuikaEsc;
 
-    // The same config block index.html carries. Copied, not shared, and that
-    // is a deliberate call rather than an oversight: the site has no build
-    // step, index.html is one self-contained file by design, and a shared
-    // firebase-config.js would be a third script tag on every page that
-    // needs the database plus a load-order dependency on a page whose whole
-    // job is to render fast. These are public client keys — the rules are
-    // what protect the data, not the config. If a third page ever needs it,
-    // that is the moment to extract it.
-    //
-    // Copy it out of index.html rather than from here, and check it matches.
-    firebase.initializeApp({
-      apiKey: "AIzaSyBH1KnxvJVBuMCkQ4vRjoBT0kfIn5ZEtqQ",
-      authDomain: "nuika-5371f.firebaseapp.com",
-      databaseURL: "https://nuika-5371f-default-rtdb.firebaseio.com",
-      projectId: "nuika-5371f",
-      storageBucket: "nuika-5371f.firebasestorage.app",
-      messagingSenderId: "652173710332",
-      appId: "1:652173710332:web:ab1d01485446fb2075d879"
-    });
-
     // Read out of contact.html, not invented. An earlier draft of this plan
     // carried a made-up number, which would have sent a customer's message to
     // a stranger. Verify it against contact.html before trusting this line.
     var WHATSAPP = '972547382282';
 
     // Today as YYYY-MM-DD in the VISITOR'S timezone. Not toISOString(): that
-    // is UTC, and from 21:00 or 22:00 Israel time it already reads tomorrow —
-    // so an event would drop into the archive on the evening before the day
-    // it actually happens, exactly when someone is checking whether to come.
+    // is UTC, and Israel is UTC+2/+3 — AHEAD of UTC, so UTC is always the
+    // same calendar day as Israel or the day BEFORE it, never after.
+    // Measured directly: Israel 21:00 → toISOString reads the same day;
+    // Israel 00:01 and again at 02:00 the next morning → toISOString still
+    // reads YESTERDAY. So the real failure here is a finished event still
+    // showing under "מה קרוב" for two or three hours after local midnight —
+    // not one dropping out early. The mirror failure is real too, just not
+    // Israel's: a visitor at a NEGATIVE offset (e.g. New York) can have UTC
+    // already reading tomorrow while their own clock still says today, which
+    // hides an event on the very day it happens.
     function todayKey() {
       var d = new Date();
       var m = String(d.getMonth() + 1);
@@ -181,21 +168,58 @@
       window.nuikaRefresh();
     }
 
-    // once(), not on(): an events board does not change while someone reads
-    // it, and a page that keeps a socket open is a page that keeps a socket
-    // open. There is no seeding here of any kind — an empty node means Noy
-    // has no events listed, which is a real and ordinary state.
-    firebase.database().ref('nuika/events').once('value')
-      .then(function (snap) {
-        var val = snap.val() || {};
-        var list = Object.keys(val).map(function (k) { return val[k]; })
-                         .filter(function (e) { return e && e.date && e.title; });
-        render(list);
-      })
-      .catch(function (err) {
-        console.error('events: could not read nuika/events', err);
-        render([]);   // the designed empty state, never a blank page
+    // Firebase's own two script tags (above) load from a CDN this page does
+    // not control. If that CDN is blocked or unreachable, `firebase` itself is
+    // undefined, and initializeApp() below throws a plain, synchronous
+    // ReferenceError — before the .once()/.catch() chain a few lines down
+    // even exists to attach to. A rejected PROMISE's .catch() can only ever
+    // catch a promise that got created; it cannot catch a throw that
+    // happened first. initializeApp() sits here, next to the read it guards,
+    // both inside one try, so either failure — init or read — reaches the
+    // same render([]), the same empty state, the same console.error.
+    // Confirmed by pointing both SDK <script src> at a 404 and reloading:
+    // without this, the page rendered its heading and nothing else,
+    // silently, forever — #evEmpty never even unhides.
+    try {
+      // The same config block index.html carries. Copied, not shared, and
+      // that is a deliberate call rather than an oversight: the site has no
+      // build step, index.html is one self-contained file by design, and a
+      // shared firebase-config.js would be a third script tag on every page
+      // that needs the database plus a load-order dependency on a page
+      // whose whole job is to render fast. These are public client keys —
+      // the rules are what protect the data, not the config. If a third
+      // page ever needs it, that is the moment to extract it.
+      //
+      // Copy it out of index.html rather than from here, and check it matches.
+      firebase.initializeApp({
+        apiKey: "AIzaSyBH1KnxvJVBuMCkQ4vRjoBT0kfIn5ZEtqQ",
+        authDomain: "nuika-5371f.firebaseapp.com",
+        databaseURL: "https://nuika-5371f-default-rtdb.firebaseio.com",
+        projectId: "nuika-5371f",
+        storageBucket: "nuika-5371f.firebasestorage.app",
+        messagingSenderId: "652173710332",
+        appId: "1:652173710332:web:ab1d01485446fb2075d879"
       });
+
+      // once(), not on(): an events board does not change while someone reads
+      // it, and a page that keeps a socket open is a page that keeps a socket
+      // open. There is no seeding here of any kind — an empty node means Noy
+      // has no events listed, which is a real and ordinary state.
+      firebase.database().ref('nuika/events').once('value')
+        .then(function (snap) {
+          var val = snap.val() || {};
+          var list = Object.keys(val).map(function (k) { return val[k]; })
+                           .filter(function (e) { return e && e.date && e.title; });
+          render(list);
+        })
+        .catch(function (err) {
+          console.error('events: could not read nuika/events', err);
+          render([]);   // the designed empty state, never a blank page
+        });
+    } catch (err) {
+      console.error('events: could not initialise Firebase', err);
+      render([]);   // the designed empty state, never a blank page — same as any other failure
+    }
   })();
   </script>
 </body>

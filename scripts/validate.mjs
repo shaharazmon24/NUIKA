@@ -1442,33 +1442,59 @@ if (want('pages')) {
 
     // The /* esc-ok: cardHTML escapes every field it renders */ marker above
     // up.innerHTML and pa.innerHTML is exactly that — a marker, never
-    // verified. unsafeHtmlWrites() (module scope, shared with the per-page
-    // loop above) only ever matches a literal `.innerHTML`/`.outerHTML`
-    // assignment, and cardHTML instead builds its markup in a local `bits`
-    // variable, one `bits += ...` at a time, returned only at the very end.
-    // None of those lines are textually `.innerHTML =` anything, so none of
-    // them were ever inspected — proven, not assumed: replacing
-    // esc(ev.title) with the bare ev.title inside cardHTML left this entire
-    // file green (task-4-report.md, breakage 2), which is the same class of
-    // regression that once shipped in gallery.html (see the comment above
-    // the shared innerHTML guard in the `pages` phase) and is exactly what
-    // the marker exists to rule out.
+    // verified by anything else in this file. cardHTML() is checked directly
+    // instead of trusted.
     //
-    // So cardHTML is checked directly instead of trusted. Every `bits +=`
-    // and `var <name> =` statement in its body is isolated with the same
-    // quote-aware statementEnd() the shared guard above already uses (the
-    // second form matters on its own: ev.ctaText and the ev.title fallback
-    // reach the card only via `var text = encodeURIComponent(...)`, never
-    // through `bits` directly — confirmed by the same method, see
-    // task-4-report.md). Every ev.<field> reference found inside one of
-    // those statements must sit inside a still-open esc( or
-    // encodeURIComponent( within the previous 60 characters — enough to
-    // credit one level of nesting (esc(dateLabel(ev.date))) without also
-    // crediting a call that already closed before this reference
-    // (esc(foo) + ev.title). A reference outside every bits/var statement —
-    // the truthiness guards if (ev.time), if (ev.place), if (ev.body), if
-    // (ev.ctaLabel) — is never inside one of those statements at all, so it
-    // is correctly never considered here.
+    // Fix round 1 (task-4-report.md) enumerated SINKS — `bits +=` and
+    // `var <name> =` — plus a hardcoded field list, and reproduced the
+    // regression it was written for (esc(ev.title) → ev.title). The reviewer
+    // then got FOUR different shapes past that version, each with a clean
+    // `All checks passed.`: rendering a field from the `return` statement
+    // (the one concatenation site the sink list never named at all),
+    // aliasing through `let`/`const` (the list only ever knew `var`),
+    // routing a field through a helper or a renamed local, and — the one
+    // that matters most going forward — simply adding a field. Task 5 is the
+    // admin panel that adds fields to this same object; a hardcoded list is
+    // wrong again the day it grows one.
+    //
+    // Enumerating sinks chases the last hole found. This inverts the
+    // question instead: cardHTML's only parameter is named `ev`, so every
+    // appearance of that name inside its body must be one of a small set of
+    // allowed shapes, and anything else fails — regardless of what new shape
+    // it takes or what the field is called. Allowed, and nothing else:
+    //   esc(ev.X)                     and  esc(<fn>(ev.X))
+    //   encodeURIComponent(ev.X)      and  encodeURIComponent(ev.X || ev.Y)
+    //   if (ev.X)                     — a presence guard; the value itself
+    //                                    never reaches output from there
+    // The parameter declaration itself (`function cardHTML(ev)`) is outside
+    // `cardBody` already, since the slice below starts after the opening `{`.
+    //
+    // A bare `ev` — passed to a helper, assigned to a local, returned
+    // directly — never matches any of the three allowed shapes below, because
+    // all three only ever mark an `ev.<field>` text range, never a bare `ev`
+    // on its own. That is what catches "aliasing the parameter" and "moving
+    // the rendering into a helper" without naming either shape specifically:
+    // anything that separates `ev` from an immediate `.field` fails by
+    // construction, whatever it is called.
+    //
+    // Each shape is matched as one whole call — esc(...), encodeURIComponent
+    // (...), if (...) — rather than read backward from the field name through
+    // a fixed-width window. The previous version's fixed 60-character
+    // lookback flagged a real esc(...) whose own argument expression ran
+    // longer than that; matching the whole shape removes the width limit
+    // instead of enlarging it, so there is no number here to get wrong twice.
+    //
+    // Known, accepted blind spot, named rather than hidden: this hunts for
+    // the literal identifier `ev`, which is what the parameter is actually
+    // called today. Renaming the parameter itself to something else (not
+    // aliasing it — replacing it, and every use of it, with a different
+    // name) would carry every usage away from this scan along with it.
+    // Nothing short of a real parser closes that; the same limitation
+    // already stands, undocumented until now, wherever else this file reads
+    // source text instead of running it (see the contact.html form-action
+    // check's own note on bracket notation and dynamic property access for
+    // the precedent — reading text has this kind of edge everywhere, not
+    // just here).
     const cardOpen = evCode.match(/function\s+cardHTML\s*\([^)]*\)\s*\{/);
     if (!cardOpen) {
       fail('events.html: no function cardHTML(ev) — cannot verify it escapes what it renders');
@@ -1483,32 +1509,89 @@ if (want('pages')) {
       }
       const cardBody = evCode.slice(cardOpen.index + cardOpen[0].length, ci - 1);
 
-      const sinkRhs = [];
-      for (const m of cardBody.matchAll(/\bbits\s*\+?=\s*|\bvar\s+\w+\s*=\s*/g)) {
-        const start = m.index + m[0].length;
-        const semi = statementEnd(cardBody, start);
-        sinkRhs.push(cardBody.slice(start, semi === -1 ? cardBody.length : semi));
+      // Every string literal's CONTENTS masked to spaces (quotes kept, so
+      // the same quote-aware walk that finds them also still finds where
+      // they end). Without this, `\bev\b` matches the word "ev" inside a
+      // class name like '<p class="ev-card__date">' — a word boundary sits
+      // on both sides of it (a quote before, a hyphen after — neither is a
+      // \w character), so the regex cannot tell that occurrence apart from
+      // the real parameter without knowing it is inside a string at all.
+      // Found immediately on the first real run of this rewrite: it flagged
+      // ev.ctaLabel's own CSS class names as violations in the file that has
+      // nothing wrong with it (see task-4-report.md, fix round 1). Matching
+      // against the masked copy instead of cardBody leaves every position
+      // and length unchanged — only string interiors turn to spaces — so
+      // every index recorded below still points at the same place in the
+      // original source.
+      const maskStrings = s => {
+        let out = '', q = null;
+        for (let i = 0; i < s.length; i++) {
+          const c = s[i];
+          if (q) {
+            if (c === q && s[i - 1] !== '\\') { q = null; out += c; }
+            else out += c === '\n' ? '\n' : ' ';
+            continue;
+          }
+          if (c === "'" || c === '"' || c === '`') { q = c; out += c; continue; }
+          out += c;
+        }
+        return out;
+      };
+      const maskedBody = maskStrings(cardBody);
+
+      // [start, end) ranges within cardBody already accounted for by one of
+      // the three allowed shapes.
+      const allowed = [];
+      const markAt = (base, localIndex, text) => allowed.push([base + localIndex, base + localIndex + text.length]);
+
+      // esc(ev.X) and esc(<fn>(ev.X)) — at most one named wrapper between
+      // esc( and ev.<field>. A second level of nesting does not match this
+      // pattern at all, so esc(a(b(ev.X))) falls through to a violation
+      // below rather than being credited by accident.
+      for (const m of maskedBody.matchAll(/\besc\s*\(\s*(?:\w+\s*\(\s*)?ev\.\w+\s*\)+/g)) {
+        const fm = m[0].match(/ev\.\w+/);
+        markAt(m.index, fm.index, fm[0]);
       }
 
-      const unescapedFields = new Set();
-      for (const rhs of sinkRhs) {
-        for (const fm of rhs.matchAll(/\bev\.(date|title|time|place|body|ctaLabel|ctaText)\b/g)) {
-          const before = rhs.slice(Math.max(0, fm.index - 60), fm.index);
-          if (!/(?:\besc|\bencodeURIComponent)\s*\([^)]*$/.test(before)) unescapedFields.add(fm[1]);
-        }
+      // encodeURIComponent(ev.X) and encodeURIComponent(ev.X || ev.Y) — both
+      // operands of the fallback are credited.
+      for (const m of maskedBody.matchAll(/\bencodeURIComponent\s*\(\s*ev\.\w+(?:\s*\|\|\s*ev\.\w+)?\s*\)/g)) {
+        for (const fm of m[0].matchAll(/ev\.\w+/g)) markAt(m.index, fm.index, fm[0]);
       }
-      if (unescapedFields.size) {
-        fail(`events.html: cardHTML() renders ev.${[...unescapedFields].join(', ev.')} without esc()/encodeURIComponent() — Noy's own event text would reach every visitor's innerHTML unescaped`);
+
+      // if (ev.X) — the entire condition is one field and nothing else.
+      for (const m of maskedBody.matchAll(/\bif\s*\(\s*ev\.\w+\s*\)/g)) {
+        const fm = m[0].match(/ev\.\w+/);
+        markAt(m.index, fm.index, fm[0]);
+      }
+
+      const isAllowed = (idx, len) => allowed.some(([s, e]) => idx >= s && idx + len <= e);
+
+      const violations = [];
+      for (const m of maskedBody.matchAll(/\bev\b(?:\.\w+)?/g)) {
+        if (!isAllowed(m.index, m[0].length)) violations.push(m[0]);
+      }
+
+      if (violations.length) {
+        fail(`events.html: cardHTML() uses ${[...new Set(violations)].join(', ')} outside esc()/encodeURIComponent()/if(...) — Noy's own event text (or any new field a later task adds) would reach every visitor's innerHTML unescaped`);
       } else {
-        pass('events.html: cardHTML() escapes every ev.* field it concatenates into the card');
+        pass('events.html: every reference to ev inside cardHTML() is escaped, encoded, or a presence guard');
       }
     }
 
     // "What is past" is decided against today's date. toISOString() is UTC,
-    // and Israel is UTC+2/+3 — an event would move to the archive at 21:00 or
-    // 22:00 the evening BEFORE it happens, on the day people are looking it up.
+    // and Israel is UTC+2/+3 — AHEAD of UTC, so UTC is always the same
+    // calendar day as Israel or the day BEFORE it, never after. Measured
+    // directly: Israel 21:00 → toISOString reads the same day; Israel 00:01
+    // and again at 02:00 the next morning → toISOString still reads
+    // YESTERDAY. So the real failure is a finished event still showing under
+    // "מה קרוב" for two or three hours after local midnight, not one
+    // dropping out early — that second failure is real, but it belongs to a
+    // visitor at a NEGATIVE offset (e.g. New York), where UTC can already
+    // read tomorrow while their own clock still says today, hiding an event
+    // on the day it actually happens.
     if (/toISOString\s*\(\s*\)/.test(evCode)) {
-      fail('events.html builds a date with toISOString() — that is UTC, so an event drops into the archive hours before its day ends in Israel');
+      fail('events.html builds a date with toISOString() — that is UTC, and Israel runs ahead of it, so a finished event keeps showing as upcoming for two or three hours after local midnight');
     } else {
       pass('events.html compares dates in local time, not UTC');
     }
