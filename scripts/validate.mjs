@@ -830,8 +830,8 @@ if (want('features')) {
     // The events section, bounded by the file's own `// ───` section-marker
     // convention rather than by a character count. The brief specified a
     // fixed 4000-character window from the marker. Measured on the real
-    // file: the section is 5,808 characters as stored with CRLF endings
-    // (5,684 with LF), so that window stops 1,808 characters SHORT of the
+    // file: the section is 8,053 characters as stored with CRLF endings
+    // (7,892 with LF), so that window stops 4,053 characters SHORT of the
     // end — it lands in the middle of a comment, and
     // `box.innerHTML = sorted.map(...)` sits past the cut. The escaping
     // checks would have scanned the two literal '<p>טוען…</p>' placeholders,
@@ -946,7 +946,12 @@ if (want('features')) {
           }
           const end = statementEnd(body.text, c.index);
           const stmt = body.text.slice(c.index, end === -1 ? body.text.length : end);
-          if (!/\.catch\s*\(\s*fbError\s*\)/.test(stmt)) {
+          // `.catch(fbError)` or a handler that calls it —
+          // `.catch(err => { outcome = 'failed'; fbError(err); })`. What
+          // matters is that the rejection reaches fbError, not the spelling.
+          // `[^)]*` cannot cross a `)`, so `.catch(() => {})` with an
+          // unrelated fbError later in the statement still fails.
+          if (!/\.catch\s*\([^)]*fbError/.test(stmt)) {
             problems.push(`admin events: ${name}()'s write to the events tree has no .catch(fbError) — it fails silently while the UI says saved`);
           }
         }
@@ -971,6 +976,27 @@ if (want('features')) {
         fail('admin events: saveEvent() does not check _eventsLoaded — EVENTS is empty until Firebase answers, and saving in that window is how the pantry got wiped on every offline open');
       } else {
         pass('admin events: saveEvent() refuses to write before the listener has answered');
+      }
+
+      // A lock with no release path is worse than no lock at all. Firebase's
+      // set() does not settle until the SERVER acknowledges it, and offline
+      // that is never — the SDK queues the write and the promise stays
+      // pending — so a release hung off the write's own chain (.then,
+      // .catch, .finally) never runs. Measured on the version that released
+      // in .finally(): with the promise pending, _eventSaving was still true
+      // after 4 seconds, the button was still disabled, a second click wrote
+      // nothing, and the form still held what had been typed, so it looked
+      // as though nothing had happened. Noy works from a phone.
+      //
+      // submitOrder() races its write against 8000 ms for exactly this
+      // reason. A lock here has to do the same, so the check asks for the
+      // race, not just for the lock.
+      if (saveBody && /_eventSaving\s*=\s*true/.test(saveBody.text)) {
+        if (!/Promise\s*\.\s*race\s*\(/.test(saveBody.text) || !/setTimeout\s*\(/.test(saveBody.text)) {
+          fail('admin events: saveEvent() takes the _eventSaving lock but releases it only from the write\'s own promise chain — a Firebase write never settles while offline, so the lock never releases and no further event can be saved for the rest of the page session; race the write against a timeout the way submitOrder() does');
+        } else {
+          pass('admin events: saveEvent() races its write against a timeout, so the save lock always releases');
+        }
       }
 
       // An empty node means Noy has no events. It does NOT mean first run.

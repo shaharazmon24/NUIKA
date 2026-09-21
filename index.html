@@ -7349,6 +7349,12 @@ let _eventsBound  = false;
 // True only while a save is in flight. The order button has _submitting for
 // exactly this; without it, two clicks on שמירה 9 ms apart produced two
 // separate events, because the id is chosen fresh from Date.now() per call.
+//
+// A lock is only half of that precedent, and the half that is easy to miss:
+// submitOrder() races its write against an 8000 ms timeout so _submitting
+// ALWAYS releases. Taking the lock without the race is worse than taking no
+// lock at all — offline, a Firebase write never settles, and the tab stays
+// locked for the rest of the page session. saveEvent() runs the same race.
 let _eventSaving  = false;
 
 function initEvents() {
@@ -7410,22 +7416,51 @@ function saveEvent() {
     created:  (existing && existing.created) || Date.now()
   };
 
-  // Held for the whole round-trip, and released in .finally() so a rejected
-  // write unlocks the button too. The guard above is the same one the order
-  // button uses; this is the half that makes it release.
   _eventSaving = true;
   const saveBtn = document.querySelector('#evForm button[type="submit"]');
   if (saveBtn) saveBtn.disabled = true;
+
+  let outcome = 'pending';
 
   // Per key, never the whole node. Noy edits from a phone and a laptop, and
   // the SDK queues writes made offline — a whole-node write made on one
   // device and delivered later deletes what the other device added in
   // between. savePantry(), saveRecipes() and saveWeeklyPlan() still carry
   // exactly this bug; do not add a fourth.
-  db.ref(ROOT + '/events/' + id).set(ev)
-    .then(clearEventForm)
-    .catch(fbError)
-    .finally(() => { _eventSaving = false; if (saveBtn) saveBtn.disabled = false; });
+  const write = db.ref(ROOT + '/events/' + id).set(ev)
+    .then(() => { outcome = 'saved'; })
+    .catch(err => { outcome = 'failed'; fbError(err); });
+
+  // Firebase's set() does not settle until the SERVER acknowledges it.
+  // Offline that is never: the SDK queues the write locally and the promise
+  // stays pending indefinitely, so anything hung off it — a .then(), a
+  // .catch(), a .finally() — never runs. An earlier version released the
+  // lock in .finally() and was measured wedging the tab: with the promise
+  // pending, _eventSaving stayed true and the button stayed disabled for the
+  // rest of the page session, so no further event could be saved or edited,
+  // and because the form was never cleared it looked as though nothing had
+  // happened at all. Noy works from a phone.
+  //
+  // submitOrder() already races its write against 8000 ms for exactly this
+  // reason; this is the same race, so the lock always releases.
+  //
+  // A timeout is NOT a failed save. The write is queued and lands by itself
+  // as soon as there is signal, so it says that rather than crying failure,
+  // and the form clears so it does not look untouched. A genuine rejection
+  // is the other case: fbError has already reported it, and the form is left
+  // alone so Noy does not lose what she typed.
+  Promise.race([
+    write,
+    new Promise(resolve => setTimeout(resolve, 8000))
+  ]).then(() => {
+    if (outcome !== 'failed') clearEventForm();
+    if (outcome === 'pending') {
+      alert('אין כרגע חיבור לאינטרנט. השמירה ממתינה ותיקלט מעצמה ברגע שיהיה חיבור — אפשר להמשיך לעבוד.');
+    }
+  }).then(() => {
+    _eventSaving = false;
+    if (saveBtn) saveBtn.disabled = false;
+  });
 }
 
 function editEvent(id) {
