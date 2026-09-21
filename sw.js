@@ -1,5 +1,5 @@
 // Bump this version on every deploy that must reach existing users.
-const CACHE = 'nuika-v11';
+const CACHE = 'nuika-v12';
 
 // Relative paths, so the same worker is correct whether the site is served
 // from the domain root (nuika.co.il) or a subdirectory.
@@ -15,15 +15,21 @@ const CACHE = 'nuika-v11';
 // file that gets discarded and leaves the one actually on screen uncached:
 // offline, it is a blank hero in exactly the case the poster exists for.
 //
-// './shop.html' is not here yet either, and that is deliberate rather than an
-// oversight: the file does not exist until the cutover renames index.html to
-// it. Precaching a name that 404s buys nothing — install swallows the failure
-// — and carving it out of the "every precached path exists" check would put a
-// hole in the one check that catches a typo'd path. It is added in the commit
-// that creates the file, and the validator fails if that commit forgets.
+// './shop.html' was deliberately absent until the cutover: the file did not
+// exist, precaching a name that 404s buys nothing — install swallows the
+// failure — and carving it out of the "every precached path exists" check
+// would have put a hole in the one check that catches a typo'd path. The
+// cutover created it, so it is listed here now, in the same commit, and the
+// validator fails if a future commit removes it while the file is still here.
+//
+// Both './' and './index.html' stay. They are the same bytes today (the film
+// home page), but './' is what a visitor who typed nuika.co.il actually
+// requested, and a cache entry is keyed on the full URL: dropping either one
+// leaves that visitor with no offline copy of the page they asked for.
 const ASSETS = [
   './',
   './index.html',
+  './shop.html',
   './admin.html',
   './story.html',
   './gallery.html',
@@ -120,9 +126,10 @@ self.addEventListener('fetch', e => {
   const isHTML = e.request.mode === 'navigate'
     || (e.request.headers.get('accept') || '').includes('text/html');
 
-  // Before the cutover './index.html' IS the shop; after it, the shop is
-  // './shop.html' and index.html is the film. Resolving per-URL keeps a
-  // customer who loses signal on their cart, not on a video.
+  // Since the cutover the shop is './shop.html' and './index.html' is the
+  // film. (Before it, './index.html' WAS the shop — which is why this resolves
+  // per-URL rather than falling back to one page for everything.) A customer
+  // who loses signal lands back on their cart, not on a video.
   const SHOP_FALLBACK = './shop.html';
   const isShopUrl = url.pathname.endsWith('/shop.html')
     || url.pathname.endsWith('/admin.html')
@@ -134,11 +141,14 @@ self.addEventListener('fetch', e => {
     //
     // ignoreSearch, because the admin panel is a query string on the shop's
     // own URL ('?admin') and a cache entry is keyed on the full URL including
-    // the search. Without it, Noy offline at 'index.html?admin' misses her own
-    // precached page and drops through to the per-URL fallback below — which
-    // resolves '?admin' to './shop.html', a file that does not exist until the
-    // cutover. The server returns the same HTML for either URL, so ignoring
-    // the search here is not a guess; it is what the origin already does.
+    // the search. Without it, Noy offline at 'shop.html?admin' misses her own
+    // precached page and drops through to the per-URL fallback below. The
+    // server returns the same HTML for either URL, so ignoring the search
+    // here is not a guess; it is what the origin already does.
+    //
+    // (This paragraph used to end "…resolves '?admin' to './shop.html', a
+    // file that does not exist until the cutover." It exists now, and it is
+    // in ASSETS above.)
     e.respondWith(
       fetch(e.request)
         .then(res => { store(e.request, res); return res; })

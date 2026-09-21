@@ -46,14 +46,23 @@
   <img src="icon-192.png" alt="נואיקה" />
   <div class="spin" role="status" aria-label="טוען"></div>
   <p>פותח את לוח הניהול…</p>
-  <noscript><p>יש להפעיל JavaScript. <a href="./?admin">המשך לניהול</a></p></noscript>
+  <noscript><p>יש להפעיל JavaScript. <a href="./shop.html?admin">המשך לניהול</a></p></noscript>
 
   <script>
     // replace(), not href: this page should not sit in the back stack, so the
     // back gesture from the panel goes where the user expects.
-    location.replace('./?admin');
+    //
+    // './shop.html?admin', not './?admin'. Before the cutover the root WAS the
+    // shop, so './?admin' landed on the panel. After it the root is the film
+    // home page, which forwards to the shop only when it detects an INSTALLED
+    // launch — and in an ordinary desktop or mobile tab it does not, so the
+    // chain admin.html -> ./?admin stopped dead on the film with no panel and
+    // nothing explaining why. Measured in a plain tab before this line
+    // changed. Naming the shop directly makes both cases work: the installed
+    // app never needs the hop, and an ordinary tab no longer loses the query.
+    location.replace('./shop.html?admin');
   </script>
 
-  <p><a href="./?admin">אם הדף לא נפתח — לחצי כאן</a></p>
+  <p><a href="./shop.html?admin">אם הדף לא נפתח — לחצי כאן</a></p>
 </body>
 </html>

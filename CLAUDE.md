@@ -15,12 +15,22 @@ This is a real business. Orders placed here are real orders.
 
 ## The one rule that matters most
 
-**Never upload `index.html` through GitHub's web "Add files via upload".**
+**Never upload `shop.html` through GitHub's web "Add files via upload".**
 
-It replaces the whole file with whatever local copy you have, and git records it
-as a normal commit. It has already happened once and silently deleted the entire
-Firebase layer plus a batch of bug fixes. The site kept loading, so nothing
-looked wrong until a customer hit it.
+> **The name changed on 21 Sep 2026.** The shop used to be `index.html`, and
+> every older note, memory and screenshot says so. It is now **`shop.html`** —
+> ~430KB, 9,000+ lines, all the ordering, payment, stock, kitchen and admin
+> code. `index.html` is now the small film front page (~15KB). If you are
+> working from a memory of this project, that memory is out of date; check the
+> file, not the name.
+
+Uploading replaces the whole file with whatever local copy you have, and git
+records it as a normal commit. It has already happened once and silently deleted
+the entire Firebase layer plus a batch of bug fixes. The site kept loading, so
+nothing looked wrong until a customer hit it.
+
+The rule is about *any* file, but `shop.html` is the one whose loss is
+catastrophic and silent.
 
 Two people share this one file from two machines. Use these two commands and
 nothing else — they install the safety hooks on first use, refuse to push
@@ -35,15 +45,33 @@ node scripts/ship.mjs "what changed"   # when you are done
 `status.mjs` compares this folder, GitHub and the live site, and refuses to
 pretend everything is fine when they differ. It also catches the case that has
 now bitten this project twice in a different form: a folder that is not the
-repo at all. `ship.mjs` stamps the version into `index.html` on every publish —
+repo at all. `ship.mjs` stamps the version into `shop.html` on every publish —
 never edit the `nuika-version` meta tag by hand.
+
+How those four tools (`status.mjs`, `ship.mjs`, `validate.mjs`,
+`enable-deploy-gate.mjs`) know which file is the shop, stated precisely, because
+a vaguer version of this sentence was wrong here for one commit:
+
+- They **find** it by name — `shop.html` if it exists, otherwise `index.html`.
+  Those two names are hardcoded in `shopFile()`.
+- They then **verify** by content: the file must contain
+  `firebase.initializeApp` and `getCartTotal()`, or they refuse to run and say
+  so ("is the shop by name but not by content").
+
+The verification is what matters and what saved the cutover: without it the
+tools would have gone on reading `index.html` and silently validated, stamped
+and deployed against the **film page**. It is not, however, name-independence.
+Rename the shop to any third name and all four stop with `neither shop.html nor
+index.html exists — this is not the NUIKA checkout`. They survived this rename
+because it was written into them in advance; another rename means editing
+`shopFile()` in all four copies first.
 
 If the user asks in Hebrew to update or to publish ("תעדכני", "תשלחי"), run
 these. Do not hand them raw git commands; plain `git push` skips the checks
 that exist because work has already been lost once.
 
 If a pull reports a conflict, resolve it properly. Never resolve by taking one
-whole side of `index.html` — both people's work is real.
+whole side of `shop.html` — both people's work is real.
 
 ---
 
@@ -61,9 +89,24 @@ Actions, so a bad push turns the commit red — but catching it locally is bette
 
 ## Architecture
 
-Single file, no build step. `index.html` holds all HTML, CSS and JavaScript.
-Tailwind and Firebase load from CDNs. Hebrew RTL with an English toggle driven
-by `lang-content="he"` / `lang-content="en"` attributes.
+No build step. Since the cutover of 21 Sep 2026 the site has two front pages
+plus four content pages:
+
+| File | What it is |
+|---|---|
+| `index.html` | the film front page, ~280 lines. What nuika.co.il serves. One screen, no scroll. |
+| `shop.html` | **the shop** — 9,000+ lines holding all its own HTML, CSS and JavaScript. Ordering, payment, stock, kitchen, finance, admin. |
+| `admin.html` | a redirect page and nothing else: it exists so Noy can have a home-screen icon that lands on the admin sign-in. |
+| `story.html` `gallery.html` `contact.html` `events.html` | content pages, sharing `site.css` + `site.js`. |
+
+`shop.html` is still one self-contained file by design and does **not** use
+`site.css` / `site.js`. Tailwind and Firebase load from CDNs. Hebrew RTL with an
+English toggle driven by `lang-content="he"` / `lang-content="en"` attributes on
+every page.
+
+`index.html` and `shop.html` are both doors into the installed app: both link
+`manifest.json` and both register `sw.js`. `admin.html` deliberately links no
+manifest — see the comment in the file.
 
 **All shared data lives in Firebase Realtime Database** under `nuika/`:
 
@@ -223,9 +266,37 @@ project has lost work before.
   actually gone wrong, but `const r = db.ref(ROOT + '/events'); r.set(all)` —
   the whole-node write, one variable away — passes when added beside a
   compliant write.
-- **`index.html` is not in `PAGES`**, so the hardened escaping check never runs
+- **`shop.html` is not in `PAGES`**, so the hardened escaping check never runs
   over the shop. The events tab carries its own scoped check; nothing else in
-  the file is covered.
+  the file is covered. (Before the cutover this said `index.html`, which was
+  the same statement about the same file. `index.html` is now `PAGES[0]` — the
+  film page — and *is* covered; the file outside `PAGES` is `shop.html`.)
 - **A `data-src=` or `data-type=` attribute on a `<script>` tag hides it** from
   the inline-script scan, so a syntax error in that block passes. No page
   carries such an attribute.
+- **No check reads any documentation file, and this is the gap that keeps
+  reopening.** `scripts/validate.mjs` parses JavaScript, asserts features,
+  checks assets, design tokens and the four other pages. It reads no `.md` at
+  all — not this file, not `PASSPORT.md`, not `SECURITY.md`, not the two Hebrew
+  guides. So every factual claim in them is unguarded: they drift as the code
+  moves and nothing ever goes red.
+
+  This is not theoretical. The cutover of 21 Sep 2026 broke, in one commit,
+  claims in five documents at once — including the restore procedure in
+  `הוראות-לקלוד.md`, which told the reader to run a test that reports a false
+  catastrophe on a perfectly healthy site, with the restore steps printed
+  underneath it. It took two review rounds to find them all, and one of the
+  "fixes" in the first round introduced the same trap pointing the other way.
+
+  Until something checks them, treat every document here the way you would
+  treat a comment: evidence of intent, not evidence of fact. **Check the code.**
+  If you are writing a check for this, the cheap first version is a list of
+  filenames that must not appear in any `.md` — the whole class so far has been
+  documents naming a file that has moved.
+- **`index.backup-v1.html` is committed and therefore served.** Measured 22 Sep
+  2026: HTTP 200 at `nuika.co.il/index.backup-v1.html`, 80,978 bytes, carrying
+  the pre-Firebase source and `const ADMIN_PASSWORD = 'nuika2026';` in plain
+  text. Not a working credential — sign-in has been Firebase Auth since 17 Aug
+  2026 — but it is a password on the open web and a stale whole copy of the
+  shop sitting where someone might restore from it. Removing it changes what
+  the site serves, so it is Noy's and Shahar's call, not a cleanup.

@@ -48,6 +48,31 @@
   /* The full wordmark is never rendered below 130px wide — under that its
      finest strokes fade out. The header sits at 160px, which measures 59px
      tall and leaves the flower legible. */
+
+  /* Both wordmarks below point at './index.html', and after the cutover that
+     is the FILM home page, not the shop. This was decided, not inherited.
+
+     On the open web it is simply right: the logo is the way home, and home is
+     the film. Nothing else on these pages offers that.
+
+     Inside the installed app it resolves differently, and that is the part
+     worth writing down. index.html's first script forwards an installed
+     launch straight to './shop.html', so in the app every wordmark tap lands
+     on the shop instead of the film. That is not a loop and not a trap — the
+     forward is location.replace(), which leaves no history entry, so Back
+     from the shop goes to the page the tap came from, not around again
+     (verified). The app's own identity says the same thing: the manifest's
+     start_url is './shop.html'. Noy installed a shop; in the shop app the
+     mark leading to the shop is the honest answer.
+
+     The alternative — pointing these at './shop.html' — was rejected because
+     it would fix a case nobody is in (there is no "home page" inside a shop
+     app) by breaking the case everybody is in: a customer on contact.html in
+     an ordinary tab would tap the logo and be dropped in the menu.
+
+     The cost is real and accepted: the film is unreachable from inside the
+     installed app. If that ever needs to change, the fix belongs in
+     index.html's installed-launch redirect, not here. */
   function nuikaHeader(active) {
     return '' +
       '<a class="nu-mark" href="./index.html" aria-label="NUIKA">' +

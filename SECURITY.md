@@ -129,8 +129,19 @@ sign-in screen rather than editing anything in the console.
 
 ## What this does not cover
 
-- **The Firebase config in `index.html` is public and that is fine.** It is an
-  address, not a credential. The rules are what protect the data.
+- **The Firebase config in `shop.html` is public and that is fine.** It is an
+  address, not a credential. The rules are what protect the data. (The file was
+  called `index.html` until the cutover of 21 Sep 2026; `index.html` is now the
+  film front page and carries no Firebase config at all.)
+- **`index.backup-v1.html` is committed, so GitHub Pages serves it.** Measured
+  22 Sep 2026: `https://nuika.co.il/index.backup-v1.html` returns HTTP 200,
+  80,978 bytes, and contains the pre-Firebase source including
+  `const ADMIN_PASSWORD = 'nuika2026';` in plain text. That mechanism no longer
+  exists — sign-in is Firebase Auth against a real account authorised by
+  `nuika/admins/{uid}`, and the rules below are what protect the data — so the
+  string is not a working credential for the panel. It is still a password
+  published on the open web, which matters if it was ever reused elsewhere.
+  Deleting or un-publishing the file is the owner's call and has not been made.
 - **A signed-in customer can still raise a stock counter**, which would make an
   item look sold out sooner than it should. The rules stop them lowering or
   deleting one, so they cannot make a sold-out item look available. It exposes

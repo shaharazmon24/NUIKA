@@ -92,6 +92,14 @@ try {
 
 const html = readFileSync(join(ROOT, SHOP), 'utf8');
 
+// SHOP's opposite number. The cutover put the film page on the site root, so
+// this is both PAGES[0] and whatever nuika.co.il serves. Named once, here,
+// beside SHOP, so the `design` and `pages` phases cannot disagree about it
+// after one of them is edited and the other is not — the same reason PAGES
+// itself is at module scope. Not resolved by content the way SHOP is: there
+// is nothing to resolve, the site root has exactly one name.
+const HOME = 'index.html';
+
 // The five phases, declared once. `want()` reads this to decide what runs;
 // the argument check below reads the same list to decide what is a real flag,
 // so a phase can never be runnable but unspellable, or spellable but dead.
@@ -207,7 +215,14 @@ const isInlineJs = attrs => {
 // `--syntax` alone (CI runs every phase separately) can still check these
 // four files' inline JavaScript without depending on the `pages` phase
 // having run first to define the list.
-const PAGES = ['home.html', 'story.html', 'gallery.html', 'contact.html', 'events.html'];
+//
+// 'index.html', not 'home.html', since the cutover: the film page was renamed
+// onto the site root and there is no home.html on disk any more. Leaving the
+// old name here is not a cosmetic slip — every loop over PAGES reports a
+// missing file, in two separate phases, and the entry that should be checking
+// the real home page checks nothing at all. SHOP resolves to shop.html beside
+// it, so the two lists never overlap.
+const PAGES = [HOME, 'story.html', 'gallery.html', 'contact.html', 'events.html'];
 
 // The token kinds a REGEX LITERAL can legally follow. This is the standard
 // rule every JavaScript tokeniser uses to tell `/` apart from division:
@@ -911,6 +926,58 @@ if (want('features')) {
     else fail(`missing "${needle}" — ${why}`);
   }
 
+  // ── Both doors into the app ───────────────────────────────────────────
+  //
+  // Two of the needles above — rel="manifest" and serviceWorker.register —
+  // read `html`, which is whatever SHOP resolves to. That was sound while
+  // there was one door and the site root WAS the shop. The cutover moved SHOP
+  // to shop.html, and those two lines went on passing, against shop.html,
+  // while saying nothing at all about the page nuika.co.il actually serves.
+  // The root shipped with no manifest link and no worker registration and the
+  // suite stayed green — measured in a browser on `/`: manifestLink null,
+  // swRegistrations 0, and all three iOS meta tags absent.
+  //
+  // A check that guards the customer-facing root has to READ the root. So the
+  // wiring is asserted per entry point, from one list, instead of against a
+  // variable that can move out from under it. Add a third door and it is one
+  // line here.
+  //
+  // What each absence costs is in the message, because these fail silently on
+  // a page that looks perfect: nothing renders differently, the install offer
+  // simply never appears.
+  //
+  // admin.html is NOT on this list and must never be added to it. Its whole
+  // purpose depends on having no manifest — see the check under "Deployment:"
+  // in the assets phase, which requires the opposite of this one.
+  console.log('Both doors into the app:');
+  {
+    const APP_WIRING = [
+      [/<link[^>]+rel=["']?manifest/i,
+       'links the manifest — without it Android never fires beforeinstallprompt on this page, so "Install app" is never offered, and an iOS "Add to Home Screen" from here saves a plain bookmark that launches in Safari chrome'],
+      [/serviceWorker\.register\s*\(/,
+       'registers the service worker — a visitor who lands here and leaves without going further caches nothing and has no offline copy of anything, the shop included'],
+      [/<meta[^>]+name=["']theme-color["']/i,
+       'declares a theme colour, or the installed app paints its own chrome white'],
+      [/<meta[^>]+name=["']apple-mobile-web-app-capable["']/i,
+       'tells iOS it may run without Safari chrome, or navigator.standalone is never true and every installed-launch branch is dead'],
+      [/<link[^>]+rel=["']apple-touch-icon["']/i,
+       'offers iOS a square home-screen icon instead of a screenshot of the page'],
+    ];
+
+    // Comment-stripped, for the reason this file has been bitten by four
+    // times: both of these pages now carry long comments ABOUT their PWA
+    // wiring, and a raw substring check would be satisfied by the explanation
+    // after the tag itself was deleted.
+    for (const [page, raw] of [[SHOP, html], [HOME, existsSync(join(ROOT, HOME)) ? readFileSync(join(ROOT, HOME), 'utf8') : null]]) {
+      if (raw === null) { fail(`${page} is missing — the site root serves nothing`); continue; }
+      const code = uncommented(raw);
+      for (const [re, why] of APP_WIRING) {
+        if (re.test(code)) pass(`${page}: ${why}`);
+        else fail(`${page}: ${why}`);
+      }
+    }
+  }
+
   // Bugs that shipped once already. Their exact shape must not come back.
   const banned = [
     ['itemsTotal + delivery', 'undefined variable that silently killed order submission'],
@@ -1472,17 +1539,17 @@ if (want('assets')) {
 
   // The admin panel is a query string on the shop's own URL ('?admin'), and a
   // cache entry is keyed on the full URL including the search — so offline,
-  // 'index.html?admin' misses the precached './index.html' and drops through
-  // to the per-URL fallback, which resolves '?admin' to './shop.html'. That
-  // file does not exist until the cutover, so the fallback resolves to
-  // undefined and Noy gets the browser's network-error page instead of her
-  // own admin. Before the per-URL fallback existed the same miss landed on
-  // './index.html' and worked, which is what makes this a regression rather
-  // than a pre-existing gap. The origin serves identical HTML for either URL.
+  // 'shop.html?admin' misses the precached './shop.html' and drops through to
+  // the per-URL fallback. The origin serves identical HTML for either URL, so
+  // ignoring the search is not a guess about the server; it is what the server
+  // already does. (Before the cutover the same miss was on './index.html', and
+  // the fallback resolved to a shop.html that did not exist yet — the
+  // network-error page instead of Noy's admin. The file exists now and is in
+  // ASSETS, but the miss is still a miss without ignoreSearch.)
   if (/caches\.match\(\s*e\.request\s*,\s*\{[^}]*ignoreSearch\s*:\s*true/.test(swFlat)) {
     pass("sw.js ignores the query string when it falls back, so '?admin' finds the cached shop");
   } else {
-    fail(`sw.js's offline fallback matches on the full URL including the search, so the admin panel — which is '?admin' on ${SHOP} — misses its own precached page and falls through to a file that does not exist yet`);
+    fail(`sw.js's offline fallback matches on the full URL including the search, so the admin panel — which is '?admin' on ${SHOP} — misses its own precached page`);
   }
 
   // CACHE must be bumped whenever sw.js changes, or the change reaches nobody
@@ -1499,6 +1566,20 @@ if (want('assets')) {
   // IS origin/main, which would compare a file against itself. Reporting that
   // plainly beats both alternatives: failing every CI run for a missing ref,
   // or printing a green line that claims a comparison nobody made.
+  //
+  // What this enforces, stated exactly, because it is weaker than "CACHE was
+  // bumped" sounds: **at least one bump per branch, measured against what is
+  // published — not one bump per commit.** The comparison is
+  // working-tree-vs-origin/main, so on a branch that already moved v11 -> v12,
+  // a later commit that changes sw.js again and does NOT touch CACHE still
+  // passes (v12 != v11), and so would a commit that moved it back to v11 if
+  // some earlier commit on the branch had moved it away and back. That is
+  // deliberate rather than an oversight: this project ships whole branches
+  // through ship.mjs, so the question that matters is "does what I am about to
+  // publish differ from what is published", and per-commit enforcement would
+  // demand a new key on every intermediate commit and make the key meaningless.
+  // If this project ever starts shipping individual commits, change the
+  // baseline to HEAD~1 and this paragraph with it.
   {
     let baseline = null;
     try {
@@ -1533,7 +1614,7 @@ if (want('assets')) {
     } else if (lf(baseline) === lf(sw)) {
       pass('sw.js is unchanged from origin/main, so CACHE does not need bumping');
     } else if (keyOf(sw) && keyOf(sw) !== keyOf(baseline)) {
-      pass(`sw.js changed and CACHE was bumped (${keyOf(baseline)} -> ${keyOf(sw)})`);
+      pass(`sw.js changed and CACHE differs from the published one (${keyOf(baseline)} -> ${keyOf(sw)}) — note this is per-branch, not per-commit: a later commit on this branch may change sw.js again without moving the key`);
     } else {
       fail(`sw.js changed but CACHE is still ${keyOf(baseline)} — activate() only deletes caches that are not CACHE, so every visitor who already has the worker keeps the old file and never sees this change`);
     }
@@ -1548,6 +1629,94 @@ if (want('assets')) {
     const host = readFileSync(cnamePath, 'utf8').trim();
     if (host === 'nuika.co.il') pass('CNAME points at nuika.co.il');
     else fail(`CNAME contains "${host}" — expected nuika.co.il`);
+  }
+
+  // ── Noy's two home-screen icons ───────────────────────────────────────
+  //
+  // She has two, and neither one's failure is visible from the repository:
+  // you find out when she taps it. The app icon launches the manifest's
+  // start_url; the admin icon is admin.html, whose only job is to redirect.
+  // Both used to resolve through './', which WAS the shop — and the cutover
+  // moved the shop off the site root, so both needed migrating in the same
+  // commit. These pin the result.
+  {
+    const mf = JSON.parse(readFileSync(join(ROOT, 'manifest.json'), 'utf8'));
+
+    // start_url is where an installed launch opens. './' is the film now, and
+    // a bakery app that opens on a film cannot take an order until you tap
+    // through it.
+    if (mf.start_url === `./${SHOP}`) pass(`the app opens at the shop (start_url: ${mf.start_url})`);
+    else fail(`manifest start_url is "${mf.start_url}" — it must be "./${SHOP}"; since the cutover "./" serves the film home page, so the installed app would open on a video instead of the menu`);
+
+    // id is IDENTITY, not a route, and it is the one field here that must NOT
+    // move with the rename. Browsers key an installed app on it: change it and
+    // this becomes a different app, the icon already on Noy's home screen is
+    // orphaned, and reinstalling is the only way back. It was "./" before the
+    // cutover; it stays "./".
+    if (mf.id === './') pass('manifest id is still "./" — the installed app keeps its identity, and Noy keeps the icon she already has');
+    else fail(`manifest id is "${mf.id}" — it must stay "./". id is the app's identity, not a URL to keep current: changing it makes browsers treat this as a NEW app and orphans the icon already on Noy's home screen`);
+
+    // scope has to contain both pages or the link from the film to the shop
+    // leaves the app and reopens in a browser tab with chrome around it.
+    if (mf.scope === './') pass('manifest scope is "./" — the film and the shop are inside one app');
+    else fail(`manifest scope is "${mf.scope}" — it must stay "./", or following the film's own link to the shop drops out of the installed app`);
+
+    // Android's long-press shortcut is the only non-iOS way into the panel
+    // without the five-tap logo gesture.
+    const shortcut = (mf.shortcuts || []).find(sc => /admin/.test(sc.url || ''));
+    if (!shortcut) fail('the manifest has no admin shortcut — the Android long-press way into the panel is gone');
+    else if (shortcut.url === `./${SHOP}?admin`) pass(`the manifest's admin shortcut opens ${shortcut.url}`);
+    else fail(`the manifest's admin shortcut is "${shortcut.url}" — it must be "./${SHOP}?admin". "./?admin" lands on the film, which forwards to the shop only on an INSTALLED launch, so in an ordinary tab it stops there`);
+  }
+
+  {
+    const adminPath = join(ROOT, 'admin.html');
+    if (!existsSync(adminPath)) {
+      fail("admin.html is missing — Noy's admin icon 404s");
+    } else {
+      // Comments stripped, and this file is the reason that matters: its
+      // header comment SPELLS OUT both of the things it must not contain —
+      // a <link rel="manifest"> tag and the old './?admin' target — as prose
+      // explaining why they are absent. Read raw, the manifest check fails on
+      // its own explanation and the route check passes on the real bug.
+      const admin = uncommented(readFileSync(adminPath, 'utf8'));
+      const wantAdmin = `./${SHOP}?admin`;
+
+      // Three routes to the same place, because any one of them can be the
+      // one that runs: the <noscript> link, the location.replace() that
+      // normally does the work, and the visible fallback link for when the
+      // replace is blocked. Reverting any single one is a dead end for
+      // whoever takes that route, so all three are counted, not OR'd.
+      //
+      // './?admin' was correct while the root was the shop. It is not now:
+      // the root is the film, which forwards to the shop only when it detects
+      // an installed launch. Measured in an ordinary desktop tab before this
+      // changed — admin.html -> ./?admin -> the film, and it stopped there,
+      // no panel, no sign-in, nothing saying why.
+      const routes = [
+        ...[...admin.matchAll(/href=["']([^"']*)["']/g)].map(m => m[1]),
+        ...[...admin.matchAll(/location\.replace\(\s*["']([^"']*)["']/g)].map(m => m[1]),
+      ].filter(t => /admin/i.test(t) || t === './');
+
+      if (routes.length !== 3)
+        fail(`admin.html offers ${routes.length} route(s) to the panel, expected 3 — the <noscript> link, location.replace(), and the visible fallback link`);
+      else if (routes.every(t => t === wantAdmin))
+        pass(`all three of admin.html's routes name the shop directly (${wantAdmin})`);
+      else
+        fail(`admin.html still routes to ${[...new Set(routes.filter(t => t !== wantAdmin))].map(t => `"${t}"`).join(', ')} — every route must be "${wantAdmin}". Since the cutover "./" is the film, which forwards to the shop only on an installed launch, so in an ordinary tab that route dead-ends with no panel and no explanation`);
+
+      // The ABSENCE of a manifest link here is load-bearing, and it is the
+      // kind of absence someone tidies back in. iOS 16.4+ reads the manifest
+      // of whatever page is added to the home screen and then always launches
+      // at its start_url — which is the shop. That is exactly how saving
+      // /?admin once "produced an icon that opened the storefront". With no
+      // manifest, iOS keeps this page's own URL and the icon lands on the
+      // admin sign-in.
+      if (/<link[^>]+rel\s*=\s*["']?manifest/i.test(admin))
+        fail('admin.html links the manifest — iOS would then launch its icon at the manifest start_url (the shop) instead of the admin sign-in, which is the exact bug admin.html was created to fix');
+      else
+        pass("admin.html links no manifest, so its icon keeps landing on the admin sign-in rather than the storefront");
+    }
   }
 
   // status.mjs reads this one tag to compare the folder, GitHub and the live
@@ -1668,8 +1837,20 @@ if (want('assets')) {
     // the next person will edit differently.
     const rawSplit = splitResolver(raw);
     resolvers.set(script, rawSplit ? rawSplit[1] : null);
-    const hard = [...cut.matchAll(/index\.html/g)];
-    if (hard.length) fail(`scripts/${script} names the pre-cutover shop file ${hard.length} time(s) outside shopFile() — resolve it with shopFile() so the cutover cannot silently point this tool at the home page`);
+    // One more exemption, and exactly one line of it. Since the cutover
+    // 'index.html' is the HOME page, not the shop, and a tool that has to
+    // talk about the site root must write that name somewhere. This file
+    // does, once, as `const HOME = '...'` beside SHOP — the same bargain
+    // shopFile() gets: name it in one place, then use the constant. Every
+    // other mention stays banned, so the shop can never be re-hardcoded
+    // under the name it used to have.
+    //
+    // The exemption is a single anchored line, not a substring, and the
+    // other three scripts have no such declaration, so nothing is stripped
+    // from them.
+    const cutHome = cut.replace(/^\s*const HOME = '[^']*';[ \t]*$/m, '');
+    const hard = [...cutHome.matchAll(/index\.html/g)];
+    if (hard.length) fail(`scripts/${script} names the pre-cutover shop file ${hard.length} time(s) outside shopFile() and the one HOME declaration — resolve the shop with shopFile() and the home page with HOME, so the cutover cannot silently point this tool at the wrong file`);
     else pass(`scripts/${script} names the pre-cutover shop file only inside shopFile()`);
   }
 
@@ -2129,11 +2310,43 @@ if (want('design')) {
       ['data-nuika-header',    'pages mark where the header goes'],
       ['data-nuika-footer',    'pages mark where the footer goes'],
       ['nu-mark__art',         'the header renders the mask element the wordmark needs'],
-      ['shop.html',            'the shop is reachable from every page'],
     ]) {
       if (js.includes(needle)) pass(why);
       else fail(`missing "${needle}" — ${why}`);
     }
+
+    // This was a bare js.includes('shop.html') in the list above. It stopped
+    // being a check the moment a comment was written over nuikaHeader()
+    // explaining why the WORDMARK does not point at the shop: the comment
+    // alone satisfies the substring, so the footer's real link could be
+    // deleted and this would still report ok. Exactly the dead-check shape
+    // this file has been bitten by before. Read the anchor instead.
+    const toShop = js.match(/class="nu-to-shop"\s+href="\.\/([^"]+)"/);
+    if (!toShop)
+      fail('site.js\'s footer builds no .nu-to-shop link — the shop is unreachable from story, gallery, contact and events');
+    else if (toShop[1] === SHOP)
+      pass(`the footer's way into the shop points at ./${SHOP}, and that file exists`);
+    else
+      fail(`the footer's way into the shop points at "./${toShop[1]}" — the shop is ./${SHOP}`);
+
+    // Where the wordmark goes was DECIDED at the cutover, not inherited, and
+    // the reasoning is written out above nuikaHeader() in site.js. Both marks
+    // point at the home page: on the open web the logo is the way home, and
+    // that is the case everybody is in. Inside the installed app the home
+    // page forwards straight back to the shop, so the mark effectively leads
+    // to the shop there — accepted, and not a loop, because the forward is
+    // location.replace() and leaves no history entry.
+    //
+    // Pinned so that a later "fix" pointing these at the shop has to be a
+    // decision too, taken here, rather than a quiet edit that drops a
+    // customer on contact.html into the menu when they reach for home.
+    const marks = [...js.matchAll(/class="nu-mark[^"]*"\s+href="\.\/([^"]+)"/g)].map(m => m[1]);
+    if (marks.length !== 2)
+      fail(`site.js builds ${marks.length} wordmark link(s), expected 2 — the header mark and the footer mark`);
+    else if (marks.every(t => t === HOME))
+      pass(`both wordmarks point at ./${HOME} — the logo is the way home on every page`);
+    else
+      fail(`the wordmarks point at ${[...new Set(marks)].map(t => `./${t}`).join(', ')} — both must be ./${HOME}; a logo that opens the menu is not a way home`);
 
     // The logo itself — the mask URL and the 130px floor, on both the base
     // rule and the mobile override — is asserted against site.css under
@@ -2175,7 +2388,7 @@ if (want('design')) {
     else
       fail('nuikaRefresh is missing — content injected after load would render in both languages at once and never release its motion classes');
 
-    // The real number is already public on the live shop (index.html,
+    // The real number is already public on the live shop (shop.html,
     // OWNER_WHATSAPP). A placeholder here is a dead contact link on the
     // bakery's own footer. Anchored to the actual wa.me link rather than a
     // bare digit string, so a mention in a comment (e.g. a TODO) could not
@@ -2406,18 +2619,18 @@ if (want('pages')) {
   }
 
   console.log('The home page and its film:');
-  // Same reason as story.html, gallery.html and contact.html below: Plan 5
-  // renames this exact file to index.html, so this one is not a hypothetical
-  // future gap the way theirs were — it is the one file in this section
-  // GUARANTEED to go missing on Plan 5's very first commit. readFileSync
-  // unguarded would throw ENOENT and crash the whole process right at that
-  // moment, taking every check after it down with it instead of reporting
-  // its own clean FAIL. existsSync + an empty-string fallback keeps every
-  // homeNeed(...) below a safe .test() against '' (which simply fails), so
-  // this line reports the missing file and every line after it reports its
-  // own FAIL too, instead of a crash hiding them all.
-  const homePath = join(ROOT, 'home.html');
-  if (!existsSync(homePath)) fail('home.html is missing');
+  // The rename this paragraph used to warn about has happened: the film page
+  // IS index.html now, and home.html is gone. The guard stays exactly as it
+  // was, because the reason for it did not change — readFileSync unguarded
+  // throws ENOENT and crashes the whole process, taking every check after it
+  // down instead of reporting its own clean FAIL. existsSync + an empty-string
+  // fallback keeps every homeNeed(...) below a safe .test() against '' (which
+  // simply fails), so a missing file reports one line and every line after it
+  // reports its own FAIL too, instead of a crash hiding them all.
+  //
+  // HOME, not a literal: it is declared once at module scope beside SHOP.
+  const homePath = join(ROOT, HOME);
+  if (!existsSync(homePath)) fail(`${HOME} is missing — nothing serves the site root`);
   const home = existsSync(homePath) ? readFileSync(homePath, 'utf8') : '';
   const homeCode = uncommented(home);
   const homeNeed = (re, why) => re.test(homeCode) ? pass(why) : fail(why);
@@ -2534,6 +2747,20 @@ if (want('pages')) {
   // argument containing parentheses would truncate here and fail the checks
   // rather than pass them — the safe direction for a checker to be wrong in,
   // and the whole lesson of the dead check above.
+  //
+  // Everything below reads the FIRST location.replace( in the page, and that
+  // is only sound while there is exactly one. Carried in from Task 3 as a
+  // LOW, and closed here because it costs one line: with two calls, a decoy
+  // — `// location.replace('./shop.html' + location.search + location.hash)`
+  // is enough, or any earlier call at all — satisfies every check below
+  // while the redirect that actually runs is broken, and the whole suite
+  // goes green. Count first, then read.
+  const replaceCalls = (homeCode.match(/location\.replace\(/g) || []).length;
+  if (replaceCalls === 1)
+    pass(`${HOME} has exactly one location.replace(, so the checks below read the redirect that actually runs`);
+  else
+    fail(`${HOME} has ${replaceCalls} location.replace( calls — the checks below read the first one, so an earlier decoy would hold them green over a broken redirect`);
+
   const redirectArg = (homeCode.match(/location\.replace\(([^)]*)\)/) || ['', ''])[1];
   const redirectNeed = (re, why) => re.test(redirectArg) ? pass(why) : fail(why);
 
@@ -2547,8 +2774,12 @@ if (want('pages')) {
   // sign-in. Its whole body is location.replace('./?admin'), and its own
   // comment records that saving /?admin directly once "produced an icon that
   // opened the storefront" — already found, already fixed once. After the
-  // cutover the root IS home.html, so that icon's chain runs
-  // admin.html -> ./?admin -> here -> the shop. The shop opens the panel from
+  // cutover the root IS this page, so that icon's chain ran
+  // admin.html -> ./?admin -> here -> the shop. admin.html now names the shop
+  // directly (pinned under "Deployment:" in the assets phase) and no longer
+  // depends on this hop — but an installed launch still arrives here with
+  // ?admin on it from the manifest shortcut, so the hop must still carry it.
+  // The shop opens the panel from
   // `new URLSearchParams(window.location.search).has('admin')` in
   // checkAdminAccess(), so a bare './shop.html' here arrives with no query and
   // Noy lands on the customer storefront: the same fixed bug, by a new route.
@@ -2570,12 +2801,12 @@ if (want('pages')) {
 
   // These live in site.js's footer builder and nowhere else. Two copies drift,
   // which is the entire reason this page does not write its own — so require
-  // them in site.js AND require home.html not to have grown a copy. An OR of
-  // the two files passes happily while a stale duplicate sits on the page.
+  // them in site.js AND require the home page not to have grown a copy. An OR
+  // of the two files passes happily while a stale duplicate sits on the page.
   const siteJs = readFileSync(join(ROOT, 'site.js'), 'utf8');
   const onlyInSiteJs = (re, what) => {
     if (!re.test(siteJs)) fail(`${what} is missing from site.js, where the footer builds it`);
-    else if (re.test(home)) fail(`${what} also appears in home.html — a second copy that will drift from the footer's`);
+    else if (re.test(home)) fail(`${what} also appears in ${HOME} — a second copy that will drift from the footer's`);
     else pass(`${what} lives in site.js only`);
   };
   onlyInSiteJs(/instagram\.com\/nuika_bread/, 'the Instagram handle');
@@ -2587,15 +2818,53 @@ if (want('pages')) {
   // stray scroll container actually shows up, and the original pattern
   // missed them entirely.
   if (/overflow(?:-[xy])?\s*:\s*(?:auto|scroll)/.test(home))
-    fail('home.html declares a scrolling overflow — the home page is one screen');
+    fail(`${HOME} declares a scrolling overflow — the home page is one screen`);
   else pass('nothing on the home page scrolls');
 
-  // Until Plan 5 renames things, nothing may link the new pages from the shop.
-  // A customer who finds a half-built page has found a bug, not a preview.
+  // Before the cutover this asserted the shop linked to NONE of the new
+  // pages, because they were live but unfinished and a customer who found one
+  // had found a bug, not a preview. That is now backwards: index.html is the
+  // home page and it links to all of them on purpose, so the old check would
+  // fail on the finished state.
+  //
+  // What matters from here is the other direction — that no file still points
+  // at a name the cutover retired. There are two such names and both are
+  // silent failures: a link to './home.html' 404s, and a link that still
+  // treats './index.html' as the SHOP now opens the film instead, with no
+  // error anywhere. The second is why this reads the shop and the four other
+  // pages rather than only the shop.
+  //
+  // The shared nav's wordmark legitimately points at './index.html' — it is
+  // the way home — so the home page's own name is only a failure when it is
+  // written inside the SHOP, where nothing links home today.
   const shop = readFileSync(join(ROOT, SHOP), 'utf8');
-  const leaked = PAGES.filter(p => shop.includes(p));
-  if (leaked.length) fail(`${SHOP} links to ${leaked.join(', ')} — the new pages are not public yet`);
-  else pass('the shop links to none of the new pages');
+
+  if (/home\.html/.test(uncommented(shop)))
+    fail(`${SHOP} still references home.html, which no longer exists — that link 404s`);
+  else pass(`${SHOP} does not reference the old home page name`);
+
+  // existsSync, not a bare readFileSync, and this line is the reason the rest
+  // of this file is so insistent about it. Written unguarded, it threw ENOENT
+  // the moment any page in PAGES went missing and crashed the whole process
+  // here — killing every check after it rather than letting each report its
+  // own FAIL. Caught by deliberately putting 'home.html' back into PAGES
+  // (Step 7's sixth breakage): the run still exited 1, so the mutation still
+  // "fired", but it fired as a Node stack trace and everything below this
+  // point went unrun and unreported. A missing page already FAILs on its own
+  // line further up; skipping it here is correct, not a hole.
+  const stillHome = PAGES.filter(p => {
+    const at = join(ROOT, p);
+    if (!existsSync(at)) return false;
+    return /home\.html/.test(uncommented(readFileSync(at, 'utf8')));
+  });
+  if (stillHome.length)
+    fail(`${stillHome.join(', ')} still reference home.html, which no longer exists`);
+  else pass(`no page references home.html, the name the film page was renamed off`);
+
+  const homeHref = new RegExp(`href=["']\\./${HOME.replace(/\./g, '\\.')}["']`);
+  if (homeHref.test(uncommented(shop)))
+    fail(`${SHOP} links to ./${HOME} — since the cutover that is the film home page, not the shop, so a customer following it leaves the menu`);
+  else pass(`${SHOP} does not mistake ./${HOME} for itself`);
 
   console.log('The story:');
   // The brief's literal Step 1 code calls readFileSync unguarded, which
