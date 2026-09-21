@@ -431,6 +431,54 @@ if (want('assets')) {
     else fail('publish() must call stampVersion() before it pushes, or a release goes out under the previous version tag');
   }
 
+  // The rules are the only thing between a public database handle and Noy's
+  // data. An untyped field under events is an HTML injection route straight
+  // into the admin panel — the same shape the orders node was hardened
+  // against. This checks the shape; Noy publishes the file by hand once.
+  const rules = JSON.parse(readFileSync(join(ROOT, 'firebase-rules.json'), 'utf8'));
+  const ev = rules?.rules?.nuika?.events;
+  if (!ev) {
+    fail('firebase-rules.json has no nuika/events — events.html would read PERMISSION_DENIED');
+  } else {
+    if (ev['.read'] === true) pass('nuika/events is publicly readable');
+    else fail('nuika/events must be publicly readable — events.html reads it with no sign-in');
+
+    if (typeof ev['.write'] === 'string' && ev['.write'].includes("root.child('nuika/admins')")) {
+      pass('nuika/events is writable only by an admin');
+    } else {
+      fail('nuika/events must be writable only by an admin, the same way products and settings are');
+    }
+
+    const item = ev['$eventId'];
+    if (!item) {
+      fail('nuika/events has no $eventId rule — every field would be unvalidated');
+    } else {
+      if (item['$other'] && item['$other']['.validate'] === false) pass('nuika/events rejects unknown fields');
+      else fail('nuika/events must carry "$other": { ".validate": false } — an unknown field is an injection route');
+
+      if (typeof item['.validate'] === 'string' && /date/.test(item['.validate']) && /title/.test(item['.validate'])) {
+        pass('an event must carry date and title');
+      } else {
+        fail('nuika/events/$eventId must require date and title — the page sorts on date and titles the card');
+      }
+
+      for (const f of ['date', 'title', 'place', 'time', 'body', 'ctaLabel', 'ctaText', 'created']) {
+        if (item[f] && typeof item[f]['.validate'] === 'string') pass(`nuika/events.${f} is typed`);
+        else fail(`nuika/events.${f} has no .validate — an untyped field reaches the admin panel's innerHTML`);
+      }
+    }
+  }
+
+  // Nothing in this plan may loosen a node that already holds real data.
+  for (const node of ['orders', 'kitchen', 'finance']) {
+    const n = rules?.rules?.nuika?.[node];
+    if (n && typeof n['.read'] === 'string' && n['.read'].includes("root.child('nuika/admins')")) {
+      pass(`nuika/${node} is still admin-read only`);
+    } else {
+      fail(`nuika/${node} is no longer admin-read only — customer data would be public`);
+    }
+  }
+
   console.log('Referenced assets:');
   const manifest = JSON.parse(readFileSync(join(ROOT, 'manifest.json'), 'utf8'));
   for (const icon of manifest.icons || []) {

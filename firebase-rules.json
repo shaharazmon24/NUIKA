@@ -29,6 +29,27 @@
         ".write": "auth != null && root.child('nuika/admins').child(auth.uid).val() === true"
       },
 
+      "events": {
+        "//": "Noy's events board. Public read — events.html shows it to anyone, with no sign-in. Admin write only. Every field is typed for the same reason orders are: Noy's own text lands in the admin panel through innerHTML, and an untyped field is an injection route into a page holding a live database handle.",
+        ".read": true,
+        ".write": "auth != null && root.child('nuika/admins').child(auth.uid).val() === true",
+
+        "$eventId": {
+          ".validate": "newData.hasChildren(['date','title'])",
+
+          "date":     { ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)" },
+          "title":    { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 120" },
+          "place":    { ".validate": "newData.isString() && newData.val().length <= 120" },
+          "time":     { ".validate": "newData.isString() && newData.val().length <= 60" },
+          "body":     { ".validate": "newData.isString() && newData.val().length <= 600" },
+          "ctaLabel": { ".validate": "newData.isString() && newData.val().length <= 40" },
+          "ctaText":  { ".validate": "newData.isString() && newData.val().length <= 300" },
+          "created":  { ".validate": "newData.isNumber()" },
+
+          "$other":   { ".validate": false }
+        }
+      },
+
       "stockUsed": {
         "//": "Per-cycle tally so customers see remaining stock without reading anyone's order. Admin write sits at THIS level so a whole cycle can be recomputed. A customer may only raise a single counter — never lower it, never delete it.",
         ".read": true,
