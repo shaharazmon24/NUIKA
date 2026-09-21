@@ -462,51 +462,54 @@ if (want('assets')) {
       // title" on a rule that requires only ONE of the two mandatory fields, not both —
       // an AND-to-OR slip that mutation testing caught and reading did not. Compare the
       // normalised rule against the exact text the plan requires instead of looking for
-      // words inside it.
+      // words inside it. The failure message below states what was expected and what was
+      // found and nothing more: a rule that merely reorders the two names, such as
+      // newData.hasChildren(['title','date']), is functionally identical in Firebase
+      // (hasChildren is order-independent) and still fails this exact-text comparison —
+      // correctly, since this file must also detect a plain unexplained edit — but the
+      // message must not claim that specific reorder is an OR bug, because it isn't one.
       const normalize = s => s.replace(/\s+/g, '');
-      if (typeof item['.validate'] === 'string' && normalize(item['.validate']) === normalize("newData.hasChildren(['date','title'])")) {
+      const EXPECTED_EVENT_ID_RULE = "newData.hasChildren(['date','title'])";
+      if (typeof item['.validate'] === 'string' && normalize(item['.validate']) === normalize(EXPECTED_EVENT_ID_RULE)) {
         pass('an event must carry date and title');
       } else {
-        fail(`nuika/events/$eventId must be exactly newData.hasChildren(['date','title']) — got ${JSON.stringify(item['.validate'])}; an OR here lets an event through with only one of the two fields the page sorts and titles by`);
+        fail(`nuika/events/$eventId's .validate must read exactly ${EXPECTED_EVENT_ID_RULE} — got ${JSON.stringify(item['.validate'])}`);
       }
 
-      // typeof item[f]['.validate'] === 'string' only proves a rule exists, not that it
-      // enforces the right thing: it still printed "ok nuika/events.created is typed"
-      // after created's rule was changed from newData.isNumber() to newData.isString(),
-      // the wrong type per the plan's field table (§6.1). Trading it for a plain
-      // substring check would only move the hole to a different field: "length <= 120"
-      // is itself a substring of "length <= 1200", so widening title's cap would still
-      // read as present under a naive .includes(). Each field below is checked against
-      // what its rule must actually require — the right type function, and for capped
-      // strings, the exact numeric bound compared as a number, not as text.
-      const isStringWithCap = (rule, { min, max }) => {
-        if (typeof rule !== 'string' || !rule.includes('newData.isString()')) return false;
-        if (min != null) {
-          const minMatch = rule.match(/length\s*>\s*(\d+)/);
-          if (!minMatch || Number(minMatch[1]) !== min) return false;
-        }
-        const maxMatch = rule.match(/length\s*<=\s*(\d+)/);
-        return !!maxMatch && Number(maxMatch[1]) === max;
+      // A "does this rule contain the required pieces" check — a substring, a regex
+      // fragment, a number pulled out and compared — proves the pieces are present, never
+      // that the rule is only those pieces and nothing else. Two real mutations exploited
+      // exactly that gap in the first version of this fix: created's rule became
+      // newData.isNumber() || true, and place's became newData.isString() &&
+      // newData.val().length <= 120 || true. By ordinary && / || precedence, `A && B ||
+      // true` is unconditionally true regardless of the value's real type or length — yet
+      // every piece a substring check looks for ("newData.isNumber()", "<= 120") was still
+      // sitting right there in the string, so both printed "ok". It reproduced on 7 of the
+      // 8 fields — every one except created, which already used exact equality and did not
+      // fall for it. The only check strong enough against an appended "|| true" is exact
+      // equality against the whole expected expression, so every field now gets it, the
+      // same technique $eventId's rule above already uses. These expected strings are
+      // written out from the plan's field table (§6.1) independently of
+      // firebase-rules.json, so the check and the file are two separate statements of the
+      // same requirement rather than one compared with itself.
+      const EXPECTED_FIELD_RULE = {
+        date:     "newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)",
+        title:    "newData.isString() && newData.val().length > 0 && newData.val().length <= 120",
+        place:    "newData.isString() && newData.val().length <= 120",
+        time:     "newData.isString() && newData.val().length <= 60",
+        body:     "newData.isString() && newData.val().length <= 600",
+        ctaLabel: "newData.isString() && newData.val().length <= 40",
+        ctaText:  "newData.isString() && newData.val().length <= 300",
+        created:  "newData.isNumber()",
       };
 
-      const fieldChecks = {
-        date:     rule => typeof rule === 'string' && rule.includes('newData.isString()') && rule.includes('[0-9]{4}-[0-9]{2}-[0-9]{2}'),
-        title:    rule => isStringWithCap(rule, { min: 0, max: 120 }),
-        place:    rule => isStringWithCap(rule, { max: 120 }),
-        time:     rule => isStringWithCap(rule, { max: 60 }),
-        body:     rule => isStringWithCap(rule, { max: 600 }),
-        ctaLabel: rule => isStringWithCap(rule, { max: 40 }),
-        ctaText:  rule => isStringWithCap(rule, { max: 300 }),
-        created:  rule => rule === 'newData.isNumber()',
-      };
-
-      for (const [f, checkRule] of Object.entries(fieldChecks)) {
+      for (const [f, expected] of Object.entries(EXPECTED_FIELD_RULE)) {
         if (!item[f]) {
           fail(`nuika/events.${f} is missing entirely — the plan's field table (§6.1) requires a typed rule for it`);
-        } else if (checkRule(item[f]['.validate'])) {
+        } else if (typeof item[f]['.validate'] === 'string' && normalize(item[f]['.validate']) === normalize(expected)) {
           pass(`nuika/events.${f} is typed correctly`);
         } else {
-          fail(`nuika/events.${f}'s .validate does not match what the plan requires (got ${JSON.stringify(item[f]['.validate'])}) — a wrong type or a widened cap reaches the admin panel's innerHTML unchecked`);
+          fail(`nuika/events.${f}'s .validate must read exactly ${expected} — got ${JSON.stringify(item[f]['.validate'])}`);
         }
       }
     }
