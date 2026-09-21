@@ -436,6 +436,25 @@ if (want('assets')) {
   // into the admin panel — the same shape the orders node was hardened
   // against. This checks the shape; Noy publishes the file by hand once.
   const rules = JSON.parse(readFileSync(join(ROOT, 'firebase-rules.json'), 'utf8'));
+
+  // Whitespace-normalised exact equality is the only technique in this file confirmed
+  // immune to an appended "|| true" — a plain .includes() test on a permission string has
+  // the identical hole as the field-rule "contains the required pieces" checks fixed
+  // above it, and it was live in exactly the two checks that used to sit here. Appending
+  // " || true" to nuika/events's .write rule (making the events board writable by anyone
+  // on the internet) still contains the substring "root.child('nuika/admins')", so
+  // .includes(...) printed "ok nuika/events is writable only by an admin". The same four
+  // characters appended to nuika/orders's .read rule — the check the brief calls the only
+  // thing between an editing slip in this file and every customer's name, phone number
+  // and address going public — still contains that substring too, and still printed "ok
+  // nuika/orders is still admin-read only". Both are now compared against this literal
+  // instead: the exact admin rule that products, settings, stockUsed, orders, kitchen,
+  // finance and _seeded all use today (checked directly against the file, not assumed).
+  // It is written out here rather than read from the file, so the check and the file stay
+  // two independent statements of the same requirement.
+  const normalize = s => s.replace(/\s+/g, '');
+  const ADMIN_ONLY_RULE = "auth != null && root.child('nuika/admins').child(auth.uid).val() === true";
+
   const ev = rules?.rules?.nuika?.events;
   if (!ev) {
     fail('firebase-rules.json has no nuika/events — events.html would read PERMISSION_DENIED');
@@ -443,10 +462,10 @@ if (want('assets')) {
     if (ev['.read'] === true) pass('nuika/events is publicly readable');
     else fail('nuika/events must be publicly readable — events.html reads it with no sign-in');
 
-    if (typeof ev['.write'] === 'string' && ev['.write'].includes("root.child('nuika/admins')")) {
+    if (typeof ev['.write'] === 'string' && normalize(ev['.write']) === normalize(ADMIN_ONLY_RULE)) {
       pass('nuika/events is writable only by an admin');
     } else {
-      fail('nuika/events must be writable only by an admin, the same way products and settings are');
+      fail(`nuika/events must be writable only by an admin — .write must read exactly ${ADMIN_ONLY_RULE}, got ${JSON.stringify(ev['.write'])}`);
     }
 
     const item = ev['$eventId'];
@@ -468,7 +487,6 @@ if (want('assets')) {
       // (hasChildren is order-independent) and still fails this exact-text comparison —
       // correctly, since this file must also detect a plain unexplained edit — but the
       // message must not claim that specific reorder is an OR bug, because it isn't one.
-      const normalize = s => s.replace(/\s+/g, '');
       const EXPECTED_EVENT_ID_RULE = "newData.hasChildren(['date','title'])";
       if (typeof item['.validate'] === 'string' && normalize(item['.validate']) === normalize(EXPECTED_EVENT_ID_RULE)) {
         pass('an event must carry date and title');
@@ -515,13 +533,17 @@ if (want('assets')) {
     }
   }
 
-  // Nothing in this plan may loosen a node that already holds real data.
+  // Nothing in this plan may loosen a node that already holds real data. Same fix as
+  // .write above and for the same reason: .includes("root.child('nuika/admins')") still
+  // finds that substring in "...val() === true || true", so appending " || true" to
+  // orders's .read — making every customer's name, phone number and address
+  // world-readable — used to print "ok nuika/orders is still admin-read only" regardless.
   for (const node of ['orders', 'kitchen', 'finance']) {
     const n = rules?.rules?.nuika?.[node];
-    if (n && typeof n['.read'] === 'string' && n['.read'].includes("root.child('nuika/admins')")) {
+    if (n && typeof n['.read'] === 'string' && normalize(n['.read']) === normalize(ADMIN_ONLY_RULE)) {
       pass(`nuika/${node} is still admin-read only`);
     } else {
-      fail(`nuika/${node} is no longer admin-read only — customer data would be public`);
+      fail(`nuika/${node} is no longer admin-read only — customer data would be public (its .read must read exactly ${ADMIN_ONLY_RULE}, got ${JSON.stringify(n && n['.read'])})`);
     }
   }
 
