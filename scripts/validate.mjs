@@ -1449,55 +1449,86 @@ if (want('pages')) {
     // `var <name> =` — plus a hardcoded field list, and reproduced the
     // regression it was written for (esc(ev.title) → ev.title). The reviewer
     // then got FOUR different shapes past that version, each with a clean
-    // `All checks passed.`: rendering a field from the `return` statement
-    // (the one concatenation site the sink list never named at all),
-    // aliasing through `let`/`const` (the list only ever knew `var`),
-    // routing a field through a helper or a renamed local, and — the one
-    // that matters most going forward — simply adding a field. Task 5 is the
-    // admin panel that adds fields to this same object; a hardcoded list is
-    // wrong again the day it grows one.
-    //
-    // Enumerating sinks chases the last hole found. This inverts the
-    // question instead: cardHTML's only parameter is named `ev`, so every
-    // appearance of that name inside its body must be one of a small set of
-    // allowed shapes, and anything else fails — regardless of what new shape
-    // it takes or what the field is called. Allowed, and nothing else:
+    // `All checks passed.`, and inverted it to an allowlist instead: every
+    // appearance of `ev` inside cardHTML's body must be one of
     //   esc(ev.X)                     and  esc(<fn>(ev.X))
     //   encodeURIComponent(ev.X)      and  encodeURIComponent(ev.X || ev.Y)
     //   if (ev.X)                     — a presence guard; the value itself
     //                                    never reaches output from there
+    // or it fails — closing "return statement", "let/const alias", "helper
+    // function", and "new field" at once, because none of them are a bare
+    // `ev.field` sitting inside one of those three shapes.
+    //
+    // Fix round 2 found that allowlist's own scanner — the thing standing
+    // between "allowed" and "violation" — was itself defeated two more ways:
+    //
+    // 1. `maskStrings` (fix round 1) treated a backtick exactly like a quote,
+    //    masking a template literal's ENTIRE span — including a `${...}`
+    //    hole, which is CODE, not string text. `` `<h3>${ev.title}</h3>` ``
+    //    passed clean: the hole's `ev.title` was masked away along with the
+    //    literal text around it, so the final `\bev\b` scan never saw it at
+    //    all. Confirmed live, not just in validate.mjs: served the page with
+    //    a crafted title through this exact hole and got a real `<img>`
+    //    element injected and `window.__xss` set. `${ev.subtitle}` passed
+    //    too — the very door Task 5's field growth was supposed to be closed
+    //    against was open again through one different kind of quote.
+    //
+    //    Two more shapes share the same root cause (a scanner that treats
+    //    every quote character as an opaque, same-shaped span): a regex
+    //    literal containing an apostrophe (`/don't/`) desyncs which
+    //    characters are "inside a string" for everything after it, and a
+    //    plain string containing `//` inside it can do the same once
+    //    `uncommented()` (module scope, this file's comment stripper) has
+    //    already run over the whole file once before this check ever sees
+    //    `cardBody` — a space immediately before `//` is what that function
+    //    treats as a real comment opening (see its own doc comment), and a
+    //    string like '<a href=" // ">' carries exactly that shape.
+    //
+    //    classifyForScan() below replaces the quote-only mask with a real
+    //    stack machine: `'`, `"`, and `` ` `` all open a string, but a
+    //    backtick's `${` additionally opens a HOLE, which is code — tracked
+    //    with its own brace depth so a nested object literal's `{`/`}`
+    //    inside a hole is not mistaken for the hole's own closing `}`, and a
+    //    further nested string or template inside a hole is handled by the
+    //    same machine recursively (via the same stack). Only the characters
+    //    genuinely inside string TEXT — never a hole — are masked.
+    //
+    //    A regex literal is where this stops trying to be clever: telling
+    //    `/don't/` apart from a division sign is genuinely undecided without
+    //    a real parser, and guessing wrong is exactly how the previous
+    //    version got desynced. So classifyForScan() does not guess — ANY `/`
+    //    it meets outside an already-open string sets `uncertain`, and this
+    //    check FAILs outright rather than trust a scan it cannot vouch for.
+    //    cardHTML contains no regex and no division today, so this costs
+    //    nothing now; it exists so that if either is ever added, the check
+    //    goes red and says so instead of quietly reporting "ok" over code it
+    //    can no longer actually read. An analyser that cannot understand the
+    //    code must never report "ok" — that is the whole lesson of this task.
+    //
+    // 2. `cardOpen` accepted ANY parameter name — `/function\s+cardHTML\s*
+    //    \([^)]*\)\s*\{/` — so renaming the parameter to, say, `item` and
+    //    rendering a genuinely unescaped `item.title` still printed
+    //    `ok events.html: every reference to ev inside cardHTML() is
+    //    escaped...`, because there was no longer any `ev` in the body at
+    //    all for the scan to find — confident and wrong at once. Two fixes:
+    //    the signature is now pinned to literally `(ev)`, with its own
+    //    message naming the actual parameter when it is anything else; and
+    //    the scan now asserts it found at least one `ev` reference before
+    //    trusting a clean result — zero references in a function that
+    //    renders seven fields means this check stopped looking at what it
+    //    thinks it is looking at, for whatever reason, and must say so
+    //    rather than pass by default.
+    //
     // The parameter declaration itself (`function cardHTML(ev)`) is outside
     // `cardBody` already, since the slice below starts after the opening `{`.
-    //
-    // A bare `ev` — passed to a helper, assigned to a local, returned
-    // directly — never matches any of the three allowed shapes below, because
-    // all three only ever mark an `ev.<field>` text range, never a bare `ev`
-    // on its own. That is what catches "aliasing the parameter" and "moving
-    // the rendering into a helper" without naming either shape specifically:
-    // anything that separates `ev` from an immediate `.field` fails by
-    // construction, whatever it is called.
-    //
-    // Each shape is matched as one whole call — esc(...), encodeURIComponent
-    // (...), if (...) — rather than read backward from the field name through
-    // a fixed-width window. The previous version's fixed 60-character
-    // lookback flagged a real esc(...) whose own argument expression ran
-    // longer than that; matching the whole shape removes the width limit
-    // instead of enlarging it, so there is no number here to get wrong twice.
-    //
-    // Known, accepted blind spot, named rather than hidden: this hunts for
-    // the literal identifier `ev`, which is what the parameter is actually
-    // called today. Renaming the parameter itself to something else (not
-    // aliasing it — replacing it, and every use of it, with a different
-    // name) would carry every usage away from this scan along with it.
-    // Nothing short of a real parser closes that; the same limitation
-    // already stands, undocumented until now, wherever else this file reads
-    // source text instead of running it (see the contact.html form-action
-    // check's own note on bracket notation and dynamic property access for
-    // the precedent — reading text has this kind of edge everywhere, not
-    // just here).
-    const cardOpen = evCode.match(/function\s+cardHTML\s*\([^)]*\)\s*\{/);
+    const cardOpen = evCode.match(/function\s+cardHTML\s*\(\s*ev\s*\)\s*\{/);
     if (!cardOpen) {
-      fail('events.html: no function cardHTML(ev) — cannot verify it escapes what it renders');
+      const looseOpen = evCode.match(/function\s+cardHTML\s*\(([^)]*)\)\s*\{/);
+      if (looseOpen) {
+        fail(`events.html: cardHTML()'s parameter is "${looseOpen[1].trim()}", not ev — this check hunts for the literal name ev, and a renamed parameter would carry every real reference away from it while still reporting ok`);
+      } else {
+        fail('events.html: no function cardHTML(ev) — cannot verify it escapes what it renders');
+      }
     } else {
       let cdepth = 1, cq = null, ci = cardOpen.index + cardOpen[0].length;
       for (; ci < evCode.length && cdepth > 0; ci++) {
@@ -1509,73 +1540,110 @@ if (want('pages')) {
       }
       const cardBody = evCode.slice(cardOpen.index + cardOpen[0].length, ci - 1);
 
-      // Every string literal's CONTENTS masked to spaces (quotes kept, so
-      // the same quote-aware walk that finds them also still finds where
-      // they end). Without this, `\bev\b` matches the word "ev" inside a
-      // class name like '<p class="ev-card__date">' — a word boundary sits
-      // on both sides of it (a quote before, a hyphen after — neither is a
-      // \w character), so the regex cannot tell that occurrence apart from
-      // the real parameter without knowing it is inside a string at all.
-      // Found immediately on the first real run of this rewrite: it flagged
-      // ev.ctaLabel's own CSS class names as violations in the file that has
-      // nothing wrong with it (see task-4-report.md, fix round 1). Matching
-      // against the masked copy instead of cardBody leaves every position
-      // and length unchanged — only string interiors turn to spaces — so
-      // every index recorded below still points at the same place in the
-      // original source.
-      const maskStrings = s => {
-        let out = '', q = null;
-        for (let i = 0; i < s.length; i++) {
-          const c = s[i];
-          if (q) {
-            if (c === q && s[i - 1] !== '\\') { q = null; out += c; }
-            else out += c === '\n' ? '\n' : ' ';
+      // Classifies every character of `body` as string TEXT (masked to a
+      // space) or CODE (left as-is) — where a template literal's `${ }` hole
+      // is code, not text, however deeply it nests further strings or
+      // templates of its own. Sets `uncertain` and stops trusting anything
+      // it has seen so far the moment it meets a `/` outside an
+      // already-open string: that character is either a division sign or
+      // the start of a regex literal, and nothing short of a real parser can
+      // tell those apart. Length-preserving throughout, so every position
+      // recorded by a caller still points at the same place in `body`.
+      function classifyForScan(body) {
+        const out = body.split('');
+        const stack = []; // {kind:'str',q} | {kind:'tmpl'} | {kind:'hole',depth}
+        let uncertain = false;
+        const top = () => stack[stack.length - 1];
+
+        for (let i = 0; i < body.length; i++) {
+          const c = body[i];
+          const ctx = top();
+
+          if (!ctx) {
+            if (c === "'" || c === '"') { out[i] = ' '; stack.push({ kind: 'str', q: c }); continue; }
+            if (c === '`') { out[i] = ' '; stack.push({ kind: 'tmpl' }); continue; }
+            if (c === '/') uncertain = true;
+            continue; // top-level code: leave as-is
+          }
+
+          if (ctx.kind === 'str') {
+            if (c === ctx.q && body[i - 1] !== '\\') { out[i] = ' '; stack.pop(); continue; }
+            out[i] = c === '\n' ? '\n' : ' ';
             continue;
           }
-          if (c === "'" || c === '"' || c === '`') { q = c; out += c; continue; }
-          out += c;
+
+          if (ctx.kind === 'tmpl') {
+            if (c === '`' && body[i - 1] !== '\\') { out[i] = ' '; stack.pop(); continue; }
+            if (c === '$' && body[i + 1] === '{') {
+              out[i] = ' ';
+              i++;
+              out[i] = ' '; // the hole's opening brace — punctuation, not code
+              stack.push({ kind: 'hole', depth: 0 });
+              continue;
+            }
+            out[i] = c === '\n' ? '\n' : ' '; // template literal TEXT
+            continue;
+          }
+
+          // ctx.kind === 'hole': inside ${ ... } — this is code.
+          if (c === "'" || c === '"') { out[i] = ' '; stack.push({ kind: 'str', q: c }); continue; }
+          if (c === '`') { out[i] = ' '; stack.push({ kind: 'tmpl' }); continue; }
+          if (c === '/') { uncertain = true; continue; }
+          if (c === '{') { ctx.depth++; continue; } // a nested object/block, not the hole's own close
+          if (c === '}') {
+            if (ctx.depth > 0) { ctx.depth--; continue; }
+            out[i] = ' '; // the hole's own closing brace
+            stack.pop();
+            continue;
+          }
+          continue; // hole content: leave as-is
         }
-        return out;
-      };
-      const maskedBody = maskStrings(cardBody);
 
-      // [start, end) ranges within cardBody already accounted for by one of
-      // the three allowed shapes.
-      const allowed = [];
-      const markAt = (base, localIndex, text) => allowed.push([base + localIndex, base + localIndex + text.length]);
-
-      // esc(ev.X) and esc(<fn>(ev.X)) — at most one named wrapper between
-      // esc( and ev.<field>. A second level of nesting does not match this
-      // pattern at all, so esc(a(b(ev.X))) falls through to a violation
-      // below rather than being credited by accident.
-      for (const m of maskedBody.matchAll(/\besc\s*\(\s*(?:\w+\s*\(\s*)?ev\.\w+\s*\)+/g)) {
-        const fm = m[0].match(/ev\.\w+/);
-        markAt(m.index, fm.index, fm[0]);
+        return { masked: out.join(''), uncertain };
       }
 
-      // encodeURIComponent(ev.X) and encodeURIComponent(ev.X || ev.Y) — both
-      // operands of the fallback are credited.
-      for (const m of maskedBody.matchAll(/\bencodeURIComponent\s*\(\s*ev\.\w+(?:\s*\|\|\s*ev\.\w+)?\s*\)/g)) {
-        for (const fm of m[0].matchAll(/ev\.\w+/g)) markAt(m.index, fm.index, fm[0]);
-      }
+      const { masked: maskedBody, uncertain } = classifyForScan(cardBody);
 
-      // if (ev.X) — the entire condition is one field and nothing else.
-      for (const m of maskedBody.matchAll(/\bif\s*\(\s*ev\.\w+\s*\)/g)) {
-        const fm = m[0].match(/ev\.\w+/);
-        markAt(m.index, fm.index, fm[0]);
-      }
-
-      const isAllowed = (idx, len) => allowed.some(([s, e]) => idx >= s && idx + len <= e);
-
-      const violations = [];
-      for (const m of maskedBody.matchAll(/\bev\b(?:\.\w+)?/g)) {
-        if (!isAllowed(m.index, m[0].length)) violations.push(m[0]);
-      }
-
-      if (violations.length) {
-        fail(`events.html: cardHTML() uses ${[...new Set(violations)].join(', ')} outside esc()/encodeURIComponent()/if(...) — Noy's own event text (or any new field a later task adds) would reach every visitor's innerHTML unescaped`);
+      if (uncertain) {
+        fail('events.html: cardHTML() contains a "/" outside any string — this checker cannot tell a regex literal from division without a real parser, and guessing is how a real regex literal (e.g. /don\'t/) previously hid an unescaped field after it; remove the "/" from cardHTML(), or this check needs to grow before it can vouch for this file again');
       } else {
-        pass('events.html: every reference to ev inside cardHTML() is escaped, encoded, or a presence guard');
+        // [start, end) ranges within cardBody already accounted for by one
+        // of the three allowed shapes. A `||` fallback is credited whether
+        // its right-hand side is another ev.<field> (visible as text) or a
+        // literal, which classifyForScan() has already masked to blank
+        // space — either way the matched call is still exactly one of the
+        // three allowed shapes and nothing else.
+        const allowed = [];
+        const markAt = (base, localIndex, text) => allowed.push([base + localIndex, base + localIndex + text.length]);
+        const TAIL = `(?:\\s*\\|\\|\\s*(?:ev\\.\\w+)?)*\\s*\\)+`;
+        const ESC_RE = new RegExp(`\\besc\\s*\\(\\s*(?:\\w+\\s*\\(\\s*)?ev\\.\\w+${TAIL}`, 'g');
+        const ENC_RE = new RegExp(`\\bencodeURIComponent\\s*\\(\\s*ev\\.\\w+${TAIL}`, 'g');
+        const IF_RE = /\bif\s*\(\s*ev\.\w+\s*\)/g;
+
+        for (const m of maskedBody.matchAll(ESC_RE)) {
+          for (const fm of m[0].matchAll(/ev\.\w+/g)) markAt(m.index, fm.index, fm[0]);
+        }
+        for (const m of maskedBody.matchAll(ENC_RE)) {
+          for (const fm of m[0].matchAll(/ev\.\w+/g)) markAt(m.index, fm.index, fm[0]);
+        }
+        for (const m of maskedBody.matchAll(IF_RE)) {
+          const fm = m[0].match(/ev\.\w+/);
+          markAt(m.index, fm.index, fm[0]);
+        }
+
+        const isAllowed = (idx, len) => allowed.some(([s, e]) => idx >= s && idx + len <= e);
+
+        const allRefs = [...maskedBody.matchAll(/\bev\b(?:\.\w+)?/g)];
+        if (allRefs.length === 0) {
+          fail('events.html: cardHTML() never references ev anywhere in its body — this check is not looking at what it thinks it is (a renamed parameter with every usage renamed to match, or a body that stopped touching its own data, would look identical to this)');
+        } else {
+          const violations = allRefs.filter(m => !isAllowed(m.index, m[0].length)).map(m => m[0]);
+          if (violations.length) {
+            fail(`events.html: cardHTML() uses ${[...new Set(violations)].join(', ')} outside esc()/encodeURIComponent()/if(...) — Noy's own event text (or any new field a later task adds) would reach every visitor's innerHTML unescaped`);
+          } else {
+            pass('events.html: every reference to ev inside cardHTML() is escaped, encoded, or a presence guard');
+          }
+        }
       }
     }
 
