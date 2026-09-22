@@ -1642,6 +1642,63 @@
     #install-pwa-btn { display: none; }
     #install-pwa-btn.is-offered { display: inline-flex; }
 
+    /* ---------- moving between pages ----------
+       The shop carries its own copy of this, because it does not load
+       site.css or site.js — see the note on the duplicated chrome above.
+       The values below are the same ones site.css declares as tokens.
+
+       position: fixed with a high z-index because it has to cover the film
+       on the home page, which paints its own stacking context. It never
+       takes a click: by the time it is on screen the navigation is already
+       committed, and if one ever got stuck the page underneath stays
+       usable. */
+    .nu-door {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: #EFE6D6;
+      display: grid;
+      place-items: center;
+      pointer-events: none;
+    }
+
+    /* The bakery door, for the shop. Rises from the bottom, and takes its time —
+       this one is an arrival, not a step sideways. */
+    .nu-door--oven {
+      transform: translateY(100%);
+      transition: transform .46s cubic-bezier(.65, 0, .35, 1);
+    }
+    .nu-door--oven.is-shut { transform: translateY(0); }
+
+    /* Everywhere else. Crosses in the reading direction — from the right in
+       Hebrew, from the left in English — and quickly, because this one happens
+       on every link on the site and has to stay out of the way. */
+    .nu-door--sweep {
+      transform: translateX(100%);
+      transition: transform .34s cubic-bezier(.65, 0, .35, 1);
+    }
+    [dir="ltr"] .nu-door--sweep { transform: translateX(-100%); }
+    .nu-door--sweep.is-shut { transform: translateX(0); }
+
+    .nu-door__mark {
+      inline-size: 190px;
+      block-size: 70px;
+      background: #B84830;
+      -webkit-mask: url(./images/logo.png) center / contain no-repeat;
+              mask: url(./images/logo.png) center / contain no-repeat;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity .3s ease .16s, transform .4s cubic-bezier(.22, .61, .36, 1) .16s;
+    }
+    .nu-door--oven.is-shut .nu-door__mark { opacity: 1; transform: translateY(0); }
+
+    /* Belt and braces with the JS, which already declines to intercept a click
+       at all when this is set — so no panel is ever built. If some future path
+       builds one anyway, it appears and leaves instantly rather than sliding. */
+    @media (prefers-reduced-motion: reduce) {
+      .nu-door, .nu-door__mark { transition: none; }
+    }
+
     /* ── SHARED CHROME ──────────────────────────────────────────────────
        The header and footer of story / gallery / events / contact, rebuilt
        here under the same class names and the same measurements.
@@ -6363,6 +6420,184 @@ function saveOneProduct(p) {
   if (!p || p.id == null) return Promise.reject(new Error('no-product-id'));
   return db.ref(`${ROOT}/products/${p.id}`).set(productRecord(p));
 }
+
+
+// ─── MOVING BETWEEN PAGES ──────────────────────────
+// The shop's copy. It does not load site.js — see the note on the
+// duplicated chrome in the <style> block — so the transition that carries a
+// visitor from here to the story, the gallery, the events board, the contact
+// page or back to the film is written out again. Same two flavours, same
+// sessionStorage note, same three independent ways to complete a navigation
+// if the animation does not.
+(function () {
+  /* ---------- moving between pages ----------
+   *
+   * Every navigation inside the site plays a panel across the screen, and
+   * the page being arrived at pulls the same panel away. Two flavours:
+   *
+   *   oven  — for the shop. A warm panel rises from the bottom and the
+   *           wordmark settles into it. It is the door of the bakery, and it
+   *           takes its time.
+   *   sweep — everywhere else. The panel crosses in the reading direction,
+   *           right to left in Hebrew and the other way in English, and it
+   *           is quick: this happens on every link, so it has to stay out of
+   *           the way.
+   *
+   * This wraps every internal click on the site, so it is built to fail
+   * open. The click is only intercepted once every precondition is met, and
+   * from there three separate things can complete the navigation: the
+   * animation's own end, a watchdog timer, and a catch around the whole
+   * attempt. Modified clicks, middle clicks, new tabs, downloads, other
+   * origins, anchors on the same page, and anyone who asked for less motion
+   * are never intercepted at all.
+   *
+   * The arriving half is what makes it a transition rather than a wipe
+   * followed by a hard cut: the outgoing page leaves a note in
+   * sessionStorage, and the page that loads next reads it, paints the panel
+   * already closed, and opens it. The note is cleared the instant it is
+   * read, so a stray one can never cover a page nobody navigated to.
+   */
+  var OVEN_MS  = 460;
+  var SWEEP_MS = 340;
+  var ARRIVE_KEY = 'nuika-arriving';
+
+  function wantsStillness() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+
+  function makePanel(flavour) {
+    var panel = document.createElement('div');
+    panel.className = 'nu-door nu-door--' + flavour;
+    panel.setAttribute('aria-hidden', 'true');
+    if (flavour === 'oven') panel.innerHTML = '<span class="nu-door__mark"></span>';
+    return panel;
+  }
+
+  /* Closes the panel over the page, then hands control back. */
+  function closePanel(flavour, go) {
+    var done = false;
+    function finish() { if (done) return; done = true; go(); }
+
+    try {
+      var panel = makePanel(flavour);
+      document.body.appendChild(panel);
+
+      /* One frame, so the browser has a start state to animate FROM. Without
+         it the class lands in the same style recalculation as the element
+         itself and nothing moves. */
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { panel.classList.add('is-shut'); });
+      });
+
+      panel.addEventListener('transitionend', function (e) {
+        if (e.propertyName === 'transform') finish();
+      });
+    } catch (e) {
+      finish();      /* no panel, but the visitor still gets where they asked */
+      return;
+    }
+
+    /* The watchdog. transitionend does not fire on a background tab, and it
+       does not fire at all if something upstream removed the transition. */
+    setTimeout(finish, (flavour === 'oven' ? OVEN_MS : SWEEP_MS) + 160);
+  }
+
+  /* The other half, on the page being arrived at: paint the panel already
+     closed and open it. */
+  function openPanel(flavour) {
+    var panel;
+    try {
+      panel = makePanel(flavour);
+      panel.classList.add('is-shut');
+      document.body.appendChild(panel);
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { panel.classList.remove('is-shut'); });
+      });
+      panel.addEventListener('transitionend', function (e) {
+        if (e.propertyName === 'transform' && panel.parentNode) panel.remove();
+      });
+    } catch (e) {
+      if (panel && panel.parentNode) panel.remove();
+      return;
+    }
+    /* Unconditional. Whatever happens to the transition, this panel comes off
+       the page — it is the one thing here that is covering content. */
+    setTimeout(function () { if (panel.parentNode) panel.remove(); },
+               (flavour === 'oven' ? OVEN_MS : SWEEP_MS) + 260);
+  }
+
+  /* Back from a page restores the whole document from the browser's cache,
+     panel and all, in whatever state it was left. That is an opaque sheet
+     over the page, and because it takes no pointer events it does not even
+     read as an overlay: the page simply looks broken until a manual reload. */
+  window.addEventListener('pageshow', function (e) {
+    if (!e.persisted) return;
+    var stuck = document.querySelectorAll('.nu-door');
+    for (var i = 0; i < stuck.length; i++) stuck[i].remove();
+  });
+
+  /* Which flavour a destination gets. The shop is the bakery door; every
+     other page on the site is a sweep. */
+  function flavourFor(pathname) {
+    return /\/shop\.html$/.test(pathname) ? 'oven' : 'sweep';
+  }
+
+  /* A link this site should animate away from: same origin, a real page
+     rather than an asset or a jump to an anchor on this one. */
+  function internalPage(a) {
+    var url;
+    try { url = new URL(a.href, location.href); } catch (err) { return null; }
+    if (url.origin !== location.origin) return null;
+
+    /* An anchor on the page we are already on is not a navigation. */
+    if (url.pathname === location.pathname && url.search === location.search && url.hash) return null;
+
+    /* Pages, not files. Anything with another extension is a download or an
+       asset and the browser should handle it untouched. */
+    var last = url.pathname.split('/').pop();
+    if (last && last.indexOf('.') !== -1 && !/\.html?$/i.test(last)) return null;
+
+    return url;
+  }
+
+  document.addEventListener('click', function (e) {
+    if (e.defaultPrevented || e.button !== 0) return;
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+
+    var a = e.target.closest && e.target.closest('a[href]');
+    if (!a || a.target === '_blank' || a.hasAttribute('download')) return;
+    if (a.getAttribute('href').charAt(0) === '#') return;
+
+    var url = internalPage(a);
+    if (!url) return;
+
+    if (wantsStillness()) return;   /* let the browser navigate plainly */
+
+    var flavour = flavourFor(url.pathname);
+    e.preventDefault();
+
+    /* Written before leaving, read by the page that loads next. */
+    try { sessionStorage.setItem(ARRIVE_KEY, flavour); } catch (err) { /* fine without it */ }
+
+    closePanel(flavour, function () { location.href = a.href; });
+  });
+
+  /* Arrival. Read once and cleared immediately, so a note left by a
+     navigation that never completed cannot cover some later page. */
+  function playArrival() {
+    var flavour = null;
+    try {
+      flavour = sessionStorage.getItem(ARRIVE_KEY);
+      sessionStorage.removeItem(ARRIVE_KEY);
+    } catch (err) { return; }
+    if (!flavour || wantsStillness()) return;
+    openPanel(flavour === 'oven' ? 'oven' : 'sweep');
+  }
+  /* Arrival plays as soon as this script runs: the shop's markup above is
+     already parsed, and waiting for the products to come back from Firebase
+     would hold the panel over the page for as long as the network takes. */
+  playArrival();
+})();
 
 // ─── LANGUAGE TOGGLE ───────────────────────────────
 function toggleLang() {

@@ -181,13 +181,14 @@ html[lang="en"]       [lang-content="he"] { display: none; }
   }
 }
 
-/* ---------- the oven door ----------
-   Played over the page on the way into the shop. A warm panel rises from the
-   bottom edge and the wordmark settles into the middle of it.
+/* ---------- moving between pages ----------
+   A panel that closes over the page you are leaving and opens on the page
+   you arrive at. Two flavours, both built from this base.
 
-   position: fixed with a high z-index because it has to cover the film on the
-   home page, which paints its own stacking context. It never takes a click:
-   the navigation is already committed by the time it is on screen. */
+   position: fixed with a high z-index because it has to cover the film on
+   the home page, which paints its own stacking context. It never takes a
+   click: by the time it is on screen the navigation is already committed,
+   and if one ever got stuck the page underneath stays usable. */
 .nu-door {
   position: fixed;
   inset: 0;
@@ -195,11 +196,26 @@ html[lang="en"]       [lang-content="he"] { display: none; }
   background: var(--wheat);
   display: grid;
   place-items: center;
-  transform: translateY(100%);
-  transition: transform .46s cubic-bezier(.65, 0, .35, 1);
   pointer-events: none;
 }
-.nu-door.is-shut { transform: translateY(0); }
+
+/* The bakery door, for the shop. Rises from the bottom, and takes its time —
+   this one is an arrival, not a step sideways. */
+.nu-door--oven {
+  transform: translateY(100%);
+  transition: transform .46s cubic-bezier(.65, 0, .35, 1);
+}
+.nu-door--oven.is-shut { transform: translateY(0); }
+
+/* Everywhere else. Crosses in the reading direction — from the right in
+   Hebrew, from the left in English — and quickly, because this one happens
+   on every link on the site and has to stay out of the way. */
+.nu-door--sweep {
+  transform: translateX(100%);
+  transition: transform .34s cubic-bezier(.65, 0, .35, 1);
+}
+[dir="ltr"] .nu-door--sweep { transform: translateX(-100%); }
+.nu-door--sweep.is-shut { transform: translateX(0); }
 
 .nu-door__mark {
   inline-size: 190px;
@@ -211,11 +227,11 @@ html[lang="en"]       [lang-content="he"] { display: none; }
   transform: translateY(10px);
   transition: opacity .3s ease .16s, transform .4s cubic-bezier(.22, .61, .36, 1) .16s;
 }
-.nu-door.is-shut .nu-door__mark { opacity: 1; transform: translateY(0); }
+.nu-door--oven.is-shut .nu-door__mark { opacity: 1; transform: translateY(0); }
 
-/* Belt and braces with the JS, which already declines to intercept the click
-   at all when this is set — so the door is never built. If some future path
-   builds one anyway, it appears instantly rather than sliding. */
+/* Belt and braces with the JS, which already declines to intercept a click
+   at all when this is set — so no panel is ever built. If some future path
+   builds one anyway, it appears and leaves instantly rather than sliding. */
 @media (prefers-reduced-motion: reduce) {
   .nu-door, .nu-door__mark { transition: none; }
 }

@@ -147,6 +147,11 @@
 
     nuikaLang(readLang());
     releaseMotion();
+
+    /* The other half of the transition that brought us here. Last, so the
+       page underneath the panel is already built and laid out when the panel
+       opens on it. */
+    playArrival();
   }
 
   /* ---------- language ---------- */
@@ -224,67 +229,135 @@
   });
 
 
-  /* ---------- the way into the shop ----------
+  /* ---------- moving between pages ----------
    *
-   * Every link to shop.html plays an oven door closing over the page before
-   * the browser leaves it: a warm panel sweeps up from the bottom, the
-   * wordmark settles into it, and the shop loads behind it.
+   * Every navigation inside the site plays a panel across the screen, and
+   * the page being arrived at pulls the same panel away. Two flavours:
    *
-   * This wraps the most important click on the site, so it is built to fail
+   *   oven  — for the shop. A warm panel rises from the bottom and the
+   *           wordmark settles into it. It is the door of the bakery, and it
+   *           takes its time.
+   *   sweep — everywhere else. The panel crosses in the reading direction,
+   *           right to left in Hebrew and the other way in English, and it
+   *           is quick: this happens on every link, so it has to stay out of
+   *           the way.
+   *
+   * This wraps every internal click on the site, so it is built to fail
    * open. The click is only intercepted once every precondition is met, and
-   * from that point three separate things can still complete the navigation:
-   * the animation's own end, a watchdog timer, and a catch around the whole
-   * attempt. A visitor who asked for less motion is never intercepted at
-   * all, and neither is a middle-click, a modified click or a new tab.
+   * from there three separate things can complete the navigation: the
+   * animation's own end, a watchdog timer, and a catch around the whole
+   * attempt. Modified clicks, middle clicks, new tabs, downloads, other
+   * origins, anchors on the same page, and anyone who asked for less motion
+   * are never intercepted at all.
+   *
+   * The arriving half is what makes it a transition rather than a wipe
+   * followed by a hard cut: the outgoing page leaves a note in
+   * sessionStorage, and the page that loads next reads it, paints the panel
+   * already closed, and opens it. The note is cleared the instant it is
+   * read, so a stray one can never cover a page nobody navigated to.
    */
-  var DOOR_MS = 460;
+  var OVEN_MS  = 460;
+  var SWEEP_MS = 340;
+  var ARRIVE_KEY = 'nuika-arriving';
 
   function wantsStillness() {
     return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }
 
-  function ovenDoor(go) {
+  function makePanel(flavour) {
+    var panel = document.createElement('div');
+    panel.className = 'nu-door nu-door--' + flavour;
+    panel.setAttribute('aria-hidden', 'true');
+    if (flavour === 'oven') panel.innerHTML = '<span class="nu-door__mark"></span>';
+    return panel;
+  }
+
+  /* Closes the panel over the page, then hands control back. */
+  function closePanel(flavour, go) {
     var done = false;
     function finish() { if (done) return; done = true; go(); }
 
     try {
-      var door = document.createElement('div');
-      door.className = 'nu-door';
-      door.setAttribute('aria-hidden', 'true');
-      door.innerHTML = '<span class="nu-door__mark"></span>';
-      document.body.appendChild(door);
+      var panel = makePanel(flavour);
+      document.body.appendChild(panel);
 
-      /* One frame, so the browser has a start state to animate FROM.
-         Without it the class lands in the same style recalculation as the
-         element itself and nothing moves. */
+      /* One frame, so the browser has a start state to animate FROM. Without
+         it the class lands in the same style recalculation as the element
+         itself and nothing moves. */
       requestAnimationFrame(function () {
-        requestAnimationFrame(function () { door.classList.add('is-shut'); });
+        requestAnimationFrame(function () { panel.classList.add('is-shut'); });
       });
 
-      door.addEventListener('transitionend', function (e) {
+      panel.addEventListener('transitionend', function (e) {
         if (e.propertyName === 'transform') finish();
       });
     } catch (e) {
-      finish();      /* no door, but the visitor still gets to the shop */
+      finish();      /* no panel, but the visitor still gets where they asked */
       return;
     }
 
     /* The watchdog. transitionend does not fire on a background tab, and it
        does not fire at all if something upstream removed the transition. */
-    setTimeout(finish, DOOR_MS + 140);
+    setTimeout(finish, (flavour === 'oven' ? OVEN_MS : SWEEP_MS) + 160);
   }
 
-  /* Back from the shop restores this page from the browser's back/forward
-     cache — the whole document, exactly as it was left, with the door still
-     in it and still shut. That is a full-screen opaque panel over the film,
-     and because it takes no pointer events it does not even read as an
-     overlay: the front page simply looks broken until a manual reload.
-     Nothing else on the site clears it, so it is cleared here. */
+  /* The other half, on the page being arrived at: paint the panel already
+     closed and open it. */
+  function openPanel(flavour) {
+    var panel;
+    try {
+      panel = makePanel(flavour);
+      panel.classList.add('is-shut');
+      document.body.appendChild(panel);
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { panel.classList.remove('is-shut'); });
+      });
+      panel.addEventListener('transitionend', function (e) {
+        if (e.propertyName === 'transform' && panel.parentNode) panel.remove();
+      });
+    } catch (e) {
+      if (panel && panel.parentNode) panel.remove();
+      return;
+    }
+    /* Unconditional. Whatever happens to the transition, this panel comes off
+       the page — it is the one thing here that is covering content. */
+    setTimeout(function () { if (panel.parentNode) panel.remove(); },
+               (flavour === 'oven' ? OVEN_MS : SWEEP_MS) + 260);
+  }
+
+  /* Back from a page restores the whole document from the browser's cache,
+     panel and all, in whatever state it was left. That is an opaque sheet
+     over the page, and because it takes no pointer events it does not even
+     read as an overlay: the page simply looks broken until a manual reload. */
   window.addEventListener('pageshow', function (e) {
     if (!e.persisted) return;
-    var doors = document.querySelectorAll('.nu-door');
-    for (var i = 0; i < doors.length; i++) doors[i].remove();
+    var stuck = document.querySelectorAll('.nu-door');
+    for (var i = 0; i < stuck.length; i++) stuck[i].remove();
   });
+
+  /* Which flavour a destination gets. The shop is the bakery door; every
+     other page on the site is a sweep. */
+  function flavourFor(pathname) {
+    return /\/shop\.html$/.test(pathname) ? 'oven' : 'sweep';
+  }
+
+  /* A link this site should animate away from: same origin, a real page
+     rather than an asset or a jump to an anchor on this one. */
+  function internalPage(a) {
+    var url;
+    try { url = new URL(a.href, location.href); } catch (err) { return null; }
+    if (url.origin !== location.origin) return null;
+
+    /* An anchor on the page we are already on is not a navigation. */
+    if (url.pathname === location.pathname && url.search === location.search && url.hash) return null;
+
+    /* Pages, not files. Anything with another extension is a download or an
+       asset and the browser should handle it untouched. */
+    var last = url.pathname.split('/').pop();
+    if (last && last.indexOf('.') !== -1 && !/\.html?$/i.test(last)) return null;
+
+    return url;
+  }
 
   document.addEventListener('click', function (e) {
     if (e.defaultPrevented || e.button !== 0) return;
@@ -292,20 +365,33 @@
 
     var a = e.target.closest && e.target.closest('a[href]');
     if (!a || a.target === '_blank' || a.hasAttribute('download')) return;
+    if (a.getAttribute('href').charAt(0) === '#') return;
 
-    /* Its own resolved URL against this page's, so './shop.html',
-       'shop.html' and a full https:// address are all the same door — and a
-       link to shop.html on ANOTHER host is not. */
-    var url;
-    try { url = new URL(a.href, location.href); } catch (err) { return; }
-    if (url.origin !== location.origin) return;
-    if (!/\/shop\.html$/.test(url.pathname)) return;
+    var url = internalPage(a);
+    if (!url) return;
 
     if (wantsStillness()) return;   /* let the browser navigate plainly */
 
+    var flavour = flavourFor(url.pathname);
     e.preventDefault();
-    ovenDoor(function () { location.href = a.href; });
+
+    /* Written before leaving, read by the page that loads next. */
+    try { sessionStorage.setItem(ARRIVE_KEY, flavour); } catch (err) { /* fine without it */ }
+
+    closePanel(flavour, function () { location.href = a.href; });
   });
+
+  /* Arrival. Read once and cleared immediately, so a note left by a
+     navigation that never completed cannot cover some later page. */
+  function playArrival() {
+    var flavour = null;
+    try {
+      flavour = sessionStorage.getItem(ARRIVE_KEY);
+      sessionStorage.removeItem(ARRIVE_KEY);
+    } catch (err) { return; }
+    if (!flavour || wantsStillness()) return;
+    openPanel(flavour === 'oven' ? 'oven' : 'sweep');
+  }
 
   /* ---------- releasing the movements ---------- */
   /* Someone who asked for less motion gets the final state immediately. The

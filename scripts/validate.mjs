@@ -3545,6 +3545,45 @@ if (want('pages')) {
         pass('gallery.html no longer shows alt text as a caption');
     }
   }
+
+  console.log('Moving between pages:');
+  // Since 22 Sep 2026 every internal link on the site is intercepted so a
+  // panel can close over the page before the browser leaves it. That is the
+  // whole navigation of the site running through one click handler, and the
+  // failure it must never have is swallowing a click without navigating —
+  // a visitor tapping a link and simply staying where they are, with no
+  // error, forever.
+  //
+  // Three independent things complete the navigation, and each is checked
+  // by name here. The same code is written twice, in site.js for the four
+  // content pages and again inside shop.html, which loads neither shared
+  // file; both copies are checked.
+  for (const [file, src] of [
+    ['site.js', readFileSync(join(ROOT, 'site.js'), 'utf8')],
+    [SHOP,      uncommented(readFileSync(join(ROOT, SHOP), 'utf8'))],
+  ]) {
+    const guards = [
+      ['catch (e) {',                 'a catch around building the panel',
+       'an exception mid-animation would leave the click intercepted and the visitor on the page they tried to leave'],
+      ['setTimeout(finish',           'the watchdog that navigates anyway',
+       'transitionend does not fire on a background tab, and without a timer that click never completes'],
+      ['if (done) return; done = true','the latch that stops a double navigation',
+       'the watchdog and the transition could both fire and navigate twice'],
+      ["url.origin !== location.origin", 'the same-origin test',
+       'a link to Instagram or WhatsApp would be intercepted and animated over before opening'],
+      ['wantsStillness()',            'the reduced-motion bail-out',
+       'somebody who asked for less motion would get the panel anyway'],
+      ['removeItem',                  'the arrival note being cleared when read',
+       'a note left by a navigation that never completed would cover some later page'],
+    ];
+    const missing = guards.filter(([needle]) => !src.includes(needle));
+    if (missing.length) {
+      for (const [, what, cost] of missing)
+        fail(`${file}: ${what} is gone from the page transition — ${cost}`);
+    } else {
+      pass(`${file}: the page transition keeps all ${guards.length} of its ways to fail open`);
+    }
+  }
   console.log('The events board:');
   {
     // Same reason as home.html, story.html, gallery.html and contact.html
