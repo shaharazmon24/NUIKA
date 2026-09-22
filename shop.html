@@ -1837,9 +1837,18 @@
       pointer-events: none;
       opacity: 0.72;
     }
+    /* Everything that offers to take an order, and everything that reports
+       on one already started. A cart survives in localStorage across a
+       closing — so without the last two rules a visitor who had three loaves
+       in hand when Noy closed comes back to badges and a − 1 + row on cards
+       that no longer answer a tap, and no cart bar to clear them from. The
+       cart is not thrown away; it is put down, and it is all still there when
+       she opens the next round. */
     body.orders-closed .product-card .add-icon,
     body.orders-closed #cart-bar,
-    body.orders-closed #repeat-order-banner {
+    body.orders-closed #repeat-order-banner,
+    body.orders-closed .product-card .qty-badge,
+    body.orders-closed .product-card [id^="qty-controls-"] {
       display: none;
     }
     /* #menu's pb-44 and the footer's bottom padding are both there to clear
@@ -1849,10 +1858,10 @@
     /* 100px is the height of the cart bar it sits above. With no cart bar it
        was hovering over the footer's "לעמוד הבית". */
     body.orders-closed #scroll-top-btn { bottom: 20px; }
-    body.orders-closed .nu-footer { padding-bottom: 40px; }
-    @media (max-width: 720px) {
-      body.orders-closed .nu-footer { padding-bottom: 32px; }
-    }
+    /* Room under the footer's last line for the back-to-top button, which
+       drops to bottom:20px once the cart bar is gone and otherwise sits on
+       top of "לעמוד הבית". */
+    body.orders-closed .nu-footer { padding-bottom: 76px; }
 
     /* ── PRODUCT GRID ───────────────────────────────────────────────────
        Equal heights within a row, and no hole at the end.
@@ -1905,11 +1914,15 @@
       line-height: 1.6;
       color: #6B655C;
       margin: 0;
-      /* Three lines rather than two. Two was cutting almost every
-         description mid-word — "מצופה שומשום מ…" — which reads as a fault
-         rather than a trim. */
+      /* Five lines, which is not a design choice so much as a measurement:
+         Noy's longest description today is 84 characters and wraps to four
+         lines in a half-width card. Two lines — what this was — cut almost
+         every one of them mid-word ("מצופה שומשום מ…"), which reads as a
+         fault rather than a trim. Five cuts none of them, and still stops a
+         five-hundred-character description from turning one card into a
+         column. Cards in a row equalise to the tallest either way. */
       display: -webkit-box;
-      -webkit-line-clamp: 3;
+      -webkit-line-clamp: 5;
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
