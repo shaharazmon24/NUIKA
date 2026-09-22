@@ -274,6 +274,18 @@
     setTimeout(finish, DOOR_MS + 140);
   }
 
+  /* Back from the shop restores this page from the browser's back/forward
+     cache — the whole document, exactly as it was left, with the door still
+     in it and still shut. That is a full-screen opaque panel over the film,
+     and because it takes no pointer events it does not even read as an
+     overlay: the front page simply looks broken until a manual reload.
+     Nothing else on the site clears it, so it is cleared here. */
+  window.addEventListener('pageshow', function (e) {
+    if (!e.persisted) return;
+    var doors = document.querySelectorAll('.nu-door');
+    for (var i = 0; i < doors.length; i++) doors[i].remove();
+  });
+
   document.addEventListener('click', function (e) {
     if (e.defaultPrevented || e.button !== 0) return;
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;

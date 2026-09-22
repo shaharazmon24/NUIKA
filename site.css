@@ -344,6 +344,12 @@ html[lang="en"]       [lang-content="he"] { display: none; }
 
 /* The orders line sits directly above the way into the shop, which is where
    it is worth reading: "closing in two days" and then the button. */
+/* `display: flex` from an author rule outranks the user agent's
+   [hidden] { display: none }, so without this the empty, never-painted
+   orders line on story / gallery / contact / events is still a flex item
+   and .nu-footer's gap adds 14px of dead space under all four footers. */
+.nu-orders[hidden] { display: none; }
+
 .nu-orders {
   margin: 0;
   display: flex;

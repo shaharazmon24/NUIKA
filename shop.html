@@ -70,6 +70,11 @@
     #print-area { display: none; }
 
     * { box-sizing: border-box; }
+    /* The font-family here is inert and kept only for a page without
+       Tailwind: <body> carries the class `font-sans`, and a class (0,1,0)
+       outranks an element selector (0,0,1) whatever order they load in. What
+       actually puts IBM Plex on this page is the `sans` entry in the
+       Tailwind config above. */
     body { background-color: #EFE6D6; font-family: var(--font-text); }
 
     /* ── GLOBAL TYPOGRAPHY ─────────────────────────── */
@@ -3623,6 +3628,17 @@ let _ordersLoaded   = false;
 // Local caches — populated by Firebase listeners
 let ORDER_LOG = [];
 let _settingsCache = {};
+// What the status box currently says, so the once-a-minute tick does not
+// rebuild markup that has not changed.
+//
+// Declared HERE, beside the other module state, and not beside the function
+// that uses it. `let` is not hoisted: it was first written just above
+// renderShopStatus(), a hundred lines below the bare updateOrdersOpenBanner()
+// call that runs at load — which reaches it through renderShopStatus() and
+// throws "Cannot access '_statusShown' before initialization", killing the
+// rest of the script and with it the entire shop.
+let _statusShown = null;
+
 // Whether Firebase has actually answered about settings yet. Until it has,
 // _settingsCache is {} and getNextTuesdayDeadline() falls back to a computed
 // next-Tuesday-17:00 — so the status line would state a specific closing time
@@ -4142,17 +4158,26 @@ function getStockRemaining(productId) {
 }
 
 // ─── REPEAT LAST ORDER ────────────────────────────
+// Called at load AND from updateOrdersOpenBanner(), so on every settings
+// event, every deadline tick and every return to the page.
+//
+// Asking ordersAreOpen() here is not enough on its own, and the first version
+// of this fix got that wrong in a way worth writing down: the only call site
+// was in the script body, which runs BEFORE Firebase has answered. At that
+// moment _settingsCache is {} — no flag, no custom deadline — so
+// ordersAreOpen() returns true unconditionally and the guard below never
+// fired. The inline display:flex was written, nothing re-ran the function,
+// and `body.orders-closed #repeat-order-banner { display:none }` loses to an
+// inline style. A returning customer read "ההזמנות סגורות כרגע" and found a
+// live "הזמיני שוב כמו שבוע שעבר" directly beneath it, which answered the
+// tap with the same alert this whole change exists to delete.
+//
+// The guard was right. What it needed was to be asked again once the answer
+// was known.
 function checkRepeatOrder() {
   const banner = document.getElementById('repeat-order-banner');
   if (!banner) return;
 
-  // Asked here, not left to CSS. `body.orders-closed #repeat-order-banner
-  // { display:none }` cannot win against the inline `display:flex` written
-  // two lines below, so on a closed shop this banner went on rendering
-  // normally — and it is not a .product-card, so nothing disabled it either.
-  // A returning customer tapped "הזמיני שוב כמו שבוע שעבר" and got
-  // alert('ההזמנות סגורות כרגע.'): precisely the behaviour this whole change
-  // exists to delete, surviving on the one control that escaped the class.
   if (!ordersAreOpen()) { banner.style.display = 'none'; return; }
 
   const last = localStorage.getItem('nuika_last_order');
@@ -5079,6 +5104,11 @@ function updateOrdersOpenBanner() {
   // the cards is erased by the next redraw — and the shop silently becomes
   // tappable again while still closed. A body class survives all of them.
   document.body.classList.toggle('orders-closed', !isOpen);
+
+  // The repeat-order banner writes its own inline display, which no
+  // stylesheet can override, so it has to be asked again every time the
+  // answer changes. See the comment on the function itself.
+  checkRepeatOrder();
 }
 
 // Firebase events are the only thing that used to move the shop from open to
@@ -5112,6 +5142,15 @@ function deadlineLabel(lang) {
 function renderShopStatus(isOpen) {
   const box = document.getElementById('shop-status');
   if (!box) return;
+
+  // The once-a-minute tick calls this whether or not anything moved, and the
+  // closed notice contains two real links. Rewriting innerHTML under them
+  // takes focus off a keyboard user's link once a minute, and can swap the
+  // element out between a finger going down and coming up.
+  const state = !_settingsLoaded ? 'loading'
+              : (isOpen ? 'open:' + deadlineLabel('he') : 'closed');
+  if (state === _statusShown) return;
+  _statusShown = state;
 
   // Before Firebase answers, say the one thing that is true whatever the
   // settings turn out to be, and make no claim about opening hours.

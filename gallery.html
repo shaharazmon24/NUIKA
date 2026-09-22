@@ -416,7 +416,12 @@
            
            entry.caption is what the admin form will write. Nothing sets it
            yet, so today this hides on every photo. */
-        var caption = (entry.caption && entry.caption[currentLang()]) || '';
+        /* Falls back to Hebrew. Noy writes her captions in Hebrew through
+           gallery-captions.html, which asks for one language, so requiring an
+           `en` key would mean an English visitor sees no caption on any photo
+           at all — worse than reading the Hebrew one. */
+        var caption = (entry.caption &&
+                      (entry.caption[currentLang()] || entry.caption.he)) || '';
         lbDesc.textContent = caption;
         lbDesc.hidden = !caption;
         // The dialog names the image actually showing, for someone who

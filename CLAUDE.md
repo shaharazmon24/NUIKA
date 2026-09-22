@@ -179,44 +179,47 @@ road was taken instead, and it needs no database and no rules published:
    ```
 
 `gallery.html` shows `caption` when it exists and shows nothing when it does
-not. **`alt` is a different field and is not a caption** — it is the
+not. Only `he` is required: an English visitor falls back to the Hebrew line
+rather than seeing no caption at all. Add `en` alongside it when there is a
+translation worth having. **`alt` is a different field and is not a caption** — it is the
 description read aloud to someone who cannot see the photo, and it used to be
 printed under every image, which is why the visible captions were switched off
 on 22 Sep 2026.
 
-### One human step: publish the rules for `nuika/events`
+### The rules for `nuika/events` are published
 
 `firebase-rules.json` is the file we edit; it is **not** what the database
 enforces. The database enforces whatever was last pasted into the Firebase
-console. `nuika/events` is in the committed file but is **not yet published**,
-and until someone publishes it both halves of the events feature are dead:
+console, so the two can drift and nothing in this repo would notice.
 
-- the **Events** tab in the admin panel (`?admin`) cannot save — every write
-  comes back `PERMISSION_DENIED`;
-- the public board at `events.html` reads nothing and shows its empty state,
-  no matter what Noy has entered.
-
-No amount of code fixes this. Someone has to do it once, by hand:
-
-1. Open the [Firebase console](https://console.firebase.google.com/) →
-   project **nuika-5371f** → **Realtime Database** → **Rules**.
-2. Replace the whole contents with `firebase-rules.json` from this repo.
-3. Press **Publish**.
-
-Publishing is purely additive and safe: the live rules were checked against
-the committed file and match on every other node, so this changes nothing
-about orders, products, settings, stock or the kitchen — it only adds the
-`events` node.
-
-To check whether it has already been done, without signing in:
+For `nuika/events` they do not: the rules were pasted and published by hand on
+21 Sep 2026, and the events board has been live since. Verified again on
+22 Sep 2026 from outside, with no sign-in:
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' \
-  'https://nuika-5371f-default-rtdb.firebaseio.com/nuika/events.json'
+curl -s -o /dev/null -w '%{http_code}
+'   'https://nuika-5371f-default-rtdb.firebaseio.com/nuika/events.json'
 ```
 
-`200` means the rules are published. `401` means they are not, and the events
-board is still dead.
+`200` means the read rule is live. `401` would mean it is not, and that the
+board is dead in both directions — the admin tab unable to save, the public
+page showing its empty state no matter what Noy has entered. Today it answers
+**200**, alongside `products` and `settings`; `orders` and `admins` answer
+`401`, which is the shape the rules describe.
+
+> This section said the opposite until 22 Sep 2026 — "**not yet published**",
+> with instructions to go and publish it — for a day after it had been
+> published, by the test printed directly underneath it. Nothing in
+> `validate.mjs` reads a `.md`, so a document can contradict a live system
+> indefinitely. Run the curl before trusting either this paragraph or the next
+> person's memory.
+
+**Publishing a rules change by hand, when there is one to publish:** the
+committed file cannot be pasted as it stands. Firebase's parser rejects a
+`"//"` key at any level — anything that is not `.read`/`.write`/`.validate`/
+`.indexOn` is read as a child node name and must hold an object — so the
+eleven comments have to come out first. They are worth keeping in the file:
+they say why each node is locked.
 
 ## Things that will bite you
 

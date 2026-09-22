@@ -35,6 +35,11 @@ const ASSETS = [
   './gallery.html',
   './contact.html',
   './events.html',
+  // The wordmark, as a CSS mask, is now the shop's header logo, its footer
+  // logo and the oven door's mark — three places that render as blank boxes
+  // without it. The shop used to show ./logo.png.png as an <img>, which is
+  // why this file was never listed.
+  './images/logo.png',
   './site.css?v=3',
   './site.js?v=3',
   './logo.png.png',

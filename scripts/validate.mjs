@@ -984,6 +984,111 @@ if (want('features')) {
     else
       pass("the gate's answer reaches the page — updateOrdersOpenBanner() passes it straight to renderShopStatus()");
   }
+
+  // Saying the shop is closed and CLOSING it are two different jobs, and the
+  // checks above only guarded the saying. Each mutation below left the suite
+  // green while the shop announced itself closed and went on taking orders —
+  // which is worse than the bug this whole change fixed, because now there is
+  // a notice above the live buttons claiming otherwise.
+  for (const [needle, what, cost] of [
+    ["classList.toggle('orders-closed'", 'the body class that disables the grid is set from the gate',
+     'the shop would say closed and stay fully tappable'],
+    ['body.orders-closed .product-card', 'a closed shop refuses a tap on the cards',
+     'every card would still answer a tap under a notice saying orders are closed'],
+    ['body.orders-closed #cart-bar', 'a closed shop puts the cart bar away',
+     'the checkout bar would stay up on a shop that cannot take the order'],
+    ['_settingsLoaded = true', 'the settings listener records that the answer arrived',
+     'the status line would never advance past its loading state and the shop would never state whether it is open'],
+    ['checkRepeatOrder();', 'the repeat-order banner is re-asked when the state changes',
+     'the banner would survive a closing with its own inline display and answer the tap with an alert'],
+  ]) {
+    if (shopJs.includes(needle)) pass(`closed means closed: ${what}`);
+    else fail(`${SHOP} no longer contains "${needle}" — ${cost}`);
+  }
+
+  // Scoped to the function body, because the file-wide version of this was a
+  // dead check: checkRepeatOrder() is ALSO called once at load, so deleting
+  // the re-ask from updateOrdersOpenBanner() left the needle satisfied by the
+  // other call site and the suite green. The load-time call is the one that
+  // cannot work on its own — it runs before Firebase has answered.
+  {
+    const at = shopJs.indexOf('function updateOrdersOpenBanner(');
+    const body = at < 0 ? '' : shopJs.slice(at).split(String.fromCharCode(10) + 'function ')[0];
+    if (/checkRepeatOrder\s*\(\s*\)/.test(body))
+      pass('closed means closed: updateOrdersOpenBanner() re-asks the repeat-order banner itself');
+    else
+      fail(`${SHOP}: updateOrdersOpenBanner() does not call checkRepeatOrder() — the banner is only decided at load, before Firebase has answered, so on a closed shop it renders anyway and answers the tap with an alert`);
+  }
+
+  // The gate's answer has to be the thing renderShopStatus() acts on. The
+  // call-site check reads the ARGUMENT; this reads the body, because a
+  // function that ignores its parameter passes that one green.
+  {
+    const at = shopJs.indexOf('function renderShopStatus(');
+    if (at < 0) {
+      fail('renderShopStatus() is gone — nothing writes the open/closed notice');
+    } else {
+      const body = shopJs.slice(at).split(String.fromCharCode(10) + 'function ')[0];
+      if (/\bisOpen\s*=/.test(body))
+        fail('renderShopStatus() assigns to its own isOpen parameter — it is no longer reporting what the gate decided, which is how the two halves drifted apart the first time');
+      else if (/if\s*\(\s*isOpen\s*\)/.test(body))
+        pass('renderShopStatus() branches on the answer it was handed');
+      else
+        fail('renderShopStatus() never branches on isOpen — it cannot be telling anyone whether the shop is open');
+    }
+  }
+
+  // The shop calls updateOrdersOpenBanner() once at top level, before any
+  // Firebase listener, so that Noy's phone shows the right state before the
+  // network answers. That call reaches renderShopStatus(), which reads the
+  // module state below.
+  //
+  // `let` and `const` are not hoisted the way `function` is. A declaration
+  // written after that call sits in the temporal dead zone when the call
+  // runs, and reading it throws — at TOP LEVEL, which stops the rest of the
+  // script dead. It is not a caught error and not a degraded page: every
+  // declaration below the throw never happens, so functions defined further
+  // down are missing and the shop is gone.
+  //
+  // Measured, not theorised: `let _statusShown` was written beside the
+  // function that uses it, a hundred lines below the call, and the page threw
+  // "Cannot access '_statusShown' before initialization" at line 5026 of
+  // 9200. new Function() parses this file without complaint — a dead zone is
+  // a runtime fact, not a syntax error — so nothing else here would see it.
+  {
+    const lines  = shopJs.split(String.fromCharCode(10));
+    const isCall = l => l.indexOf('updateOrdersOpenBanner();') === 0;
+    const callAt = lines.findIndex(isCall);
+
+    // Plain string work, no regex. The first version of this built the
+    // declaration pattern with escaped \s and \b, the backslashes did not
+    // survive the quoting on the way in, and it reported every declaration
+    // missing on a file where all three are present and correct.
+    const declares = (line, name) => {
+      const t = line.trim();
+      for (const kw of ['let ', 'const ', 'var ']) {
+        if (t.indexOf(kw) !== 0) continue;
+        const rest = t.slice(kw.length).trim();
+        if (rest.indexOf(name) !== 0) continue;
+        const after = rest.charAt(name.length);
+        if (after === '' || ' =;,'.indexOf(after) !== -1) return true;
+      }
+      return false;
+    };
+
+    if (callAt < 0) {
+      fail(`${SHOP} no longer calls updateOrdersOpenBanner() at load — the shop's first paint will not know whether it is open`);
+    } else {
+      const late = ['_statusShown', '_settingsLoaded', '_settingsCache'].filter(name => {
+        const declAt = lines.findIndex(l => declares(l, name));
+        return declAt === -1 || declAt > callAt;
+      });
+      if (late.length)
+        fail(`${SHOP}: ${late.join(', ')} ${late.length > 1 ? 'are' : 'is'} declared after the top-level updateOrdersOpenBanner() call on line ${callAt + 1} — a let/const read before its declaration throws at top level and kills the rest of the script, taking the whole shop with it`);
+      else
+        pass(`${SHOP}: the state the first paint reads is declared before the call that reads it`);
+    }
+  }
   // ── Both doors into the app ───────────────────────────────────────────
   //
   // Two of the needles above — rel="manifest" and serviceWorker.register —
@@ -2386,8 +2491,12 @@ if (want('design')) {
     // shop alone keeps the 404. Nothing would have said so.
     // uncommented(), or wrapping the whole <nav> in <!-- --> leaves the shop
     // with no menu at all and this check still reporting that it matches.
+    // Any href, not just one written './…'. The first version captured only
+    // the relative spelling, so a fifth menu entry pointing at an absolute
+    // URL was invisible to this check and the shop's menu could grow an item
+    // site.js has never heard of.
     const shopNav = [...uncommented(readFileSync(join(ROOT, SHOP), 'utf8'))
-      .matchAll(/class="nu-nav__item"[^>]*href="(\.\/[^"]+)"/g)].map(m => m[1]);
+      .matchAll(/class="nu-nav__item"[^>]*href="([^"]+)"/g)].map(m => m[1]);
     const siteNav = [...js.matchAll(/href\s*:\s*'(\.\/[^']+)'/g)].map(m => m[1]);
 
     if (!shopNav.length) {
@@ -2730,6 +2839,32 @@ if (want('pages')) {
     // site.css, so a visitor holding a fresh copy of one and a stale copy of
     // the other sees a broken page. Bumping them together is the discipline;
     // this is what notices when only one was bumped.
+    // The service worker precaches these by their FULL versioned URL, so a
+    // bump in the five pages that is not mirrored in sw.js leaves the worker
+    // warming two files nothing requests, while the files the pages do
+    // request fall back to whatever the network and the HTTP cache decide.
+    //
+    // Plain string containment, not an interpolated regex. The first attempt
+    // built the pattern by escaping dots through two layers of quoting, the
+    // backslashes did not survive, and it reported a missing precache on a
+    // worker that had it.
+    {
+      const sw = existsSync(join(ROOT, 'sw.js')) ? readFileSync(join(ROOT, 'sw.js'), 'utf8') : '';
+      for (const asset of ['site.js', 'site.css']) {
+        const pageV = [...new Set(seen.get(asset).values())][0];
+        if (!pageV) continue;
+        const wanted = './' + asset + '?v=' + pageV;
+        const held   = (sw.match(/\.\/site\.(?:js|css)\?v=\d+/g) || [])
+                         .filter(u => u.indexOf('/' + asset + '?') !== -1);
+        if (held.includes(wanted))
+          pass(`sw.js precaches ${wanted}, the URL the pages actually request`);
+        else if (held.length)
+          fail(`sw.js precaches ${held.join(', ')} while the pages request ${wanted} — the worker is warming a file nobody asks for, and the one they do ask for is left to the network`);
+        else
+          fail(`sw.js does not precache ${asset} at all — the pages request ${wanted} and the worker warms nothing for it`);
+      }
+    }
+
     const jsV  = [...new Set(seen.get('site.js').values())][0];
     const cssV = [...new Set(seen.get('site.css').values())][0];
     if (jsV && cssV && jsV !== cssV)
