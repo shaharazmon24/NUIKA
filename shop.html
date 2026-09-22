@@ -33,26 +33,32 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Hebrew:wght@200;300;400;500;600;700&family=Noto+Sans+Hebrew:wght@200;300;400;500;600;700&family=Amatic+SC:wght@400;700&display=swap" rel="stylesheet" />
+  <!-- Bellefair and IBM Plex Sans Hebrew are the two faces site.css loads on
+       every other page. The shop asks for them by the same names so a visitor
+       walking in from the film reads the same letters, not a near-miss.
+       Noto stays loaded: the admin panel styles its text inline with it, and
+       nothing about Noy's panel is being redesigned here. -->
+  <link href="https://fonts.googleapis.com/css2?family=Bellefair&family=IBM+Plex+Sans+Hebrew:wght@300;400;500;600;700&family=Noto+Serif+Hebrew:wght@200;300;400;500;600;700&family=Noto+Sans+Hebrew:wght@200;300;400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            cream:    '#F7EEE0',
+            cream:    '#EFE6D6',
             parchment:'#EFE1C7',
             earth:    '#6B2E1E',
-            terracotta:'#BD4D30',
+            terracotta:'#B84830',
             sand:     '#D6A54A',
             bark:     '#9C5A32',
-            ink:      '#2C1810',
+            ink:      '#3B2A24',
             muted:    '#9B8B75',
             honey:    '#E0A83A',
           },
           fontFamily: {
             serif:  ['Noto Serif Hebrew', 'serif'],
-            sans:   ['Noto Sans Hebrew', 'sans-serif'],
+            sans:   ['IBM Plex Sans Hebrew', 'Noto Sans Hebrew', 'sans-serif'],
+            display:['Bellefair', 'Noto Serif Hebrew', 'serif'],
           },
         }
       }
@@ -64,7 +70,7 @@
     #print-area { display: none; }
 
     * { box-sizing: border-box; }
-    body { background-color: #F7EEE0; }
+    body { background-color: #EFE6D6; font-family: var(--font-text); }
 
     /* ── GLOBAL TYPOGRAPHY ─────────────────────────── */
     h1, h2, h3 { text-wrap: balance; }
@@ -72,8 +78,16 @@
 
     /* Improved muted color — passes WCAG AA on cream bg */
     :root {
-      --color-muted-readable: #6B5D4E;
+      --color-muted-readable: #6B655C;
       --color-desc: #7A6B58;
+
+      /* The same two stacks site.css declares, written out here rather than
+         imported: shop.html stays one self-contained file, and loading
+         site.css would also bring its body/h1-h3 rules down on nine thousand
+         lines of markup that never asked for them — including Noy's panel.
+         The values are what must match, and these are the values. */
+      --font-display: 'Bellefair', 'Noto Serif Hebrew', 'Times New Roman', serif;
+      --font-text:    'IBM Plex Sans Hebrew', 'Noto Sans Hebrew', 'Segoe UI', system-ui, sans-serif;
     }
 
     /* RTL scroll */
@@ -85,7 +99,7 @@
       position: fixed;
       inset: 0;
       z-index: 500;
-      background: rgba(44,24,16,0.7);
+      background: rgba(59,42,36,0.7);
       backdrop-filter: blur(6px);
       align-items: center;
       justify-content: center;
@@ -127,7 +141,7 @@
       transition: transform 0.25s;
       box-shadow: 0 1px 4px rgba(0,0,0,0.2);
     }
-    .admin-toggle input:checked + .admin-toggle-slider { background: #BD4D30; }
+    .admin-toggle input:checked + .admin-toggle-slider { background: #B84830; }
     .admin-toggle input:checked + .admin-toggle-slider::before { transform: translateX(22px); }
 
     .admin-card {
@@ -147,7 +161,7 @@
     }
     .admin-save-btn {
       background: #6B2E1E;
-      color: #F7EEE0;
+      color: #EFE6D6;
       font-family: 'Noto Serif Hebrew', serif;
       font-weight: 700;
       font-size: 1rem;
@@ -168,7 +182,7 @@
       position: fixed;
       inset: 0;
       z-index: 600;
-      background: rgba(44,24,16,0.6);
+      background: rgba(59,42,36,0.6);
       backdrop-filter: blur(4px);
       align-items: flex-end;
       justify-content: center;
@@ -182,7 +196,7 @@
       position: fixed;
       inset: 0;
       z-index: 600;
-      background: rgba(44,24,16,0.6);
+      background: rgba(59,42,36,0.6);
       backdrop-filter: blur(4px);
       align-items: flex-end;
       justify-content: center;
@@ -204,7 +218,7 @@
       cursor: pointer; padding: 0;
       color: #6B2E1E; font-size: 0.7rem; line-height: 1;
     }
-    .ord-btn:hover:not(:disabled) { background: #EFE1C7; border-color: #BD4D30; }
+    .ord-btn:hover:not(:disabled) { background: #EFE1C7; border-color: #B84830; }
     .ord-btn:disabled { opacity: 0.3; cursor: default; }
 
     /* Hero: two arched photos with the name between them. The arch is the
@@ -226,7 +240,7 @@
       border-radius: 999px 999px 14px 14px;
       overflow: hidden;
       background: #EFE1C7;
-      box-shadow: 0 10px 30px rgba(44, 24, 16, 0.10);
+      box-shadow: 0 10px 30px rgba(59,42,36, 0.10);
     }
     .hero-arch img {
       width: 100%; height: 100%;
@@ -260,7 +274,7 @@
       position: relative;
       overflow: hidden;
     }
-    .img-upload-area:hover { border-color: #BD4D30; background: #F7EEE0; }
+    .img-upload-area:hover { border-color: #B84830; background: #EFE6D6; }
     .img-upload-area input[type=file] {
       position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%;
     }
@@ -273,9 +287,9 @@
     /* Add product button */
     .add-product-btn {
       width: 100%;
-      border: 2px dashed #BD4D30;
+      border: 2px dashed #B84830;
       background: transparent;
-      color: #BD4D30;
+      color: #B84830;
       font-family: 'Noto Serif Hebrew', serif;
       font-weight: 700;
       font-size: 0.95rem;
@@ -285,7 +299,7 @@
       transition: background 0.2s, color 0.2s;
       display: flex; align-items: center; justify-content: center; gap: 8px;
     }
-    .add-product-btn:hover { background: #BD4D30; color: white; }
+    .add-product-btn:hover { background: #B84830; color: white; }
 
     /* ── ORDER MANAGEMENT ─────────────────────────── */
     .order-stat-card {
@@ -328,7 +342,7 @@
       padding: 0 14px 8px;
       font-family: 'Noto Sans Hebrew', sans-serif;
       font-size: 0.78rem;
-      color: #6B5D4E;
+      color: #6B655C;
       line-height: 1.6;
     }
     .order-actions {
@@ -351,8 +365,8 @@
       cursor: pointer;
       transition: background 0.15s, border-color 0.15s;
     }
-    .btn-status:hover { background: #EFE1C7; border-color: #BD4D30; }
-    .btn-status.active { background: #6B2E1E; color: #F7EEE0; border-color: #6B2E1E; }
+    .btn-status:hover { background: #EFE1C7; border-color: #B84830; }
+    .btn-status.active { background: #6B2E1E; color: #EFE6D6; border-color: #6B2E1E; }
     .btn-wa {
       display: inline-flex; align-items: center; gap: 5px;
       font-family: 'Noto Sans Hebrew', sans-serif;
@@ -427,14 +441,14 @@
       top: 50%; left: 50%;
       transform: translate(-50%, -60%) rotate(-18deg);
       background: rgba(107,58,42,0.88);
-      color: #F7EEE0;
+      color: #EFE6D6;
       font-family: 'Noto Serif Hebrew', serif;
       font-weight: 700;
       font-size: 0.9rem;
       letter-spacing: 0.12em;
       padding: 5px 14px;
       border-radius: 4px;
-      border: 2px solid rgba(247,242,232,0.7);
+      border: 2px solid rgba(239,230,214,0.7);
       pointer-events: none;
       z-index: 10;
       white-space: nowrap;
@@ -505,7 +519,7 @@
     }
     .product-card:hover {
       transform: translateY(-3px);
-      border-color: #BD4D30;
+      border-color: #B84830;
     }
     .product-card.in-cart {
       border-color: #6B2E1E;
@@ -528,7 +542,10 @@
       align-items: center;
       justify-content: center;
       overflow: hidden;
-      aspect-ratio: 4/3;
+      /* Square, not 4:3. The illustrations are engravings with a drawn frame
+         around them; at 4:3 in a half-width card the frame was most of what
+         you saw. */
+      aspect-ratio: 1/1;
     }
     .illus-wrap img {
       width: 100%;
@@ -546,7 +563,7 @@
       top: 8px;
       left: 8px;
       background: #6B2E1E;
-      color: #F7EEE0;
+      color: #EFE6D6;
       font-family: 'Noto Sans Hebrew', sans-serif;
       font-weight: 700;
       font-size: 13px;
@@ -586,7 +603,7 @@
       position: fixed;
       inset: 0;
       z-index: 100;
-      background: rgba(44,24,16,0.55);
+      background: rgba(59,42,36,0.55);
       backdrop-filter: blur(4px);
       align-items: flex-end;
       justify-content: center;
@@ -624,7 +641,7 @@
       padding: 12px 14px;
       font-family: 'Noto Sans Hebrew', sans-serif;
       font-size: 16px;
-      color: #2C1810;
+      color: #3B2A24;
       outline: none;
       transition: border-color 0.2s;
     }
@@ -633,7 +650,7 @@
     /* Scrollbar */
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: #EFE1C7; }
-    ::-webkit-scrollbar-thumb { background: #BD4D30; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb { background: #B84830; border-radius: 3px; }
 
     /* English toggle.
 
@@ -664,11 +681,11 @@
       cursor: pointer;
       transition: background 0.15s, color 0.15s;
     }
-    .qty-btn:hover { background: #6B2E1E; color: #F7EEE0; }
+    .qty-btn:hover { background: #6B2E1E; color: #EFE6D6; }
 
     .divider-flower {
       display: flex; align-items: center; gap: 16px;
-      color: #BD4D30;
+      color: #B84830;
     }
     .divider-flower::before, .divider-flower::after {
       content: '';
@@ -700,14 +717,14 @@
     #cart-progress-bar {
       height: 100%;
       border-radius: 2px;
-      background: linear-gradient(90deg, #D6A54A, #BD4D30);
+      background: linear-gradient(90deg, #D6A54A, #B84830);
       transition: width 0.4s cubic-bezier(0.34,1.1,0.64,1);
       width: 0%;
     }
     #cart-progress-label {
       font-family: 'Noto Sans Hebrew', sans-serif;
       font-size: 0.68rem;
-      color: rgba(247,242,232,0.55);
+      color: rgba(239,230,214,0.55);
       margin-top: 2px;
       line-height: 1;
       min-height: 12px;
@@ -724,14 +741,14 @@
       background: rgba(107,58,42,0.85);
       backdrop-filter: blur(8px);
       border: 1.5px solid rgba(196,120,90,0.4);
-      color: #F7EEE0;
+      color: #EFE6D6;
       display: flex; align-items: center; justify-content: center;
       cursor: pointer;
       opacity: 0;
       transform: translateY(12px) scale(0.85);
       transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.34,1.3,0.64,1);
       pointer-events: none;
-      box-shadow: 0 4px 16px rgba(44,24,16,0.25);
+      box-shadow: 0 4px 16px rgba(59,42,36,0.25);
     }
     #scroll-top-btn.visible {
       opacity: 1;
@@ -813,9 +830,9 @@
       transition: border-color 0.2s, transform 0.18s;
       text-decoration: none;
     }
-    .dash-action-card:hover { border-color: #BD4D30; transform: translateY(-1px); }
+    .dash-action-card:hover { border-color: #B84830; transform: translateY(-1px); }
     body.dark .dash-action-card { background: #241E18; border-color: #3A2E24; }
-    body.dark .dash-action-card:hover { border-color: #BD4D30; }
+    body.dark .dash-action-card:hover { border-color: #B84830; }
 
     .dash-action-icon {
       width: 44px; height: 44px;
@@ -830,7 +847,7 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      background: #BD4D30;
+      background: #B84830;
       color: white;
       border-radius: 100px;
       font-size: 0.62rem;
@@ -950,7 +967,7 @@
     }
     .k-subnav-btn.active {
       background: #6B2E1E;
-      color: #F7EEE0;
+      color: #EFE6D6;
     }
     .k-subnav-btn:hover:not(.active) {
       background: rgba(107,58,42,0.1);
@@ -970,7 +987,7 @@
     .k-section-title {
       font-family: 'Noto Serif Hebrew', serif;
       font-weight: 700;
-      color: #2C1810;
+      color: #3B2A24;
       font-size: 1.05rem;
       margin: 0;
     }
@@ -983,7 +1000,7 @@
       font-family: 'Noto Sans Hebrew', sans-serif;
       font-size: 0.8rem;
       font-weight: 700;
-      color: #F7EEE0;
+      color: #EFE6D6;
       background: #6B2E1E;
       border: none;
       border-radius: 8px;
@@ -1022,14 +1039,14 @@
       text-align: right;
       padding: 8px 10px;
       font-weight: 700;
-      color: #6B5D4E;
+      color: #6B655C;
       font-size: 0.75rem;
       border-bottom: 2px solid #E5D9C5;
       white-space: nowrap;
     }
     .k-table td {
       padding: 9px 10px;
-      color: #2C1810;
+      color: #3B2A24;
       border-bottom: 1px solid #F0E9D8;
       vertical-align: middle;
     }
@@ -1043,7 +1060,7 @@
       padding: 2px 6px;
       border-radius: 100px;
       background: #EFE1C7;
-      color: #6B5D4E;
+      color: #6B655C;
       white-space: nowrap;
     }
     .k-table-wrap {
@@ -1056,7 +1073,7 @@
       width: 100%;
       font-family: 'Noto Sans Hebrew', sans-serif;
       font-size: 0.85rem;
-      color: #2C1810;
+      color: #3B2A24;
       background: #FDFAF4;
       border: 1.5px solid #D5C9B5;
       border-radius: 9px;
@@ -1088,7 +1105,7 @@
     .recipe-card-k .r-name {
       font-family: 'Noto Serif Hebrew', serif;
       font-weight: 700;
-      color: #2C1810;
+      color: #3B2A24;
       font-size: 0.88rem;
       margin-bottom: 3px;
       line-height: 1.3;
@@ -1103,7 +1120,7 @@
       font-family: 'Noto Sans Hebrew', sans-serif;
       font-size: 0.78rem;
       font-weight: 600;
-      color: #2C1810;
+      color: #3B2A24;
     }
     .fc-badge {
       display: inline-block;
@@ -1137,7 +1154,7 @@
       text-align: center;
     }
     .r-action-btn:hover { background: #EFE1C7; }
-    .r-action-btn.primary { background: #6B2E1E; color: #F7EEE0; border-color: #6B2E1E; }
+    .r-action-btn.primary { background: #6B2E1E; color: #EFE6D6; border-color: #6B2E1E; }
     .r-action-btn.primary:hover { background: #5A3022; }
 
     /* Category label colors */
@@ -1162,7 +1179,7 @@
     .plan-row .plan-name {
       flex: 1;
       font-weight: 600;
-      color: #2C1810;
+      color: #3B2A24;
       font-size: 0.82rem;
       line-height: 1.2;
     }
@@ -1217,7 +1234,7 @@
     }
     .shop-item:last-child { border-bottom: none; }
     .shop-item input[type=checkbox] { accent-color: #6B2E1E; width: 16px; height: 16px; flex-shrink: 0; }
-    .shop-item .si-name { flex: 1; color: #2C1810; font-weight: 600; }
+    .shop-item .si-name { flex: 1; color: #3B2A24; font-weight: 600; }
     .shop-item .si-amount { color: #6B2E1E; font-weight: 700; font-size: 0.88rem; }
     .shop-item .si-cost { color: #9B8B75; font-size: 0.72rem; }
     .shop-cat-header {
@@ -1245,7 +1262,7 @@
     #recipe-editor-modal .re-backdrop {
       position: absolute;
       inset: 0;
-      background: rgba(44,24,16,0.45);
+      background: rgba(59,42,36,0.45);
     }
     #recipe-editor-modal .re-panel {
       position: relative;
@@ -1292,7 +1309,7 @@
     .re-field-label {
       font-family: 'Noto Sans Hebrew', sans-serif;
       font-weight: 600;
-      color: #2C1810;
+      color: #3B2A24;
       font-size: 0.82rem;
       display: block;
       margin-bottom: 5px;
@@ -1316,7 +1333,7 @@
     .ing-table input[type=text], .ing-table input[type=number] {
       font-family: 'Noto Sans Hebrew', sans-serif;
       font-size: 0.82rem;
-      color: #2C1810;
+      color: #3B2A24;
       background: #F5EFE3;
       border: 1.5px solid #E5D9C5;
       border-radius: 6px;
@@ -1383,7 +1400,7 @@
     .scale-calc label {
       font-family: 'Noto Sans Hebrew', sans-serif;
       font-size: 0.82rem;
-      color: #2C1810;
+      color: #3B2A24;
       white-space: nowrap;
     }
     .scale-calc input {
@@ -1404,7 +1421,7 @@
       flex: 1;
       font-family: 'Noto Sans Hebrew', sans-serif;
       font-size: 0.78rem;
-      color: #6B5D4E;
+      color: #6B655C;
     }
 
     /* Empty state */
@@ -1446,7 +1463,7 @@
     #pantry-edit-modal .pe-backdrop {
       position: absolute;
       inset: 0;
-      background: rgba(44,24,16,0.45);
+      background: rgba(59,42,36,0.45);
     }
     #pantry-edit-modal .pe-box {
       position: relative;
@@ -1509,7 +1526,7 @@
       align-items: center;
       justify-content: center;
       padding: 20px;
-      background: rgba(44,24,16,0.45);
+      background: rgba(59,42,36,0.45);
       overflow-y: auto;
     }
     #expense-modal.open { display: flex; }
@@ -1526,7 +1543,7 @@
       display: block;
       font-family: 'Noto Sans Hebrew', sans-serif;
       font-weight: 600;
-      color: #2C1810;
+      color: #3B2A24;
       font-size: 0.82rem;
       margin-bottom: 5px;
     }
@@ -1540,7 +1557,7 @@
       align-items: center;
       justify-content: center;
       padding: 20px;
-      background: rgba(44,24,16,0.45);
+      background: rgba(59,42,36,0.45);
       overflow-y: auto;
     }
     #import-undo-modal.open { display: flex; }
@@ -1565,7 +1582,7 @@
       align-items: center;
       justify-content: center;
       padding: 20px;
-      background: rgba(44,24,16,0.45);
+      background: rgba(59,42,36,0.45);
       overflow-y: auto;
     }
     #recipe-import-modal.open { display: flex; }
@@ -1583,7 +1600,7 @@
       display: block;
       font-family: 'Noto Sans Hebrew', sans-serif;
       font-weight: 600;
-      color: #2C1810;
+      color: #3B2A24;
       font-size: 0.82rem;
       margin-bottom: 5px;
     }
@@ -1623,6 +1640,310 @@
       border-color: #C4B89A;
     }
 
+    /* ── SHARED CHROME ──────────────────────────────────────────────────
+       The header and footer of story / gallery / events / contact, rebuilt
+       here under the same class names and the same measurements.
+
+       Why a copy and not site.css: that file also sets `body` and `h1,h2,h3`
+       globally, and this page is nine thousand lines of markup — including
+       Noy's whole panel — written against Tailwind's defaults. Importing it
+       to gain a header would restyle her kitchen, her finance screens and
+       every dialog in the file. So the chrome is duplicated on purpose, and
+       `node scripts/validate.mjs` compares the menu here against the one
+       site.js builds, so the two cannot quietly drift apart. */
+
+    .nu-header {
+      position: relative;
+      display: flex;
+      align-items: center;
+      padding: 14px 20px;
+      border-block-end: 1px solid rgba(59, 42, 36, .13);
+    }
+    .nu-mark { flex: 0 0 auto; display: block; line-height: 0; }
+    /* A mask rather than an <img>, exactly as site.css does it, so the one
+       logo file can be tinted per context. 160 ÷ 2.72 ≈ 59. */
+    .nu-mark__art {
+      display: block;
+      width: 160px;
+      height: 59px;
+      background: #B84830;
+      -webkit-mask: url(./images/logo.png) center / contain no-repeat;
+              mask: url(./images/logo.png) center / contain no-repeat;
+    }
+    .nu-nav {
+      position: absolute;
+      inset-inline: 0;
+      display: flex;
+      justify-content: center;
+      gap: 26px;
+      pointer-events: none;
+    }
+    .nu-nav__item {
+      pointer-events: auto;
+      font-family: var(--font-text);
+      font-size: 13px;
+      font-weight: 400;
+      color: #3B2A24;
+      text-decoration: none;
+      padding-block-end: 2px;
+      border-block-end: 1px solid transparent;
+      transition: border-color .2s ease;
+      white-space: nowrap;
+    }
+    .nu-nav__item:hover { border-block-end-color: #B84830; }
+
+    /* The shop's own header tools — language, install, admin — sit where
+       site.css puts the lone language button, pushed to the far end. */
+    .nu-tools {
+      margin-inline-start: auto;
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nu-lang {
+      font-family: var(--font-text);
+      font-size: 11px;
+      letter-spacing: .04em;
+      background: transparent;
+      color: #3B2A24;
+      border: 1px solid currentColor;
+      border-radius: 999px;
+      padding: 4px 13px;
+      cursor: pointer;
+      opacity: .75;
+    }
+    .nu-lang:hover { opacity: 1; }
+
+    /* Under 720px the menu drops to its own row beneath the mark, the same
+       breakpoint and the same behaviour as every other page. */
+    @media (max-width: 720px) {
+      .nu-header { flex-wrap: wrap; gap: 10px; padding: 12px 16px; }
+      .nu-mark__art { width: 130px; height: 48px; }   /* the floor, never below it */
+      .nu-nav {
+        position: static;
+        order: 3;
+        width: 100%;
+        gap: 14px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .nu-nav__item { font-size: 12.5px; }
+    }
+
+    .nu-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 22px;
+      padding: 40px 28px 9rem;
+      background: #3B2A24;
+      color: #F6F0E4;
+    }
+    .nu-mark--foot {
+      display: block;
+      width: 150px;
+      height: 55px;
+      flex: 0 0 auto;
+      background: #F6F0E4;
+      -webkit-mask: url(./images/logo.png) center / contain no-repeat;
+              mask: url(./images/logo.png) center / contain no-repeat;
+    }
+    .nu-foot-mid { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+    .nu-soc-row { display: flex; gap: 18px; }
+    .nu-soc {
+      color: inherit;
+      font-family: var(--font-text);
+      font-size: 13px;
+      text-decoration: none;
+      opacity: .85;
+    }
+    .nu-soc:hover { opacity: 1; }
+    .nu-fine {
+      margin: 0;
+      font-family: var(--font-text);
+      font-size: 11px;
+      letter-spacing: .04em;
+      opacity: .6;
+      text-align: center;
+    }
+    .nu-back-home {
+      color: inherit;
+      font-family: var(--font-text);
+      font-size: 13px;
+      text-decoration: none;
+      border-block-end: 1px solid currentColor;
+      flex: 0 0 auto;
+    }
+    @media (max-width: 720px) {
+      .nu-footer { justify-content: center; text-align: center; padding: 32px 18px 9rem; }
+    }
+
+    /* ── HERO LINE ──────────────────────────────────────────────────────
+       What used to be the name typed in a display face, now that the real
+       wordmark sits in the header directly above it. */
+    .hero-line {
+      margin: 0;
+      font-family: var(--font-display);
+      font-weight: 400;
+      color: #6B2E1E;
+      font-size: clamp(1.6rem, 4.4vw, 2.6rem);
+      line-height: 1.35;
+      letter-spacing: 0.01em;
+    }
+
+    /* ── SHOP STATUS ────────────────────────────────────────────────────
+       Open or closed, said before the menu instead of inside an alert box
+       after a tap. */
+    .shop-status {
+      max-width: 34rem;
+      margin: 0 auto 1.75rem;
+      text-align: center;
+    }
+    .shop-status__line {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: clamp(1.25rem, 3.2vw, 1.6rem);
+      line-height: 1.3;
+      color: #B84830;
+    }
+    .shop-status__note {
+      margin: 0.35rem 0 0;
+      font-family: var(--font-text);
+      font-size: 0.85rem;
+      line-height: 1.7;
+      color: #6B655C;
+    }
+    .shop-status__note a {
+      color: #AE472C;
+      text-decoration: none;
+      border-block-end: 1px solid currentColor;
+    }
+    /* Closed reads as a held breath, not an error: same warmth, one shade
+       quieter, with a rule above and below so it is clearly a notice. */
+    .shop-status.is-closed {
+      background: #EFE1C7;
+      border: 1px solid #D5C9B5;
+      border-radius: 14px;
+      padding: 1.1rem 1.25rem 1.2rem;
+    }
+    .shop-status.is-closed .shop-status__line { color: #6B2E1E; }
+
+    /* Closed means closed everywhere, from one class on the body. The cards
+       stay legible — the menu is still worth reading — but nothing in the
+       grid answers a tap, and the cart bar goes with them. */
+    body.orders-closed .product-card:not(.sold-out) {
+      pointer-events: none;
+      opacity: 0.72;
+    }
+    body.orders-closed .product-card .add-icon,
+    body.orders-closed #cart-bar,
+    body.orders-closed #repeat-order-banner {
+      display: none;
+    }
+    /* #menu's pb-44 and the footer's bottom padding are both there to clear
+       the fixed cart bar. With the bar hidden they are just under 300px of
+       empty ground between the last loaf and the footer. */
+    body.orders-closed #menu { padding-bottom: 2.5rem; }
+    /* 100px is the height of the cart bar it sits above. With no cart bar it
+       was hovering over the footer's "לעמוד הבית". */
+    body.orders-closed #scroll-top-btn { bottom: 20px; }
+    body.orders-closed .nu-footer { padding-bottom: 40px; }
+    @media (max-width: 720px) {
+      body.orders-closed .nu-footer { padding-bottom: 32px; }
+    }
+
+    /* ── PRODUCT GRID ───────────────────────────────────────────────────
+       Equal heights within a row, and no hole at the end.
+
+       Cards stretch to their row (grid's default align-items) and the body
+       inside is a flex column, so the price sits on the floor of the card
+       whatever the description does and prices line up across a row.
+
+       A lone card on the last row used to leave a card-shaped gap beside it.
+       It now centres under the two columns at its normal width. The first
+       version of this let it span the full width and lay itself out sideways,
+       which looked deliberate in a sketch and wrong on a phone: with
+       `grid-auto-rows: 1fr` every row inherited the tallest, the sideways
+       card grew to about 490px, and most of it was empty card. Centring is
+       the smaller idea and the one that actually reads. */
+    #products-grid > .product-card { height: 100%; display: flex; flex-direction: column; }
+    #products-grid > .product-card > .illus-wrap { flex: 0 0 auto; }
+    .product-body { display: flex; flex-direction: column; flex: 1 1 auto; padding: 12px 14px 14px; }
+    .product-desc { flex: 1 1 auto; }
+    .product-foot { margin-top: 10px; }
+
+    @media (max-width: 767px) {
+      #products-grid > .product-card:last-child:nth-child(odd) {
+        grid-column: 1 / -1;
+        max-width: calc(50% - 6px);   /* one column, minus half the gap-3 */
+        margin-inline: auto;
+      }
+    }
+
+    /* ── CARD CONTENTS ──────────────────────────────────────────────────
+       The engravings are the best thing on this page and they were being
+       shown at about 160×120. A square gives them room without making the
+       card taller than a thumb's reach. */
+    .product-name {
+      font-family: var(--font-display);
+      font-weight: 400;
+      /* Bellefair is wider than the Amatic it replaced, and Noy's names run
+         long — "לחם כוסמין מלא, שיבולת שועל ושקדים קלויים" took four lines
+         at 1.5rem in a half-width card. Never clamped, though: a customer
+         has to be able to read what they are buying. */
+      font-size: clamp(1.15rem, 3.6vw, 1.38rem);
+      line-height: 1.2;
+      letter-spacing: 0.005em;
+      color: #3B2A24;
+      margin-bottom: 5px;
+    }
+    .product-desc__text {
+      font-family: var(--font-text);
+      font-size: 0.78rem;
+      line-height: 1.6;
+      color: #6B655C;
+      margin: 0;
+      /* Three lines rather than two. Two was cutting almost every
+         description mid-word — "מצופה שומשום מ…" — which reads as a fault
+         rather than a trim. */
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .product-price {
+      font-family: var(--font-display);
+      font-size: 1.3rem;
+      line-height: 1;
+      color: #6B2E1E;
+      /* No direction override here. The source says `₪30` and Hebrew bidi
+         renders that as "30₪", which is how a price is written in Israel and
+         how every price on this site has always read. An earlier draft added
+         `direction: ltr; unicode-bidi: isolate` for tidiness and silently
+         flipped all of them to "₪30". */
+    }
+    /* A filled target instead of a hairline circle: 34px is a finger, 22px
+       of outlined SVG was not. */
+    .add-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: #B84830;
+      color: #F6F0E4;
+      transition: background .2s ease, transform .2s cubic-bezier(.34,1.3,.64,1);
+    }
+    .product-card:hover .add-icon { background: #AE472C; transform: scale(1.06); }
+    /* Once the card is in the cart it grows its own − 1 + row along the
+       bottom, so the round button becomes a second, contradictory way to
+       remove the same item. It steps aside. */
+    .product-card.in-cart .add-icon { display: none; }
+
   </style>
   <!-- Firebase Realtime Database (compat SDK) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -1632,64 +1953,56 @@
 <body class="font-sans text-ink">
 
 <!-- ============ HEADER ============ -->
-<header class="sticky top-0 z-40 border-b" style="background:rgba(247,242,232,0.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-color:#E5D9C5;">
-  <div class="max-w-5xl mx-auto px-4 py-2.5 flex items-center justify-between">
-    <!-- Logo. Five taps opens the admin sign-in: iOS has no manifest
-         shortcuts, so there is no other way into the panel from an installed
-         app on an iPhone. -->
-    <div class="flex items-center">
-      <img
-        src="logo.png.png"
-        alt="לוגו נואיקה"
-        class="h-14 w-auto object-contain"
-        style="mix-blend-mode: multiply;"
-      />
-    </div>
-    <!-- Nav -->
-    <div class="flex items-center gap-3">
-      <button id="admin-entry-btn" onclick="openAdminLogin()" style="display:none;align-items:center;gap:5px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.78rem;font-weight:600;color:#6B3A2A;background:#F5EFE3;border:1.5px solid #D5C9B5;border-radius:100px;padding:5px 12px;cursor:pointer;" aria-label="לוח ניהול">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        ניהול
-      </button>
-      <button id="install-pwa-btn" onclick="installPWA()" aria-label="התקן כאפליקציה">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v13M8 11l4 4 4-4M20 17v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2"/></svg>
-        <span lang-content="he">התקן</span>
-        <span lang-content="en">Install</span>
-      </button>
-<button onclick="toggleLang()" class="text-xs text-muted hover:text-earth transition-colors font-sans tracking-wide px-2 py-1 rounded border border-muted/30 hover:border-earth cursor-pointer" id="lang-btn">EN</button>
-      <a href="https://www.instagram.com/nuika_bread" target="_blank" rel="noopener" aria-label="Instagram" class="text-muted hover:text-terracotta transition-colors cursor-pointer">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
-          <circle cx="12" cy="12" r="4"/>
-          <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor"/>
-        </svg>
-      </a>
-      <a href="https://wa.me/972547382282" target="_blank" rel="noopener" aria-label="WhatsApp" class="text-muted hover:text-earth transition-colors cursor-pointer">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-        </svg>
-      </a>
-    </div>
+<header class="nu-header sticky top-0 z-40" style="background:rgba(239,230,214,0.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
+  <!-- The wordmark is the way home, and home is the film page — the same
+       contract site.js states for every other page. Inside the installed app
+       index.html forwards straight back here, so in the app the mark leads to
+       the shop; that is deliberate and documented there.
+
+       The comment that used to sit here claimed five taps on the logo opened
+       the admin sign-in. No such handler has ever existed in this file. Noy
+       reaches the panel from her "ניהול" home-screen icon, which lands on
+       shop.html?admin, and once she is signed in from the button below. -->
+  <a class="nu-mark" href="./index.html" aria-label="נואיקה — לעמוד הבית">
+    <span class="nu-mark__art"></span>
+  </a>
+
+  <!-- The same four destinations site.js builds, in the same order. A fifth
+       entry here without one there is what validate.mjs is watching for. -->
+  <nav class="nu-nav" aria-label="תפריט האתר">
+    <a class="nu-nav__item" href="./story.html"><span lang-content="he">הסיפור</span><span lang-content="en">Story</span></a>
+    <a class="nu-nav__item" href="./gallery.html"><span lang-content="he">גלריה</span><span lang-content="en">Gallery</span></a>
+    <a class="nu-nav__item" href="./events.html"><span lang-content="he">אירועים</span><span lang-content="en">Events</span></a>
+    <a class="nu-nav__item" href="./contact.html"><span lang-content="he">דברו איתי</span><span lang-content="en">Talk to me</span></a>
+  </nav>
+
+  <div class="nu-tools">
+    <button id="admin-entry-btn" onclick="openAdminLogin()" style="display:none;align-items:center;gap:5px;font-family:var(--font-text);font-size:0.78rem;font-weight:600;color:#6B3A2A;background:#F5EFE3;border:1.5px solid #D5C9B5;border-radius:100px;padding:5px 12px;cursor:pointer;" aria-label="לוח ניהול">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      ניהול
+    </button>
+    <button id="install-pwa-btn" onclick="installPWA()" aria-label="התקן כאפליקציה">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v13M8 11l4 4 4-4M20 17v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2"/></svg>
+      <span lang-content="he">התקן</span>
+      <span lang-content="en">Install</span>
+    </button>
+    <button onclick="toggleLang()" class="nu-lang" id="lang-btn">EN</button>
   </div>
 </header>
 
 <!-- ============ HERO ============ -->
-<section class="max-w-5xl mx-auto px-4 text-center" style="padding-top:clamp(2.5rem,6vw,4.5rem);padding-bottom:clamp(1.5rem,3vw,2.5rem);">
+<!-- The wordmark now sits in the header, so the name is not typed out a
+     second time here. What replaces it is the thing a visitor actually needs
+     in the first screen of a shop: what this is, and whether it is open. -->
+<section class="max-w-5xl mx-auto px-4 text-center" style="padding-top:clamp(2rem,5vw,3.5rem);padding-bottom:clamp(1.25rem,3vw,2rem);">
   <div class="hero-row">
     <figure class="hero-arch">
       <img src="images/hero-sandwich.jpg" width="620" height="900" alt="כריך פוקצ'ה עם עלים ירוקים" />
     </figure>
 
     <div class="hero-name">
-      <h1 class="text-earth" style="font-family:'Amatic SC',cursive;font-weight:700;font-size:clamp(3.1rem,8.4vw,5.5rem);line-height:1.05;letter-spacing:0.02em;margin:0;" lang-content="he">נואיקה</h1>
-      <h1 class="text-earth" style="font-family:'Amatic SC',cursive;font-weight:700;font-size:clamp(3.1rem,8.4vw,5.5rem);line-height:1.05;letter-spacing:0.02em;margin:0;" lang-content="en">Nuika</h1>
-
-      <p style="font-family:'Amatic SC',cursive;font-weight:700;color:#7A6650;font-size:clamp(1.45rem,3.9vw,2.35rem);line-height:1.3;letter-spacing:0.015em;margin-top:0.35rem;" lang-content="he">
-        מאפייה ארטיזנלית עונתית<br />באיסוף עצמי מרחובות
-      </p>
-      <p style="font-family:'Amatic SC',cursive;font-weight:700;color:#7A6650;font-size:clamp(1.45rem,3.9vw,2.35rem);line-height:1.3;letter-spacing:0.015em;margin-top:0.35rem;" lang-content="en">
-        Seasonal artisan bakery<br />Self pickup from Rehovot
-      </p>
+      <p class="hero-line" lang-content="he">מאפייה ארטיזנלית עונתית<br />באיסוף עצמי מרחובות</p>
+      <p class="hero-line" lang-content="en">Seasonal artisan bakery<br />Self pickup from Rehovot</p>
     </div>
 
     <figure class="hero-arch">
@@ -1702,11 +2015,11 @@
 <div class="max-w-5xl mx-auto px-4 py-4">
   <div class="divider-flower">
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <g stroke="#BD4D30" stroke-width="1.2" fill="none">
+      <g stroke="#B84830" stroke-width="1.2" fill="none">
         <ellipse cx="10" cy="10" rx="2" ry="5" transform="rotate(0 10 10)"/>
         <ellipse cx="10" cy="10" rx="2" ry="5" transform="rotate(60 10 10)"/>
         <ellipse cx="10" cy="10" rx="2" ry="5" transform="rotate(120 10 10)"/>
-        <circle cx="10" cy="10" r="2.2" fill="#BD4D30"/>
+        <circle cx="10" cy="10" r="2.2" fill="#B84830"/>
       </g>
     </svg>
   </div>
@@ -1714,20 +2027,19 @@
 
 <!-- ============ PRODUCTS ============ -->
 <section id="menu" class="max-w-5xl mx-auto px-4 pb-44">
-  <div class="text-center mb-8">
-    <p class="font-serif font-bold" style="color:#BD4D30;font-size:clamp(1.1rem,3vw,1.4rem);" lang-content="he">ניתן להזמין 3 מוצרים ומעלה</p>
-    <p class="font-serif font-bold" style="color:#BD4D30;font-size:clamp(1.1rem,3vw,1.4rem);" lang-content="en">Minimum order: 3 items</p>
-  </div>
+  <!-- Whether the shop is taking orders, said once and said here, before the
+       menu rather than after a tap. Written by renderShopStatus(). -->
+  <div id="shop-status" class="shop-status"></div>
 
   <!-- Repeat last order banner (shown if previous order exists) -->
   <div id="repeat-order-banner" onclick="repeatLastOrder()" role="button" aria-label="הזמן שוב כמו שבוע שעבר">
     <div style="display:flex;align-items:center;gap:10px;">
       <span style="font-size:1.3rem;">🔁</span>
       <div>
-        <div style="font-family:'Noto Serif Hebrew',serif;font-size:0.9rem;font-weight:700;color:#2C1810;" lang-content="he">הזמני שוב כמו שבוע שעבר</div>
-        <div style="font-family:'Noto Serif Hebrew',serif;font-size:0.9rem;font-weight:700;color:#2C1810;" lang-content="en">Repeat your last order</div>
-        <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.75rem;color:#6B5D4E;margin-top:1px;" lang-content="he">לחצי להוספת ההזמנה הקודמת לסל</div>
-        <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.75rem;color:#6B5D4E;margin-top:1px;" lang-content="en">Tap to add your previous order to cart</div>
+        <div style="font-family:'Noto Serif Hebrew',serif;font-size:0.9rem;font-weight:700;color:#3B2A24;" lang-content="he">הזמני שוב כמו שבוע שעבר</div>
+        <div style="font-family:'Noto Serif Hebrew',serif;font-size:0.9rem;font-weight:700;color:#3B2A24;" lang-content="en">Repeat your last order</div>
+        <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.75rem;color:#6B655C;margin-top:1px;" lang-content="he">לחצי להוספת ההזמנה הקודמת לסל</div>
+        <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.75rem;color:#6B655C;margin-top:1px;" lang-content="en">Tap to add your previous order to cart</div>
       </div>
     </div>
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B7260" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="9 18 15 12 9 6"/></svg>
@@ -1740,7 +2052,7 @@
 
 <!-- ============ CART BAR ============ -->
 <div id="cart-bar">
-  <div style="background:#2C1810;padding:10px 16px 14px;box-shadow:0 -4px 24px rgba(44,24,16,0.18);">
+  <div style="background:#3B2A24;padding:10px 16px 14px;box-shadow:0 -4px 24px rgba(59,42,36,0.18);">
     <div class="max-w-5xl mx-auto">
       <!-- Progress bar row -->
       <div id="cart-progress-wrap" style="display:none;">
@@ -1755,16 +2067,16 @@
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D6A54A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
             </svg>
-            <span id="cart-count" class="absolute -top-1.5 -right-1.5 text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center" style="background:#D6A54A;color:#2C1810;font-family:'Noto Sans Hebrew',sans-serif;font-size:11px;">0</span>
+            <span id="cart-count" class="absolute -top-1.5 -right-1.5 text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center" style="background:#D6A54A;color:#3B2A24;font-family:'Noto Sans Hebrew',sans-serif;font-size:11px;">0</span>
           </div>
           <div>
-            <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.75rem;color:rgba(247,242,232,0.6);line-height:1;" lang-content="he">סל הקניות</div>
-            <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.75rem;color:rgba(247,242,232,0.6);line-height:1;" lang-content="en">Cart</div>
-            <div class="font-serif font-bold" style="font-size:1.15rem;color:#F7EEE0;line-height:1.3;" id="cart-total">₪0</div>
+            <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.75rem;color:rgba(239,230,214,0.6);line-height:1;" lang-content="he">סל הקניות</div>
+            <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.75rem;color:rgba(239,230,214,0.6);line-height:1;" lang-content="en">Cart</div>
+            <div class="font-serif font-bold" style="font-size:1.15rem;color:#EFE6D6;line-height:1.3;" id="cart-total">₪0</div>
           </div>
         </div>
-        <button id="cart-order-btn-he" onclick="openOrderModal()" class="font-serif font-bold transition-all" style="background:#D6A54A;color:#2C1810;font-size:0.92rem;padding:11px 22px;border-radius:100px;border:none;letter-spacing:0.01em;" lang-content="he">לביצוע הזמנה ←</button>
-        <button id="cart-order-btn-en" onclick="openOrderModal()" class="font-serif font-bold transition-all" style="background:#D6A54A;color:#2C1810;font-size:0.92rem;padding:11px 22px;border-radius:100px;border:none;letter-spacing:0.01em;" lang-content="en">Place Order →</button>
+        <button id="cart-order-btn-he" onclick="openOrderModal()" class="font-serif font-bold transition-all" style="background:#D6A54A;color:#3B2A24;font-size:0.92rem;padding:11px 22px;border-radius:100px;border:none;letter-spacing:0.01em;" lang-content="he">לביצוע הזמנה ←</button>
+        <button id="cart-order-btn-en" onclick="openOrderModal()" class="font-serif font-bold transition-all" style="background:#D6A54A;color:#3B2A24;font-size:0.92rem;padding:11px 22px;border-radius:100px;border:none;letter-spacing:0.01em;" lang-content="en">Place Order →</button>
       </div>
     </div>
   </div>
@@ -1880,7 +2192,7 @@
 <!-- ============ THANK YOU PAGE ============ -->
 <div id="thankyou-overlay" role="status" aria-live="polite">
   <!-- Decorative floaters (reused style) -->
-  <svg class="floater" style="width:30px;top:10%;right:10%;animation-delay:0s;" viewBox="0 0 36 30" fill="none"><g stroke="#9C5A32" stroke-width="0.9" opacity="0.6" fill="none" stroke-linecap="round"><path d="M18 28 Q18 20 18 14"/><path d="M18 14 Q12 8 8 3"/><path d="M18 14 Q15 6 15 1"/><path d="M18 14 Q19 5 22 2"/><path d="M18 14 Q23 8 27 4"/></g><g stroke="#BD4D30" stroke-width="0.75" opacity="0.55" fill="none" stroke-linecap="round"><path d="M8 3 l-1.5 -1.5 M8 3 l0.5 -2 M8 3 l2 0.5"/><path d="M15 1 l-1 -1.5 M15 1 l1.5 -1"/><path d="M22 2 l-0.5 -1.5 M22 2 l1.5 -0.5"/><path d="M27 4 l0.5 -1.5 M27 4 l2 0"/></g></svg>
+  <svg class="floater" style="width:30px;top:10%;right:10%;animation-delay:0s;" viewBox="0 0 36 30" fill="none"><g stroke="#9C5A32" stroke-width="0.9" opacity="0.6" fill="none" stroke-linecap="round"><path d="M18 28 Q18 20 18 14"/><path d="M18 14 Q12 8 8 3"/><path d="M18 14 Q15 6 15 1"/><path d="M18 14 Q19 5 22 2"/><path d="M18 14 Q23 8 27 4"/></g><g stroke="#B84830" stroke-width="0.75" opacity="0.55" fill="none" stroke-linecap="round"><path d="M8 3 l-1.5 -1.5 M8 3 l0.5 -2 M8 3 l2 0.5"/><path d="M15 1 l-1 -1.5 M15 1 l1.5 -1"/><path d="M22 2 l-0.5 -1.5 M22 2 l1.5 -0.5"/><path d="M27 4 l0.5 -1.5 M27 4 l2 0"/></g></svg>
   <svg class="floater" style="width:24px;bottom:20%;left:8%;animation-delay:2s;" viewBox="0 0 22 32" fill="none"><g stroke="#6B2E1E" stroke-width="0.9" opacity="0.55" fill="none" stroke-linecap="round"><path d="M11 30 Q10 20 12 12"/></g><path d="M12 12 Q5 10 4 5 Q4 1 10 3 Q13 1 16 5 Q17 10 12 12Z" fill="none" stroke="#9C5A32" stroke-width="0.85" opacity="0.55"/><g stroke="#9C5A32" stroke-width="0.5" opacity="0.4" fill="none"><path d="M11 4 Q11 8 12 11"/><path d="M11 6 Q8 7 6 6"/><path d="M12 9 Q15 10 16 8"/></g></svg>
 
   <div style="max-width:460px;width:100%;">
@@ -1888,7 +2200,7 @@
     <!-- Animated check / bread icon -->
     <div class="ty-icon mb-5">
       <div style="width:88px;height:88px;background:#6B2E1E;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto;box-shadow:0 8px 28px rgba(107,58,42,0.25);">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#F7EEE0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#EFE6D6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
       </div>
     </div>
 
@@ -1910,7 +2222,7 @@
       </div>
       <a id="paybox-link" href="#" target="_blank" rel="noopener"
          class="block w-full text-center font-serif font-bold text-base py-3.5 rounded-full transition-colors cursor-pointer"
-         style="background:#BD4D30;color:#F7EEE0;display:none;">
+         style="background:#B84830;color:#EFE6D6;display:none;">
         <span lang-content="he">תשלום ב-PayBox →</span>
         <span lang-content="en">Pay via PayBox →</span>
       </a>
@@ -2048,7 +2360,7 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A6DB5" stroke-width="1.8" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
         </div>
         <div style="flex:1;">
-          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#2C1810;font-size:0.95rem;">ניהול הזמנות</div>
+          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#3B2A24;font-size:0.95rem;">ניהול הזמנות</div>
           <div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;">רשימת אפייה, סטטוסים, ארכיון</div>
         </div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C4B89A" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -2059,7 +2371,7 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A06000" stroke-width="1.8" stroke-linecap="round"><path d="M3 2h18"/><path d="M3 7h18"/><rect x="3" y="11" width="18" height="10" rx="2"/></svg>
         </div>
         <div style="flex:1;">
-          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#2C1810;font-size:0.95rem;">תפריט שבועי</div>
+          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#3B2A24;font-size:0.95rem;">תפריט שבועי</div>
           <div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;">עריכת מנות, מחירים, זמינות</div>
         </div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C4B89A" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -2070,7 +2382,7 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2A7A2A" stroke-width="1.8" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
         </div>
         <div style="flex:1;">
-          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#2C1810;font-size:0.95rem;">לקוחות</div>
+          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#3B2A24;font-size:0.95rem;">לקוחות</div>
           <div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;">היסטוריה, WhatsApp, CRM קטן</div>
         </div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C4B89A" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -2081,7 +2393,7 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
         </div>
         <div style="flex:1;">
-          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#2C1810;font-size:0.95rem;">הגדרות</div>
+          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#3B2A24;font-size:0.95rem;">הגדרות</div>
           <div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;">Bit, מועד סגירה, סיסמה</div>
         </div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C4B89A" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -2101,7 +2413,7 @@
         <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.75rem;margin:0;">ארכיון אוטומטי לאחר 7 ימים</p>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button onclick="openManualOrderModal()" style="display:flex;align-items:center;gap:5px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.76rem;font-weight:600;background:#6B2E1E;border:1.5px solid #6B2E1E;color:#F7EEE0;padding:7px 12px;border-radius:100px;cursor:pointer;">
+        <button onclick="openManualOrderModal()" style="display:flex;align-items:center;gap:5px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.76rem;font-weight:600;background:#6B2E1E;border:1.5px solid #6B2E1E;color:#EFE6D6;padding:7px 12px;border-radius:100px;cursor:pointer;">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           הזמנה ידנית
         </button>
@@ -2161,7 +2473,7 @@
         <h2 style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.2rem;font-weight:700;margin:0 0 2px;">תפריט שבועי</h2>
         <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.75rem;margin:0;">עריכה, הוספה וזמינות מנות</p>
       </div>
-      <button onclick="openAddProduct()" style="display:flex;align-items:center;gap:6px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;font-weight:600;background:#6B2E1E;color:#F7EEE0;border:none;padding:9px 16px;border-radius:100px;cursor:pointer;">
+      <button onclick="openAddProduct()" style="display:flex;align-items:center;gap:6px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;font-weight:600;background:#6B2E1E;color:#EFE6D6;border:none;padding:9px 16px;border-radius:100px;cursor:pointer;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         הוסף מנה
       </button>
@@ -2391,7 +2703,7 @@
         <div class="plan-totals-row" id="plan-totals" style="display:none;">
           <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.78rem;">
             <div style="color:#9B8B75;">הכנסה צפויה</div>
-            <div id="plan-revenue" style="font-size:1.05rem;font-weight:700;color:#2C1810;">₪0</div>
+            <div id="plan-revenue" style="font-size:1.05rem;font-weight:700;color:#3B2A24;">₪0</div>
           </div>
           <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.78rem;text-align:center;">
             <div style="color:#9B8B75;">עלות ח"ג</div>
@@ -2423,7 +2735,7 @@
         <div class="k-table-wrap">
           <div id="shopping-list-body"></div>
         </div>
-        <div id="shopping-total" style="text-align:left;padding:10px 12px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.82rem;color:#6B5D4E;"></div>
+        <div id="shopping-total" style="text-align:left;padding:10px 12px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.82rem;color:#6B655C;"></div>
       </div>
     </div>
   </div>
@@ -2437,7 +2749,7 @@
   <div class="re-backdrop" onclick="closeRecipeEditor()"></div>
   <div class="re-panel">
     <div class="re-header">
-      <h3 id="re-title" style="font-family:'Noto Serif Hebrew',serif;font-size:1.1rem;font-weight:700;color:#2C1810;margin:0;">מתכון חדש</h3>
+      <h3 id="re-title" style="font-family:'Noto Serif Hebrew',serif;font-size:1.1rem;font-weight:700;color:#3B2A24;margin:0;">מתכון חדש</h3>
       <div style="display:flex;gap:6px;align-items:center;">
         <button onclick="printRecipe()" title="הדפסת המתכון" style="display:flex;align-items:center;gap:5px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.78rem;font-weight:600;color:#6B2E1E;background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:8px;padding:5px 10px;cursor:pointer;">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
@@ -2498,7 +2810,7 @@
           <input type="number" id="re-price" class="field" placeholder="35" min="0" dir="ltr" oninput="recalcEditorCosts()" />
         </div>
       </div>
-      <div id="re-yield-hint" style="margin:-8px 0 16px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.79rem;color:#6B5D4E;line-height:1.6;"></div>
+      <div id="re-yield-hint" style="margin:-8px 0 16px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.79rem;color:#6B655C;line-height:1.6;"></div>
 
       <!-- Section: ingredients -->
       <div class="re-section-label">מרכיבים</div>
@@ -2728,7 +3040,7 @@
   <div class="pe-backdrop" onclick="closePantryEditor()"></div>
   <div class="pe-box">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
-      <h3 id="pe-title" style="font-family:'Noto Serif Hebrew',serif;font-size:1.1rem;font-weight:700;color:#2C1810;margin:0;">הוספת מרכיב</h3>
+      <h3 id="pe-title" style="font-family:'Noto Serif Hebrew',serif;font-size:1.1rem;font-weight:700;color:#3B2A24;margin:0;">הוספת מרכיב</h3>
       <button onclick="closePantryEditor()" style="background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
@@ -2795,12 +3107,12 @@
 
     <!-- Image upload -->
     <div style="margin-bottom:14px;">
-      <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:6px;">תמונה</label>
+      <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#3B2A24;font-size:0.88rem;display:block;margin-bottom:6px;">תמונה</label>
       <div class="img-upload-area" onclick="document.getElementById('edit-img-input').click()">
         <input type="file" id="edit-img-input" accept="image/*" onchange="previewImage(this)" onclick="event.stopPropagation()" />
         <img id="edit-img-preview" class="img-preview" alt="תצוגה מקדימה" />
         <div id="edit-img-placeholder">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#BD4D30" stroke-width="1.5" stroke-linecap="round" style="margin:0 auto 6px;display:block;"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#B84830" stroke-width="1.5" stroke-linecap="round" style="margin:0 auto 6px;display:block;"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
           <div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.82rem;">לחצי להעלאת תמונה חדשה</div>
           <div style="font-family:'Noto Sans Hebrew',sans-serif;color:#C4B8A0;font-size:0.75rem;margin-top:2px;">JPG, PNG עד 5MB</div>
         </div>
@@ -2809,39 +3121,39 @@
 
     <!-- Name Hebrew -->
     <div style="margin-bottom:12px;">
-      <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:6px;">שם המנה (עברית)</label>
+      <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#3B2A24;font-size:0.88rem;display:block;margin-bottom:6px;">שם המנה (עברית)</label>
       <input id="edit-name-he" type="text" class="field" placeholder="לחם מושלם לסופ״ש" onblur="autoTranslateField('edit-name-he','edit-name-en','edit-name-en-note')" />
     </div>
 
     <!-- Name English -->
     <div style="margin-bottom:12px;">
-      <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:6px;">שם המנה (אנגלית)</label>
+      <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#3B2A24;font-size:0.88rem;display:block;margin-bottom:6px;">שם המנה (אנגלית)</label>
       <input id="edit-name-en" type="text" class="field" dir="ltr" placeholder="Perfect Weekend Loaf" />
       <div id="edit-name-en-note" style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.7rem;margin-top:3px;"></div>
     </div>
 
     <!-- Desc Hebrew -->
     <div style="margin-bottom:12px;">
-      <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:6px;">תיאור (עברית)</label>
+      <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#3B2A24;font-size:0.88rem;display:block;margin-bottom:6px;">תיאור (עברית)</label>
       <textarea id="edit-desc-he" class="field" rows="2" placeholder="קמח חיטה כפרי, מחמצת שיפון..." onblur="autoTranslateField('edit-desc-he','edit-desc-en','edit-desc-en-note')"></textarea>
     </div>
 
     <!-- Desc English -->
     <div style="margin-bottom:12px;">
-      <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:6px;">תיאור (אנגלית)</label>
+      <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#3B2A24;font-size:0.88rem;display:block;margin-bottom:6px;">תיאור (אנגלית)</label>
       <textarea id="edit-desc-en" class="field" rows="2" dir="ltr" placeholder="Country wheat flour, rye sourdough..."></textarea>
       <div id="edit-desc-en-note" style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.7rem;margin-top:3px;"></div>
     </div>
 
     <!-- Price -->
     <div style="margin-bottom:20px;">
-      <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:6px;">מחיר (₪)</label>
+      <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#3B2A24;font-size:0.88rem;display:block;margin-bottom:6px;">מחיר (₪)</label>
       <input id="edit-price" type="number" class="field" style="width:120px;" placeholder="30" min="1" dir="ltr" />
     </div>
 
     <!-- Max Stock -->
     <div style="margin-bottom:12px;">
-      <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:6px;">מלאי מקסימלי לשבוע</label>
+      <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#3B2A24;font-size:0.88rem;display:block;margin-bottom:6px;">מלאי מקסימלי לשבוע</label>
       <div style="display:flex;align-items:center;gap:10px;">
         <input id="edit-stock" type="number" class="field" style="width:110px;" placeholder="ללא הגבלה" min="0" dir="ltr" />
         <span style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#9B8B75;">יחידות (ריק = ללא הגבלה · 0 = לא זמין השבוע)</span>
@@ -2852,7 +3164,7 @@
          joined only by comparing Hebrew names, so renaming a dish silently
          broke its recipe, its weekly-plan import and its costing. -->
     <div style="margin-bottom:20px;">
-      <label for="edit-recipe-id" style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:8px;">מתכון מקושר</label>
+      <label for="edit-recipe-id" style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#3B2A24;font-size:0.88rem;display:block;margin-bottom:8px;">מתכון מקושר</label>
       <select id="edit-recipe-id" class="field" style="width:100%;">
         <option value="">— ללא מתכון —</option>
       </select>
@@ -2863,7 +3175,7 @@
 
     <!-- Tag -->
     <div style="margin-bottom:20px;">
-      <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.88rem;display:block;margin-bottom:8px;">תגית על הכרטיס</label>
+      <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#3B2A24;font-size:0.88rem;display:block;margin-bottom:8px;">תגית על הכרטיס</label>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.82rem;font-weight:600;padding:5px 11px;border-radius:100px;border:1.5px solid #D5C9B5;background:#F5EFE3;color:#5A4A3A;">
           <input type="radio" name="edit-tag" value="" style="accent-color:#6B2E1E;" /> ללא תגית
@@ -2900,26 +3212,26 @@
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
       <div>
-        <label for="mo-name" style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.85rem;display:block;margin-bottom:6px;">שם הלקוח</label>
+        <label for="mo-name" style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#3B2A24;font-size:0.85rem;display:block;margin-bottom:6px;">שם הלקוח</label>
         <input id="mo-name" type="text" class="field" placeholder="שם" maxlength="80" />
       </div>
       <div>
-        <label for="mo-phone" style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.85rem;display:block;margin-bottom:6px;">טלפון</label>
+        <label for="mo-phone" style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#3B2A24;font-size:0.85rem;display:block;margin-bottom:6px;">טלפון</label>
         <input id="mo-phone" type="tel" class="field" placeholder="05X-XXXXXXX" dir="ltr" maxlength="25" />
       </div>
     </div>
 
-    <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.85rem;display:block;margin-bottom:6px;">פריטים</label>
+    <label style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#3B2A24;font-size:0.85rem;display:block;margin-bottom:6px;">פריטים</label>
     <div id="mo-items-list" style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:12px;padding:6px 12px;margin-bottom:14px;"></div>
 
-    <label for="mo-payment" style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.85rem;display:block;margin-bottom:6px;">אופן תשלום</label>
+    <label for="mo-payment" style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#3B2A24;font-size:0.85rem;display:block;margin-bottom:6px;">אופן תשלום</label>
     <select id="mo-payment" class="field" style="margin-bottom:14px;">
       <option value="cash">מזומן</option>
       <option value="bit">Bit</option>
       <option value="paybox">PayBox</option>
     </select>
 
-    <label for="mo-notes" style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.85rem;display:block;margin-bottom:6px;">הערות (אופציונלי)</label>
+    <label for="mo-notes" style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#3B2A24;font-size:0.85rem;display:block;margin-bottom:6px;">הערות (אופציונלי)</label>
     <textarea id="mo-notes" class="field" rows="2" maxlength="500" style="margin-bottom:14px;"></textarea>
 
     <div style="display:flex;justify-content:space-between;align-items:center;background:#F0E9D8;border-radius:12px;padding:10px 14px;margin-bottom:16px;">
@@ -2933,20 +3245,30 @@
 </div>
 
 <!-- ============ FOOTER ============ -->
-<footer style="background:#EFE1C7;border-top:1px solid #D5C9B5;margin-top:0;padding-bottom:8rem;">
-  <div class="max-w-5xl mx-auto px-4 text-center" style="padding-top:2.5rem;padding-bottom:2rem;">
-    <div class="font-serif text-earth font-bold mb-2" style="font-size:1.35rem;">נואיקה • NUIKA</div>
-    <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#6B5D4E;font-size:0.85rem;margin-bottom:1.1rem;">לחם בוטיק ביתי • ש. בן ציון 13, רחובות</p>
-    <div class="flex justify-center items-center gap-3">
-      <a href="https://wa.me/972547382282" target="_blank" rel="noopener" style="font-family:'Noto Sans Hebrew',sans-serif;color:#8B7260;font-size:0.85rem;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#6B2E1E'" onmouseout="this.style.color='#8B7260'">054-7382282</a>
-      <span style="color:#C4B89A;font-size:0.6rem;">●</span>
+<!-- The same footer as story / gallery / events / contact: the wordmark on
+     ink, the two places to reach Noy, and the way back to the film. Its
+     bottom padding clears the fixed cart bar. -->
+<footer class="nu-footer">
+  <a class="nu-mark--foot" href="./index.html" aria-label="נואיקה — לעמוד הבית"></a>
+
+  <div class="nu-foot-mid">
+    <div class="nu-soc-row">
+      <a class="nu-soc" href="https://wa.me/972547382282" target="_blank" rel="noopener">054-7382282</a>
       <!-- Written forwards, and isolated so it renders forwards. It used to be
            typed backwards ("nuika_bread@") to make it look right on screen,
            which meant copying it, or reading it aloud, gave the wrong handle. -->
-      <a href="https://www.instagram.com/nuika_bread" target="_blank" rel="noopener" style="font-family:'Noto Sans Hebrew',sans-serif;color:#8B7260;font-size:0.85rem;text-decoration:none;transition:color 0.2s;direction:ltr;unicode-bidi:isolate;display:inline-block;" onmouseover="this.style.color='#BD4D30'" onmouseout="this.style.color='#8B7260'">@nuika_bread</a>
+      <a class="nu-soc" href="https://www.instagram.com/nuika_bread" target="_blank" rel="noopener" style="direction:ltr;unicode-bidi:isolate;">@nuika_bread</a>
     </div>
-
+    <p class="nu-fine">
+      <span lang-content="he">ש. בן ציון 13, רחובות · איסוף בימי שישי</span>
+      <span lang-content="en">S. Ben Zion 13, Rehovot · Friday pickup</span>
+    </p>
   </div>
+
+  <a class="nu-back-home" href="./index.html">
+    <span lang-content="he">לעמוד הבית</span>
+    <span lang-content="en">Home</span>
+  </a>
 </footer>
 
 <!-- ============ SCRIPT ============ -->
@@ -3698,17 +4020,21 @@ function renderProducts() {
           : (p.svg || '')}
       </div>
 
-      <!-- Info -->
-      <div style="padding:12px 14px 14px;">
-        <div class="text-ink mb-1" style="font-family:'Amatic SC',cursive;font-weight:700;font-size:1.42rem;line-height:1.1;letter-spacing:0.01em;" lang-content="he">${esc(p.nameHe)}</div>
-        <div class="text-ink mb-1" style="font-family:'Amatic SC',cursive;font-weight:700;font-size:1.42rem;line-height:1.1;letter-spacing:0.01em;" lang-content="en">${esc(p.nameEn)}</div>
-        <p style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.75rem;line-height:1.5;color:#6B5D4E;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" lang-content="he">${esc(p.descHe)}</p>
-        <p style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.75rem;line-height:1.5;color:#6B5D4E;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" lang-content="en">${esc(p.descEn)}</p>
+      <!-- Info. The column is a flex box so the price row sits on the floor
+           of the card however long the description runs, and prices line up
+           across a row. -->
+      <div class="product-body">
+        <div class="product-name" lang-content="he">${esc(p.nameHe)}</div>
+        <div class="product-name" lang-content="en">${esc(p.nameEn)}</div>
+        <div class="product-desc">
+          <p class="product-desc__text" lang-content="he">${esc(p.descHe)}</p>
+          <p class="product-desc__text" lang-content="en">${esc(p.descEn)}</p>
+        </div>
         ${stockHtml}
-        <div class="flex items-center justify-between" style="margin-top:8px;">
-          <span class="font-serif font-bold text-earth" style="font-size:1rem;">₪${p.price}</span>
-          <span class="add-icon transition-all duration-200" id="add-icon-${p.id}" style="color:#BD4D30;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        <div class="product-foot flex items-center justify-between">
+          <span class="product-price">₪${p.price}</span>
+          <span class="add-icon" id="add-icon-${p.id}" aria-hidden="true">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="6" x2="12" y2="18"/><line x1="6" y1="12" x2="18" y2="12"/></svg>
           </span>
         </div>
       </div>
@@ -3775,14 +4101,16 @@ function updateCard(id) {
     card.classList.add('in-cart');
     badge.textContent = qty;
     badge.classList.add('visible');
-    icon.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`;
+    // The circle is the button itself now (.add-icon), so the glyph inside
+    // is just the stroke. A second circle here would draw a ring in a ring.
+    icon.innerHTML = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="12" x2="18" y2="12"/></svg>`;
     controls.classList.remove('hidden');
     controls.classList.add('flex');
     if (display) display.textContent = qty;
   } else {
     card.classList.remove('in-cart');
     badge.classList.remove('visible');
-    icon.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`;
+    icon.innerHTML = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="6" x2="12" y2="18"/><line x1="6" y1="12" x2="18" y2="12"/></svg>`;
     controls.classList.add('hidden');
     controls.classList.remove('flex');
   }
@@ -4263,10 +4591,10 @@ function openAdminPanel() {
   const isOpen = _settingsCache.ordersOpen !== false;
   const tog = document.getElementById('orders-toggle');
   if (tog) {
+    // The toggle itself stays bound to the flag — the flag is what it sets.
+    // Only the line under it describes what a customer actually gets.
     tog.checked = isOpen;
-    const statusText = document.getElementById('orders-status-text');
-    statusText.textContent = isOpen ? 'פתוחה — לקוחות יכולים להזמין' : 'סגורה — לקוחות לא יוכלו להזמין';
-    statusText.style.color = isOpen ? '#7A9A50' : '#B45032';
+    paintOrdersState();
   }
 
   renderAdminProducts();
@@ -4317,7 +4645,7 @@ function productRow(p, i, arr) {
         onerror="this.style.display='none'"
         style="width:56px;height:56px;object-fit:cover;border-radius:8px;flex-shrink:0;" />
       <div style="flex:1;min-width:0;">
-        <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#2C1810;font-size:0.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.nameHe)}</div>
+        <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#3B2A24;font-size:0.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.nameHe)}</div>
         <div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;">₪${p.price}</div>
       </div>
       <!-- Edit button -->
@@ -4452,46 +4780,127 @@ updateOrdersOpenBanner();
 // Products and settings both arrive via the Firebase listeners above.
 
 // ─── ORDERS ON/OFF ─────────────────────────────────
+// The line under Noy's toggle, in one place because it used to be written in
+// two and both were wrong in the same way: they described the FLAG, and the
+// flag is only half of what decides whether a customer can order.
+//
+// The third state below is the one that had no words at all. On 22 Sep 2026
+// the live shop sat in it — flag on, deadline four weeks past — and her panel
+// told her "פתוחה, לקוחות יכולים להזמין" while every customer who tapped got
+// an alert saying the opposite. She had no way to see it from here.
+function describeOrdersState() {
+  if (_settingsCache.ordersOpen === false)
+    return { text: 'סגורה — לקוחות לא יוכלו להזמין', color: '#B45032' };
+
+  const dl = getNextTuesdayDeadline();
+  if (dl && dl.getTime() <= Date.now())
+    return {
+      text: 'מועד הסגירה כבר עבר — לקוחות לא יכולים להזמין. קבעי מועד חדש בשדה שלמטה.',
+      color: '#B45032'
+    };
+
+  return { text: 'פתוחה — לקוחות יכולים להזמין', color: '#7A9A50' };
+}
+
+function paintOrdersState() {
+  const statusText = document.getElementById('orders-status-text');
+  if (!statusText) return;
+  const state = describeOrdersState();
+  statusText.textContent  = state.text;
+  statusText.style.color  = state.color;
+}
+
 function toggleOrdersStatus(checkbox) {
   const isOpen = checkbox.checked;
   db.ref(`${ROOT}/settings/ordersOpen`).set(isOpen).catch(fbError);
   _settingsCache.ordersOpen = isOpen;   // banner reads the cache synchronously
-  const statusText = document.getElementById('orders-status-text');
-  statusText.textContent = isOpen
-    ? 'פתוחה — לקוחות יכולים להזמין'
-    : 'סגורה — לקוחות לא יוכלו להזמין';
-  statusText.style.color = isOpen ? '#7A9A50' : '#B45032';
+  paintOrdersState();
   updateOrdersOpenBanner();
 }
 
+// Two gates decided whether the shop was open, and they disagreed.
+//
+// The buttons ask ordersAreOpen(), which is the flag AND the deadline. This
+// function used to ask only `_settingsCache.ordersOpen !== false` — the flag
+// alone. So a shop whose flag said open but whose deadline had passed showed
+// no notice at all, let a visitor fill a cart, and answered the tap with
+// alert('ההזמנות סגורות כרגע.'). That was the live state of nuika.co.il on
+// 22 Sep 2026: ordersOpen true, deadline 2026-08-27, four weeks gone.
+//
+// There is now one gate. Whatever stops the order also says so, up front.
 function updateOrdersOpenBanner() {
-  const isOpen = _settingsCache.ordersOpen !== false;
-  let banner = document.getElementById('orders-closed-banner');
-  if (!isOpen) {
-    if (!banner) {
-      banner = document.createElement('div');
-      banner.id = 'orders-closed-banner';
-      banner.style.cssText = `
-        position:fixed;top:0;left:0;right:0;z-index:45;
-        background:#6B2E1E;color:#F7EEE0;
-        text-align:center;padding:10px 16px;
-        font-family:'Noto Sans Hebrew',sans-serif;font-size:0.9rem;
-        `;
-      banner.textContent = 'ההזמנות סגורות כרגע — נחזור בקרוב 🌾';
-      document.body.prepend(banner);
-    }
-    // Disable cart button
-    document.querySelectorAll('.product-card:not(.sold-out)').forEach(c => {
-      c.style.pointerEvents = 'none';
-      c.style.opacity = '0.6';
-    });
+  const isOpen = ordersAreOpen();
+
+  // The old notice was a fixed bar pinned over the top of the page, which sat
+  // on top of the sticky header. The state belongs in the page, above the
+  // menu it is talking about.
+  const stale = document.getElementById('orders-closed-banner');
+  if (stale) stale.remove();
+
+  renderShopStatus(isOpen);
+
+  // On the body, not on each card. renderProducts() rebuilds the whole grid
+  // from scratch on every products or orders event, so a class written onto
+  // the cards is erased by the next redraw — and the shop silently becomes
+  // tappable again while still closed. A body class survives all of them.
+  document.body.classList.toggle('orders-closed', !isOpen);
+}
+
+// The deadline in the visitor's own words: "יום שלישי, 20:00".
+function deadlineLabel(lang) {
+  const dl = getNextTuesdayDeadline();
+  if (!dl) return '';
+  const days = lang === 'en'
+    ? ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
+    : ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+  const hh = String(dl.getHours()).padStart(2, '0');
+  const mm = String(dl.getMinutes()).padStart(2, '0');
+  return lang === 'en'
+    ? days[dl.getDay()] + ', ' + hh + ':' + mm
+    : 'יום ' + days[dl.getDay()] + ', ' + hh + ':' + mm;
+}
+
+// Every value below is built here from code, never from customer input, so
+// there is nothing to escape. The one moving part is the deadline, and it is
+// assembled digit by digit from a Date.  /* esc-ok: no external input */
+function renderShopStatus(isOpen) {
+  const box = document.getElementById('shop-status');
+  if (!box) return;
+
+  if (isOpen) {
+    const he = deadlineLabel('he');
+    const en = deadlineLabel('en');
+    box.className = 'shop-status is-open';
+    box.innerHTML =
+      '<p class="shop-status__line">' +
+        '<span lang-content="he">ההזמנות פתוחות' + (he ? ' · נסגרות ב' + he : '') + '</span>' +
+        '<span lang-content="en">Orders are open' + (en ? ' · closing ' + en : '') + '</span>' +
+      '</p>' +
+      '<p class="shop-status__note">' +
+        '<span lang-content="he">מינימום 3 מוצרים להזמנה · איסוף עצמי מרחובות</span>' +
+        '<span lang-content="en">Minimum 3 items · self pickup from Rehovot</span>' +
+      '</p>';
   } else {
-    if (banner) banner.remove();
-    document.querySelectorAll('.product-card:not(.sold-out)').forEach(c => {
-      c.style.pointerEvents = '';
-      c.style.opacity = '';
-    });
+    box.className = 'shop-status is-closed';
+    box.innerHTML =
+      '<p class="shop-status__line">' +
+        '<span lang-content="he">ההזמנות סגורות כרגע</span>' +
+        '<span lang-content="en">Orders are closed right now</span>' +
+      '</p>' +
+      '<p class="shop-status__note">' +
+        '<span lang-content="he">התפריט כאן כדי להציץ. נוי פותחת סבב חדש כל שבוע — ' +
+          'אפשר לעקוב <a href="https://www.instagram.com/nuika_bread" target="_blank" rel="noopener">באינסטגרם</a> ' +
+          'או <a href="./contact.html">לכתוב לה</a>.</span>' +
+        '<span lang-content="en">The menu is here to browse. Noy opens a new round every week — ' +
+          'follow <a href="https://www.instagram.com/nuika_bread" target="_blank" rel="noopener">on Instagram</a> ' +
+          'or <a href="./contact.html">write to her</a>.</span>' +
+      '</p>';
   }
+
+  // No language pass is needed after this write. The shop hides the other
+  // language in CSS — `body:not(.lang-en) [lang-content="en"] { display:none
+  // !important }` — so injected markup is already correct the moment it
+  // lands. (The four site.js pages do need a call; this page does not.)
 }
 
 // ─── ORDER MANAGEMENT ──────────────────────────────
@@ -4619,7 +5028,7 @@ function moRenderRows(qtyById) {
     return `
     <div class="mo-item-row">
       <div>
-        <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.85rem;color:#2C1810;font-weight:600;">${esc(r.name)}${r.soldOut ? ' <span style="color:#B45032;font-weight:400;">(אזל)</span>' : ''}${r.offMenu ? ' <span style="color:#9B8B75;font-weight:400;">(לא בתפריט)</span>' : ''}</div>
+        <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.85rem;color:#3B2A24;font-weight:600;">${esc(r.name)}${r.soldOut ? ' <span style="color:#B45032;font-weight:400;">(אזל)</span>' : ''}${r.offMenu ? ' <span style="color:#9B8B75;font-weight:400;">(לא בתפריט)</span>' : ''}</div>
         <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#9B8B75;">₪${r.price}${note}</div>
       </div>
       <input type="number" min="0" step="1" value="${+qtyById[r.id] || 0}" class="field mo-qty-input" id="mo-qty-${r.id}" oninput="updateManualOrderTotal()" />
@@ -4952,7 +5361,7 @@ function renderBakingSummary() {
   }
   el.innerHTML = entries.sort((a,b) => b[1]-a[1]).map(([name, qty]) => `
     <div class="baking-row">
-      <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.88rem;color:#2C1810;font-weight:600;">${esc(name)}</div>
+      <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.88rem;color:#3B2A24;font-weight:600;">${esc(name)}</div>
       <div style="font-family:'Noto Serif Hebrew',serif;font-size:1.1rem;font-weight:700;color:#6B2E1E;">${+qty || 0} <span style="font-size:0.75rem;font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-weight:400;">יח'</span></div>
     </div>
   `).join('');
@@ -4982,7 +5391,7 @@ function renderOrderList() {
     <div class="order-card" id="ocard-${+o.id || 0}">
       <div class="order-card-header">
         <div>
-          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#2C1810;font-size:0.95rem;">${esc(o.name)}</div>
+          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#3B2A24;font-size:0.95rem;">${esc(o.name)}</div>
           <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#9B8B75;">${esc(o.date)}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
@@ -5836,7 +6245,7 @@ function renderCustomers() {
     <div class="order-card" style="margin-bottom:10px;">
       <div class="order-card-header">
         <div style="flex:1;min-width:0;">
-          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#2C1810;font-size:0.95rem;">${esc(c.name || 'לקוח')}</div>
+          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#3B2A24;font-size:0.95rem;">${esc(c.name || 'לקוח')}</div>
           <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.78rem;color:#9B8B75;" dir="ltr">${esc(c.phone)}</div>
         </div>
         <div style="text-align:center;padding:4px 10px;background:#EDF6FF;border-radius:8px;flex-shrink:0;">
@@ -6163,7 +6572,7 @@ function renderPantry() {
   }
   tbody.innerHTML = filtered.map(p => `
     <tr>
-      <td style="font-weight:600;color:#2C1810;">${p.name}</td>
+      <td style="font-weight:600;color:#3B2A24;">${p.name}</td>
       <td dir="ltr" style="color:#6B2E1E;font-weight:700;">₪${Number(p.pricePerKg || 0).toFixed(1)}</td>
       <td><span class="k-cat-badge">${esc(p.cat || '')}</span></td>
       <td style="color:#9B8B75;font-size:0.75rem;">${p.supplier||'—'}</td>
@@ -6586,7 +6995,7 @@ function addIngredientRow(ing) {
     <td style="min-width:120px;">
       <input list="${dlId}" type="text" placeholder="שם מרכיב" class="ing-name"
         value="${ing ? esc(ing.name) : ''}"
-        style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#2C1810;background:#F5EFE3;border:1.5px solid #E5D9C5;border-radius:6px;padding:5px 7px;width:100%;"
+        style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#3B2A24;background:#F5EFE3;border:1.5px solid #E5D9C5;border-radius:6px;padding:5px 7px;width:100%;"
         oninput="onIngNameInput(this, '${rowId}')" />
       <input type="hidden" class="ing-pantry-id" value="${ing ? esc(ing.pantryId||'') : ''}" />
       <datalist id="${dlId}">${PANTRY.map(p=>`<option value="${esc(p.name)}" data-id="${p.id}">`).join('')}</datalist>
@@ -6599,7 +7008,7 @@ function addIngredientRow(ing) {
            keypad on a phone, and saveRecipe() normalises the comma. -->
       <input type="text" inputmode="decimal" placeholder="0" class="ing-weight"
         value="${ing ? ing.weightG : ''}" dir="ltr"
-        style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#2C1810;background:#F5EFE3;border:1.5px solid #E5D9C5;border-radius:6px;padding:5px 7px;width:100%;text-align:center;"
+        style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#3B2A24;background:#F5EFE3;border:1.5px solid #E5D9C5;border-radius:6px;padding:5px 7px;width:100%;text-align:center;"
         oninput="onIngWeightInput('${rowId}')" />
     </td>
     <td style="min-width:56px;text-align:center;">
@@ -6610,7 +7019,7 @@ function addIngredientRow(ing) {
       <input type="text" inputmode="decimal" class="ing-baker-pct" placeholder="—"
         value="${ing && ing.bakerPct ? ing.bakerPct : ''}" dir="ltr"
         title="אחוז מסך הקמח. אפשר להקליד כאן והמשקל יתעדכן."
-        style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.75rem;color:#6B5D4E;background:#FBF7EF;border:1.5px solid #E5D9C5;border-radius:6px;padding:5px 4px;width:100%;text-align:center;"
+        style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.75rem;color:#6B655C;background:#FBF7EF;border:1.5px solid #E5D9C5;border-radius:6px;padding:5px 4px;width:100%;text-align:center;"
         oninput="applyBakerPct('${rowId}')" />
     </td>
     <!-- Clickable. An unpriced ingredient used to mean leaving the recipe,
@@ -6763,7 +7172,7 @@ function renderFinance() {
           ? `<img class="fin-thumb" id="fin-thumb-${esc(e.id)}" alt="חשבונית" />`
           : `<div class="fin-thumb" style="display:flex;align-items:center;justify-content:center;color:#C9B99F;font-size:1.1rem;">🧾</div>`}
         <div style="flex:1;min-width:0;">
-          <div style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#2C1810;font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          <div style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:600;color:#3B2A24;font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
             ${esc(e.supplier || e.category || 'הוצאה')}
           </div>
           <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#9B8B75;">
@@ -7024,7 +7433,7 @@ async function importExpensesFromFile(input) {
     const months = [...new Set(entries.map(e => e.date.slice(0, 7)))].sort();
     box.innerHTML = `
       <div style="background:#FDFAF4;border:1px solid #E3D7C3;border-radius:12px;padding:12px;">
-        <div style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:700;color:#2C1810;font-size:0.85rem;margin-bottom:6px;">
+        <div style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:700;color:#3B2A24;font-size:0.85rem;margin-bottom:6px;">
           ${entries.length} הוצאות זוהו · סה"כ <span dir="ltr">₪${total.toFixed(0)}</span>
         </div>
         <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.76rem;color:#9B8B75;margin-bottom:10px;">
@@ -7701,7 +8110,7 @@ function renderMultiRecipeImport(list) {
   const box = document.getElementById('ri-multi');
   box.style.display = 'block';
   box.innerHTML = `
-    <div style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:700;color:#2C1810;font-size:0.95rem;margin-bottom:4px;">
+    <div style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:700;color:#3B2A24;font-size:0.95rem;margin-bottom:4px;">
       נמצאו ${list.length} מתכונים בקובץ
     </div>
     <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.76rem;color:#9B8B75;margin-bottom:12px;line-height:1.6;">
@@ -7849,7 +8258,7 @@ function openImportUndo() {
     <div class="iu-batch">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
         <div style="min-width:0;">
-          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#2C1810;font-size:0.92rem;">
+          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#3B2A24;font-size:0.92rem;">
             ${b.list.length === 1 ? 'מתכון אחד' : b.list.length + ' מתכונים'}
           </div>
           <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.74rem;color:#9B8B75;">
@@ -8271,7 +8680,7 @@ function renderRecipeImport() {
   // Only worth showing for a real table. A two-column paste has nothing to pick.
   const picker = a.width > 2 ? `
     <div style="background:#FDFAF4;border:1px solid #E3D7C3;border-radius:12px;padding:10px 12px;margin-bottom:10px;">
-      <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.76rem;color:#6B5D4E;margin-bottom:7px;">
+      <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.76rem;color:#6B655C;margin-bottom:7px;">
         זיהיתי ${a.width} עמודות${a.hasHeader ? ' ושורת כותרות' : ''}. אם משהו לא נכון — פשוט תחליפי כאן:
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
@@ -8285,12 +8694,12 @@ function renderRecipeImport() {
   const noWeight  = rows.filter(r => !r.weightG);
   const unmatched = rows.filter(r => r.matched === false && r.weightG);
   const flour = riFlourTotal();
-  const fld = 'font-family:\'Noto Sans Hebrew\',sans-serif;font-size:0.78rem;color:#2C1810;background:#FBF7EF;border:1.5px solid #E5D9C5;border-radius:6px;padding:5px 7px;';
+  const fld = 'font-family:\'Noto Sans Hebrew\',sans-serif;font-size:0.78rem;color:#3B2A24;background:#FBF7EF;border:1.5px solid #E5D9C5;border-radius:6px;padding:5px 7px;';
 
   box.innerHTML = `
     ${picker}
     <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px;">
-      <div style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:700;color:#2C1810;font-size:0.85rem;">
+      <div style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:700;color:#3B2A24;font-size:0.85rem;">
         ${rows.length} מרכיבים זוהו
       </div>
       <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.74rem;color:#9B8B75;">
@@ -8317,12 +8726,12 @@ function renderRecipeImport() {
         <input type="text" inputmode="decimal" dir="ltr" class="ri-p" data-i="${i}"
           value="${pctVal}" placeholder="—" oninput="riEditPct(${i}, this)"
           title="אחוז מסך הקמח. הקלדה כאן משנה את המשקל."
-          style="${fld}width:58px;flex:0 0 auto;text-align:center;color:#6B5D4E;" />
+          style="${fld}width:58px;flex:0 0 auto;text-align:center;color:#6B655C;" />
         <button onclick="riDropRow(${i})" title="הסרת השורה" aria-label="הסרת ${esc(r.name)}"
           style="width:26px;height:28px;flex:0 0 auto;border:none;background:none;color:#B45032;cursor:pointer;font-size:1rem;line-height:1;">×</button>
       </div>`;
     }).join('')}
-    <div id="ri-totals" style="margin-top:10px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.82rem;color:#6B5D4E;">
+    <div id="ri-totals" style="margin-top:10px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.82rem;color:#6B655C;">
       ${riTotalsHtml()}
     </div>
     ${noWeight.length ? `<div class="ri-unmatched" style="margin-top:8px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;">
@@ -8330,7 +8739,7 @@ function renderRecipeImport() {
 
     ${unmatched.length ? `
       <div style="margin-top:14px;background:#FDFAF4;border:1px solid #E3D7C3;border-radius:12px;padding:12px;">
-        <div style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:700;color:#2C1810;font-size:0.83rem;margin-bottom:4px;">
+        <div style="font-family:'Noto Sans Hebrew',sans-serif;font-weight:700;color:#3B2A24;font-size:0.83rem;margin-bottom:4px;">
           ${unmatched.length} מרכיבים חדשים — להוסיף למזווה?
         </div>
         <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.74rem;color:#9B8B75;margin-bottom:10px;line-height:1.6;">
@@ -8338,7 +8747,7 @@ function renderRecipeImport() {
         </div>
         ${unmatched.map((r, i) => `
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
-            <label style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#2C1810;cursor:pointer;">
+            <label style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#3B2A24;cursor:pointer;">
               <input type="checkbox" class="ri-new-add" data-name="${esc(r.name)}" checked />
               <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.name)}</span>
             </label>

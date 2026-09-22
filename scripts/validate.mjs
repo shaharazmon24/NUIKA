@@ -926,6 +926,39 @@ if (want('features')) {
     else fail(`missing "${needle}" — ${why}`);
   }
 
+
+  // ── One gate for "is the shop open" ───────────────────────────────────
+  //
+  // There are two questions — may this customer order, and does the page say
+  // so — and for a long time they were answered by different code. The
+  // buttons called ordersAreOpen(), which is the flag AND the deadline.
+  // updateOrdersOpenBanner() and Noy's admin label each tested
+  // `_settingsCache.ordersOpen` on their own, which is the flag alone.
+  //
+  // A shop whose flag says open and whose deadline has passed therefore
+  // showed no notice, let a visitor fill a cart, and answered the tap with an
+  // alert. That is not hypothetical: it was the live state of nuika.co.il on
+  // 22 Sep 2026, and Noy's own panel read "פתוחה — לקוחות יכולים להזמין"
+  // throughout.
+  //
+  // So: anything that TELLS someone whether the shop is open has to ask the
+  // same function the buttons ask.
+  const gateReaders = [
+    ['function updateOrdersOpenBanner(', 'the notice a customer sees above the menu'],
+    ['function describeOrdersState(',    "the line under Noy's orders toggle"],
+  ];
+  for (const [opener, what] of gateReaders) {
+    const at = html.indexOf(opener);
+    if (at < 0) { fail(`${what}: ${opener}…) is gone — the open/closed state has moved somewhere this check cannot see`); continue; }
+    // The function body, up to the first line that starts a new top-level one.
+    const rest = html.slice(at + opener.length);
+    const endAt = rest.search(/\n(?:function |const |let |\/\/ ─── )/);
+    const body = endAt < 0 ? rest : rest.slice(0, endAt);
+
+    const asksDeadline = body.includes('ordersAreOpen()') || body.includes('getNextTuesdayDeadline()');
+    if (asksDeadline) pass(`${what} asks the same gate the order buttons ask`);
+    else fail(`${what} decides from the ordersOpen flag alone — a shop past its deadline will look open and then refuse the order, which is the bug that shipped on 22 Sep 2026`);
+  }
   // ── Both doors into the app ───────────────────────────────────────────
   //
   // Two of the needles above — rel="manifest" and serviceWorker.register —
@@ -2861,10 +2894,40 @@ if (want('pages')) {
     fail(`${stillHome.join(', ')} still reference home.html, which no longer exists`);
   else pass(`no page references home.html, the name the film page was renamed off`);
 
-  const homeHref = new RegExp(`href=["']\\./${HOME.replace(/\./g, '\\.')}["']`);
-  if (homeHref.test(uncommented(shop)))
-    fail(`${SHOP} links to ./${HOME} — since the cutover that is the film home page, not the shop, so a customer following it leaves the menu`);
-  else pass(`${SHOP} does not mistake ./${HOME} for itself`);
+  // Every anchor in the shop whose href is the home page, captured with the
+  // opening tag it sits in, so the two sanctioned ones can be told apart
+  // from the rest by the class they carry.
+  // Every opening <a> tag in the shop, then the ones whose href is the home
+  // page. Matched by plain string containment rather than an escaped regex:
+  // the first version of this check built the href pattern by interpolation,
+  // its backslashes did not survive, and it matched nothing — reporting a
+  // dead end on a shop that had just been given two links home.
+  const homeAnchors = (uncommented(shop).match(/<a[^>]*>/g) || [])
+    .filter(a => a.includes(`href="./${HOME}"`) || a.includes(`href='./${HOME}'`));
+
+  const CHROME = ['nu-mark', 'nu-mark--foot', 'nu-back-home'];
+  const hasClass   = (a, c) => a.includes(`class="${c}"`) || a.includes(`class='${c}'`);
+  const isChrome   = a => CHROME.some(c => hasClass(a, c));
+  const sanctioned = homeAnchors.filter(isChrome);
+  const strays     = homeAnchors.filter(a => !isChrome(a));
+
+  if (strays.length)
+    fail(`${SHOP} links to ./${HOME} from ${strays.length} place(s) that are not the wordmark or the footer's way home — since the cutover that address is the film, so each one silently drops a customer out of the menu`);
+  else pass(`${SHOP} links to ./${HOME} only as the way home`);
+
+  // Named one by one, not counted. A count was the first version of this and
+  // it was useless: three links are sanctioned, so the header wordmark could
+  // lose its href entirely and a "two or more" test still passed — the exact
+  // dead end this is here to catch, waved through.
+  for (const [cls, what] of [
+    ['nu-mark',      "the header wordmark — a customer's only way out of the menu"],
+    ['nu-mark--foot', 'the footer wordmark'],
+  ]) {
+    if (sanctioned.some(a => hasClass(a, cls)))
+      pass(`${SHOP}: ${what} links to ./${HOME}`);
+    else
+      fail(`${SHOP}: ${what} does not link to ./${HOME} — the shop is a dead end again`);
+  }
 
   console.log('The story:');
   // The brief's literal Step 1 code calls readFileSync unguarded, which
