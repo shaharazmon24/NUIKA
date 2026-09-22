@@ -29,11 +29,11 @@
      accessible name or it reaches a screen reader as "link", so `he`/`en`
      stay — they are now the aria-label instead of the visible label.
 
-     FACEBOOK: asked for on 22 Sep 2026 and not added, because NUIKA has no
-     Facebook address anywhere in this repo and inventing one would publish a
-     dead link on a real shop. When Shahar sends the page URL it is one entry
-     here and it appears on all five pages at once; nothing else needs
-     touching. */
+     FACEBOOK: asked for on 22 Sep 2026, then set aside the same day — NUIKA
+     has no Facebook address anywhere in this repo, and Shahar's answer when
+     asked for one was that it is not relevant for now. If that changes it is
+     one entry in this array and it appears on all five pages at once;
+     nothing else needs touching. */
   var SOCIAL = [
     {
       href: 'https://www.instagram.com/nuika_bread/',

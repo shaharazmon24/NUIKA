@@ -3274,6 +3274,89 @@ if (want('pages')) {
       pass(`contact.html: #${id} carries no name attribute`);
   }
 
+
+  console.log("Noy's captions form:");
+  {
+    const FORM = 'gallery-captions.html';
+    const at = join(ROOT, FORM);
+    if (!existsSync(at)) {
+      fail(`${FORM} is missing — the only way Noy has to write captions for the gallery`);
+    } else {
+      const raw  = readFileSync(at, 'utf8');
+      const code = uncommented(raw);
+
+      // It is served from the public domain and it is not part of the site.
+      // Without this it would turn up in search results as a NUIKA page.
+      if (/<meta[^>]+name="robots"[^>]+noindex/.test(code))
+        pass(`${FORM} asks not to be indexed — it is a tool, not a page of the site`);
+      else
+        fail(`${FORM} has no noindex — an internal form on the public domain will be found and listed as part of the site`);
+
+      // Nothing links to it, and that is deliberate. A link from the nav or
+      // the footer would put an editing tool in front of every customer.
+      // HOME and SHOP, never their literal names — the guard further down
+      // exists because a hardcoded 'index.html' is what pointed these tools
+      // at the wrong file through the cutover.
+      const linkers = [HOME, ...PAGES, SHOP].filter((p, i, a) => a.indexOf(p) === i);
+      const linked = linkers.filter(p => {
+        const f = join(ROOT, p);
+        return existsSync(f) && uncommented(readFileSync(f, 'utf8')).includes(FORM);
+      });
+      if (linked.length)
+        fail(`${linked.join(', ')} link${linked.length > 1 ? '' : 's'} to ${FORM} — this form is handed to Noy directly, never shown to customers`);
+      else
+        pass(`nothing on the site links to ${FORM}`);
+
+      // The whole page is built with createElement/textContent precisely so
+      // there is no escaping rule to remember. innerHTML appearing here
+      // means somebody reintroduced one.
+      if (/\.innerHTML\s*=/.test(code))
+        fail(`${FORM} assigns innerHTML — this page builds its DOM with createElement/textContent so that photo filenames and Noy's own typing can never be parsed as markup`);
+      else
+        pass(`${FORM} writes no innerHTML — nothing on it can become markup`);
+
+      // It must not grow a write path. Its entire job is to hand text back
+      // to Shahar; a database write here would need rules that do not exist.
+      //
+      // Named spellings, not a bare /\.push\(/ — the message builder calls
+      // lines.push() on a local array, and a looser pattern reported that as
+      // a database write. This project has made exactly that mistake before.
+      const writesOut = [
+        [/\bfirebase\b/i,                 'loads the Firebase SDK'],
+        [/\bdb\s*\.\s*ref\s*\(/,          'takes a database reference'],
+        [/\.ref\s*\([^)]*\)\s*\.\s*(set|update|push|remove)\s*\(/, 'writes to a database reference'],
+        [/firebaseio\.com/i,              'names the database host'],
+        [/method\s*:\s*['"](POST|PUT|PATCH)['"]/i, 'makes a writing HTTP request'],
+      ].filter(([re]) => re.test(code)).map(([, why]) => why);
+
+      if (writesOut.length)
+        fail(`${FORM} ${writesOut.join(' and ')} — it is meant to write nowhere, and nuika/gallery has no rules published`);
+      else
+        pass(`${FORM} writes to no database`);
+
+      // wa.me with no number opens WhatsApp's contact picker. A number here
+      // would be a private one, published.
+      if (/wa\.me\/\?text=/.test(code))
+        pass(`${FORM} opens WhatsApp without a hardcoded number — Noy picks who to send to`);
+      else
+        fail(`${FORM} no longer opens WhatsApp the way it did — check it is not publishing somebody's phone number`);
+
+      // The other half of the pipeline: gallery.html has to read the field
+      // this form fills, or Noy's work lands nowhere.
+      const gal = existsSync(join(ROOT, 'gallery.html'))
+        ? uncommented(readFileSync(join(ROOT, 'gallery.html'), 'utf8')) : '';
+      if (/entry\.caption/.test(gal))
+        pass('gallery.html reads entry.caption, so a caption Noy writes actually appears');
+      else
+        fail('gallery.html does not read entry.caption — the captions form fills a field nothing displays');
+
+      // And it must no longer print the accessibility text as a caption.
+      if (/lbDesc\.textContent\s*=\s*alt\b/.test(gal))
+        fail('gallery.html prints the alt text as the visible caption again — that text is written for screen readers and reads as filler under a photo');
+      else
+        pass('gallery.html no longer shows alt text as a caption');
+    }
+  }
   console.log('The events board:');
   {
     // Same reason as home.html, story.html, gallery.html and contact.html

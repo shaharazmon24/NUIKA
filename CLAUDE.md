@@ -98,6 +98,7 @@ plus four content pages:
 | `shop.html` | **the shop** — 9,000+ lines holding all its own HTML, CSS and JavaScript. Ordering, payment, stock, kitchen, finance, admin. |
 | `admin.html` | a redirect page and nothing else: it exists so Noy can have a home-screen icon that lands on the admin sign-in. |
 | `story.html` `gallery.html` `contact.html` `events.html` | content pages, sharing `site.css` + `site.js`. |
+| `gallery-captions.html` | **not a page of the site.** A form Shahar hands to Noy so she can write the captions for the gallery photos. In no nav, linked from nowhere, `noindex`, and not precached. |
 
 `shop.html` is still one self-contained file by design and does **not** use
 `site.css` / `site.js`. Tailwind and Firebase load from CDNs. Hebrew RTL with an
@@ -155,6 +156,33 @@ manifest — see the comment in the file.
 `localStorage` is only for per-device convenience: the customer's own cart,
 their saved name and phone, and their last order. Nothing Noy manages belongs
 there — it would not reach anyone else's device.
+
+### Gallery captions: a form, not an admin tab
+
+The photos in the gallery are uploaded from this repo, so a caption Noy typed
+into an admin panel would have to travel back into the repo anyway. The short
+road was taken instead, and it needs no database and no rules published:
+
+1. New photos go into `images/gallery/` and into `gallery.json` as usual.
+2. Send Noy `nuika.co.il/gallery-captions.html`. It reads `gallery.json`, shows
+   every photo with a box under it, saves her drafts to her own device as she
+   types, and has a "show only what is missing" toggle so a second round only
+   asks about the new ones.
+3. She taps **שליחה לשחר בוואטסאפ**. The link is `wa.me/?text=` with no number,
+   so WhatsApp asks her who to send it to — no private number is published.
+4. The message is `filename` / `caption` / blank line, repeating. Put each one
+   into that entry's `caption` field in `gallery.json`:
+
+   ```json
+   { "file": "…", "alt": { "he": "…", "en": "…" },
+     "caption": { "he": "הכיכר הראשונה שיצאה לי מושלמת" } }
+   ```
+
+`gallery.html` shows `caption` when it exists and shows nothing when it does
+not. **`alt` is a different field and is not a caption** — it is the
+description read aloud to someone who cannot see the photo, and it used to be
+printed under every image, which is why the visible captions were switched off
+on 22 Sep 2026.
 
 ### One human step: publish the rules for `nuika/events`
 

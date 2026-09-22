@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>תיאורים לתמונות — NUIKA</title>
+
+  <!-- Deliberately kept out of every index and every sitemap. This is a tool
+       Shahar hands to Noy when new photos go up, not a page of the site: it
+       is in no nav, nothing links to it, and it is excluded from the service
+       worker's precache so it never costs a visitor anything.
+
+       It is nevertheless served from the public domain, so it holds nothing
+       that is not already public. It reads gallery.json, which the gallery
+       page reads anyway; it writes to this one device's localStorage; and
+       the only thing it ever sends is a WhatsApp message Noy taps to send
+       herself. No database, no credentials, no upload. -->
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#6B2E1E">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bellefair&family=IBM+Plex+Sans+Hebrew:wght@300;400;500;600&display=swap">
+  <link rel="stylesheet" href="./site.css?v=3">
+
+  <style>
+    /* Prefixed .cp- so nothing here can reach another page's styles. */
+
+    /* site.css declares no global box-sizing reset, by design, so a width of
+       100% here means 100% PLUS the padding and the border. That is 24px on
+       the textarea below, which is exactly how far it hung out of its card
+       before this line existed. Scoped to this page's own elements rather
+       than declared on *, so it stays a local decision. */
+    .cp-wrap, .cp-wrap *, .cp-send, .cp-send * { box-sizing: border-box; }
+
+    body { padding-block-end: 140px; }
+
+    .cp-wrap { max-inline-size: 760px; margin-inline: auto; padding: 28px 18px 0; }
+
+    .cp-head { text-align: center; margin-block-end: 26px; }
+    .cp-title { font-family: var(--font-display); font-size: var(--t-page); margin: 0 0 10px; }
+    .cp-lede { margin: 0 auto; max-inline-size: 46ch; line-height: 1.8; color: var(--muted); }
+
+    .cp-steps {
+      margin: 22px auto 0;
+      max-inline-size: 46ch;
+      padding: 16px 20px;
+      background: var(--butter);
+      border-radius: 14px;
+      text-align: start;
+    }
+    .cp-steps ol { margin: 0; padding-inline-start: 20px; line-height: 1.9; }
+
+    .cp-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 14px; flex-wrap: wrap;
+      margin-block: 26px 18px;
+      padding-block-end: 12px;
+      border-block-end: 1px solid rgba(59,42,36,.14);
+    }
+    .cp-count { font-size: var(--t-small); color: var(--muted); }
+    .cp-toggle {
+      font: inherit; font-size: var(--t-small);
+      background: transparent; color: var(--ink);
+      border: 1px solid var(--ink); border-radius: 999px;
+      padding: 6px 15px; cursor: pointer;
+    }
+    .cp-toggle[aria-pressed="true"] { background: var(--ink); color: var(--cream); }
+
+    .cp-list { display: grid; gap: 16px; }
+
+    .cp-card {
+      display: grid;
+      grid-template-columns: 96px 1fr;
+      gap: 14px;
+      align-items: start;
+      padding: 14px;
+      background: var(--cream);
+      border: 1px solid rgba(59,42,36,.12);
+      border-radius: 14px;
+    }
+    .cp-card.is-done { border-color: var(--sage); }
+
+    .cp-thumb {
+      inline-size: 96px; block-size: 96px;
+      object-fit: cover; border-radius: 10px; display: block;
+      background: var(--butter);
+    }
+    /* min-inline-size: 0 is the whole reason this column stays inside its
+       card. A grid track sized 1fr refuses to shrink below the intrinsic
+       minimum width of what is in it, and a <textarea> has a stubborn one
+       (its `cols` default, about 20 characters) — so without this the field
+       pushes past the card's edge on a phone and the text runs off screen. */
+    .cp-field { display: grid; gap: 6px; min-inline-size: 0; }
+    .cp-label { font-size: var(--t-label); letter-spacing: .06em; color: var(--muted); }
+    .cp-input {
+      font: inherit; font-size: 15px; line-height: 1.6;
+      min-inline-size: 0; max-inline-size: 100%;
+      color: var(--ink); background: #FFFDF8;
+      border: 1px solid rgba(59,42,36,.18); border-radius: 10px;
+      padding: 9px 11px; inline-size: 100%;
+      resize: vertical; min-block-size: 68px;
+    }
+    .cp-input:focus-visible { outline: 2px solid var(--terra); outline-offset: 1px; }
+    .cp-left { font-size: var(--t-label); color: var(--muted); text-align: start; }
+    .cp-left.is-over { color: var(--terra-deep); }
+
+    /* The send bar rides the bottom of the screen so the button is reachable
+       from anywhere in a list of twenty-four. */
+    .cp-send {
+      position: fixed; inset-inline: 0; inset-block-end: 0;
+      background: var(--ink); color: var(--cream);
+      padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      flex-wrap: wrap;
+      box-shadow: 0 -6px 24px rgba(59,42,36,.22);
+      z-index: 20;
+    }
+    .cp-send__note { font-size: var(--t-label); opacity: .75; }
+    .cp-btn {
+      font: inherit; font-size: var(--t-small);
+      border-radius: 999px; padding: 10px 22px;
+      border: 1px solid transparent; cursor: pointer;
+      transition: transform .2s cubic-bezier(.34,1.3,.64,1), background-color .2s ease, opacity .2s ease;
+    }
+    .cp-btn:hover:not(:disabled) { transform: translateY(-2px); }
+    .cp-btn:disabled { opacity: .45; cursor: default; }
+    .cp-btn--go { background: var(--butter); color: var(--ink); }
+    .cp-btn--copy { background: transparent; color: var(--cream); border-color: rgba(246,240,228,.55); }
+
+    .cp-said {
+      position: fixed; inset-block-end: 86px; inset-inline: 0;
+      text-align: center; pointer-events: none; z-index: 21;
+    }
+    .cp-said span {
+      display: inline-block;
+      background: var(--ink); color: var(--cream);
+      font-size: var(--t-small);
+      padding: 8px 16px; border-radius: 999px;
+      opacity: 0; transform: translateY(6px);
+      transition: opacity .25s ease, transform .25s ease;
+    }
+    .cp-said.is-on span { opacity: 1; transform: none; }
+
+    @media (max-width: 520px) {
+      .cp-card { grid-template-columns: 72px 1fr; }
+      .cp-thumb { inline-size: 72px; block-size: 72px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .cp-btn, .cp-said span { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="cp-wrap">
+    <header class="cp-head">
+      <h1 class="cp-title">תיאורים לתמונות</h1>
+      <p class="cp-lede">
+        נוי — התמונות למטה נמצאות בגלריה באתר. כתבי ליד כל אחת משפט קצר משלך,
+        ובסוף לחצי על הכפתור הירוק כדי לשלוח לשחר.
+      </p>
+
+      <div class="cp-steps">
+        <ol>
+          <li>אין חובה למלא הכל בבת אחת — מה שכתבת נשמר במכשיר שלך.</li>
+          <li>משפט אחד או שניים לכל תמונה. מה שבא לך לספר עליה.</li>
+          <li>תמונה שלא בא לך לכתוב עליה — פשוט דלגי.</li>
+          <li>בסוף: "שליחה לשחר בוואטסאפ".</li>
+        </ol>
+      </div>
+    </header>
+
+    <div class="cp-bar">
+      <p class="cp-count" id="cpCount">טוען…</p>
+      <button class="cp-toggle" id="cpToggle" type="button" aria-pressed="false">הצג רק מה שחסר</button>
+    </div>
+
+    <div class="cp-list" id="cpList"></div>
+  </div>
+
+  <div class="cp-send">
+    <span class="cp-send__note" id="cpNote"></span>
+    <button class="cp-btn cp-btn--go" id="cpSend" type="button" disabled>שליחה לשחר בוואטסאפ</button>
+    <button class="cp-btn cp-btn--copy" id="cpCopy" type="button" disabled>העתקת הכל</button>
+  </div>
+
+  <div class="cp-said" id="cpSaid" aria-live="polite"><span></span></div>
+
+  <script>
+    /* Noy writes a line per photo; the page hands the result back to Shahar,
+       who puts it into gallery.json. There is no database here on purpose —
+       the photos are uploaded from the repo anyway, so a caption written in
+       an admin panel would have to travel back into the repo regardless.
+       This is the shorter road, and it needs no rules published to work.
+
+       Nothing is built with innerHTML. Every value on this page comes from
+       gallery.json or from Noy's own typing, and building the DOM with
+       createElement/textContent means there is no escaping question to get
+       wrong rather than an escaping rule to remember. */
+    (function () {
+      'use strict';
+
+      var MAX      = 140;                   /* a caption, not a paragraph */
+      var STORE    = 'nuika-captions-draft';
+      var MANIFEST = './images/gallery/gallery.json';
+
+      var listEl   = document.getElementById('cpList');
+      var countEl  = document.getElementById('cpCount');
+      var toggleEl = document.getElementById('cpToggle');
+      var sendEl   = document.getElementById('cpSend');
+      var copyEl   = document.getElementById('cpCopy');
+      var noteEl   = document.getElementById('cpNote');
+      var saidEl   = document.getElementById('cpSaid');
+
+      var entries     = [];
+      var draft       = read();
+      var onlyMissing = false;
+      var saveTimer   = null;
+
+      /* Private mode throws on both of these rather than returning null, and
+         a tool that cannot remember is still a tool that must open. */
+      function read() {
+        try { return JSON.parse(localStorage.getItem(STORE) || '{}') || {}; }
+        catch (e) { return {}; }
+      }
+      function write() {
+        try { localStorage.setItem(STORE, JSON.stringify(draft)); }
+        catch (e) { /* she keeps what is on screen; it just will not survive a reload */ }
+      }
+
+      var sayTimer = null;
+      function say(text) {
+        saidEl.firstChild.textContent = text;
+        saidEl.classList.add('is-on');
+        clearTimeout(sayTimer);
+        sayTimer = setTimeout(function () { saidEl.classList.remove('is-on'); }, 2400);
+      }
+
+      /* What is already in gallery.json wins as the starting value, so a
+         caption Shahar has already filed shows up written rather than blank
+         and asking to be typed again. */
+      function valueFor(entry) {
+        if (typeof draft[entry.file] === 'string') return draft[entry.file];
+        return (entry.caption && entry.caption.he) || '';
+      }
+
+      function filled() {
+        return entries.filter(function (e) { return valueFor(e).trim(); });
+      }
+
+      function refreshCount() {
+        var n = filled().length;
+        countEl.textContent = n + ' מתוך ' + entries.length + ' תמונות קיבלו תיאור';
+        var has = n > 0;
+        sendEl.disabled = !has;
+        copyEl.disabled = !has;
+        noteEl.textContent = has ? '' : 'כתבי תיאור אחד לפחות';
+      }
+
+      function card(entry) {
+        var wrap = document.createElement('div');
+        wrap.className = 'cp-card';
+
+        var img = document.createElement('img');
+        img.className = 'cp-thumb';
+        img.loading = 'lazy';
+        img.src = './images/gallery/' + (entry.thumb || entry.file);
+        /* The old accessibility text, doing the job it was written for. */
+        img.alt = (entry.alt && entry.alt.he) || '';
+        wrap.appendChild(img);
+
+        var field = document.createElement('div');
+        field.className = 'cp-field';
+
+        var id = 'cap-' + entry.file.replace(/[^a-z0-9]+/gi, '-');
+
+        var label = document.createElement('label');
+        label.className = 'cp-label';
+        label.textContent = 'מה את רוצה לספר על התמונה הזאת?';
+        label.setAttribute('for', id);
+        field.appendChild(label);
+
+        var box = document.createElement('textarea');
+        box.className = 'cp-input';
+        box.id = id;
+        box.rows = 2;
+        box.value = valueFor(entry);
+        box.placeholder = 'למשל: הכיכר הראשונה שיצאה לי מושלמת';
+        field.appendChild(box);
+
+        var left = document.createElement('p');
+        left.className = 'cp-left';
+        field.appendChild(left);
+
+        function paintLeft() {
+          var over = box.value.length - MAX;
+          left.textContent = over > 0
+            ? 'ארוך ב-' + over + ' תווים'
+            : (MAX - box.value.length) + ' תווים נשארו';
+          left.classList.toggle('is-over', over > 0);
+          wrap.classList.toggle('is-done', !!box.value.trim());
+        }
+
+        box.addEventListener('input', function () {
+          draft[entry.file] = box.value;
+          paintLeft();
+          refreshCount();
+          clearTimeout(saveTimer);
+          saveTimer = setTimeout(write, 300);   /* not on every keystroke */
+        });
+        /* A tab away or a switched app is the moment worth being sure about. */
+        box.addEventListener('blur', write);
+
+        paintLeft();
+        wrap.appendChild(field);
+        return wrap;
+      }
+
+      function render() {
+        listEl.textContent = '';
+        var shown = onlyMissing
+          ? entries.filter(function (e) { return !valueFor(e).trim(); })
+          : entries;
+        if (!shown.length) {
+          var done = document.createElement('p');
+          done.className = 'cp-lede';
+          done.textContent = 'כל התמונות קיבלו תיאור. אפשר לשלוח.';
+          listEl.appendChild(done);
+        }
+        shown.forEach(function (e) { listEl.appendChild(card(e)); });
+        refreshCount();
+      }
+
+      function message() {
+        var lines = ['תיאורים לגלריה — NUIKA', ''];
+        filled().forEach(function (e) {
+          lines.push(e.file);
+          lines.push(valueFor(e).trim());
+          lines.push('');
+        });
+        return lines.join('\n');
+      }
+
+      toggleEl.addEventListener('click', function () {
+        onlyMissing = !onlyMissing;
+        toggleEl.setAttribute('aria-pressed', String(onlyMissing));
+        toggleEl.textContent = onlyMissing ? 'הצג את כולן' : 'הצג רק מה שחסר';
+        render();
+      });
+
+      sendEl.addEventListener('click', function () {
+        write();
+        /* wa.me with no number opens WhatsApp's own contact picker, so Noy
+           chooses Shahar herself. Hardcoding a number would mean putting a
+           private one into a file served on the open web. */
+        var url = 'https://wa.me/?text=' + encodeURIComponent(message());
+        /* A URL past this length gets truncated somewhere along the way, and
+           what it drops is the end — the photos she wrote about last, which
+           she would never notice were missing. */
+        if (url.length > 7500) {
+          say('יש הרבה טקסט — השתמשי ב"העתקת הכל"');
+          return;
+        }
+        window.open(url, '_blank', 'noopener');
+      });
+
+      copyEl.addEventListener('click', function () {
+        write();
+        var text = message();
+        function fallback() {
+          var ta = document.createElement('textarea');
+          ta.value = text;
+          ta.setAttribute('readonly', '');
+          ta.style.position = 'fixed';
+          ta.style.top = '-1000px';
+          document.body.appendChild(ta);
+          ta.select();
+          try { document.execCommand('copy'); say('הועתק'); }
+          catch (e) { say('לא הצלחתי להעתיק'); }
+          document.body.removeChild(ta);
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () { say('הועתק'); }, fallback);
+        } else {
+          fallback();
+        }
+      });
+
+      fetch(MANIFEST)
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          entries = (data || []).filter(function (e) { return e && e.file; });
+          render();
+        })
+        .catch(function () {
+          countEl.textContent = 'לא הצלחתי לטעון את רשימת התמונות. נסי לרענן.';
+        });
+    })();
+  </script>
+</body>
+</html>
