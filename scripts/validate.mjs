@@ -2996,6 +2996,39 @@ if (want('pages')) {
     fail('sw.js precaches a video — 24MB on every visitor\'s device, and the shop evicted from the cache when the quota runs out');
   else pass('sw.js precaches no video');
 
+
+  console.log('Opening the installed app:');
+  // index.html forwards a standalone launch into the shop, and that one line
+  // has to hold three things at once. Each has already been broken or
+  // questioned once.
+  {
+    const src = uncommented(home);
+
+    // 1. It still forwards. Without it Noy's icon opens on a film she is not
+    //    there to watch, and the shop is a tap further away every time.
+    if (/location\.replace\(/.test(src) && /display-mode:\s*standalone/.test(src))
+      pass('an installed launch still opens straight into the shop');
+    else
+      fail(`${HOME} no longer forwards an installed launch — Noy's home-screen icon would land on the film, with the menu one tap further away every single time`);
+
+    // 2. It carries the query. admin.html and the manifest shortcut both
+    //    arrive with ?admin, and a bare './shop.html' here drops it — which
+    //    lands Noy in the customer storefront instead of her own panel. That
+    //    bug has already been found and fixed once.
+    if (/location\.replace\('\.\/shop\.html'\s*\+\s*location\.search/.test(src))
+      pass('the forward carries the query, so Noy\u2019s admin icon still opens the panel');
+    else
+      fail(`${HOME}'s forward no longer carries location.search — an installed launch arriving with ?admin loses it and Noy gets the customer storefront instead of her admin panel`);
+
+    // 3. It exempts a navigation from inside the app. Until 22 Sep 2026 it
+    //    did not, and the film was simply unreachable once installed: the
+    //    wordmark and the home button both point at this page, and both
+    //    bounced straight back to the shop.
+    if (/document\.referrer/.test(src) && /location\.origin/.test(src))
+      pass('a tap on the wordmark inside the installed app reaches the film instead of bouncing back');
+    else
+      fail(`${HOME} forwards every standalone visit with no referrer test — inside the installed app the wordmark and the home button both bounce back to the shop, and the film cannot be reached at all`);
+  }
   console.log('The home page\'s words:');
   // Noy's own sentence, chosen in the design review. Not a placeholder.
   homeNeed(/אופה מה שאני הכי רוצה לאכול/, 'carries the line the design settled on');

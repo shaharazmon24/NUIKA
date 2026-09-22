@@ -230,9 +230,31 @@
     // returning by a new route. Measured, not theorised: with a bare target
     // the destination reports admin_query_present: false.
     // Do not "simplify" this back to a bare string.
+    // A COLD LAUNCH only, and that qualifier is new. Until 22 Sep 2026 this
+    // forwarded every standalone visit, which meant the film was unreachable
+    // from inside the installed app: the wordmark and the "לעמוד הבית" button
+    // both point here, and tapping either one bounced straight back to the
+    // shop. site.js's own comment called that cost "real and accepted"; it
+    // was neither, and Shahar asked why the film never appears.
+    //
+    // The referrer is what tells the two apart. Tapping the icon starts a
+    // navigation with no referrer at all; a tap on the wordmark inside the
+    // app carries the page it came from, same-origin. So Noy's icon still
+    // opens straight into the shop — she never pays a tap for a film she is
+    // not there to watch — and anyone who asks for the home page now gets it.
+    //
+    // Wrapped, because URL() throws on a malformed referrer and this runs
+    // before anything else on the page: a throw here takes the home page
+    // down for everyone, installed or not.
+    var fromInsideTheApp = false;
+    try {
+      fromInsideTheApp = !!document.referrer &&
+                         new URL(document.referrer).origin === location.origin;
+    } catch (e) { fromInsideTheApp = false; }
+
     var installed = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
                  || window.navigator.standalone === true;
-    if (installed) { location.replace('./shop.html' + location.search + location.hash); }
+    if (installed && !fromInsideTheApp) { location.replace('./shop.html' + location.search + location.hash); }
   </script>
   <div class="hm-screen">
     <!-- Two cuts, not one file scaled. A phone frame keeps about a fifth of

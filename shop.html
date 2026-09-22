@@ -314,9 +314,11 @@
       to   { transform: scale(1.02) translate3d(0, 0, 0); }
     }
 
-    /* A small step between them. Two identical arches at the same height read
-       as a diagram; offsetting one reads as a composition. */
-    .hero-arch:last-of-type { margin-block-start: clamp(12px, 3vw, 34px); }
+    /* No step between them. One arch was offset about 22px lower on purpose —
+       two identical arches at the same height read as a diagram, and an
+       offset reads as a composition. It did not read that way: it read as a
+       mistake, which is the only verdict that counts. They are the same size
+       and now the same height. */
     /* Under ~640px three columns will not fit, so the name takes its own line
        above and the two arches sit side by side beneath it. */
     @media (max-width: 639px) {
