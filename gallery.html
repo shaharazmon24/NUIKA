@@ -402,7 +402,23 @@
         // but the enlarged view is the one place that loads the full image.
         lbImg.src = './images/gallery/' + entry.file;
         lbImg.alt = alt;
-        lbDesc.textContent = alt;
+
+        /* Noy's own words, when she has written them, and nothing at all when
+           she has not.
+           
+           Until 22 Sep 2026 this printed `alt` under every photo. That text
+           was written as ACCESSIBILITY text — a flat description of what is
+           in the frame, for somebody who cannot see it — and read as a
+           caption it is dull at best ("Hands on a scored sourdough loaf").
+           Shahar asked for it to come off the screen until Noy can write her
+           own. It stays in `alt` above, where it does the job it was written
+           for; only the visible caption waits.
+           
+           entry.caption is what the admin form will write. Nothing sets it
+           yet, so today this hides on every photo. */
+        var caption = (entry.caption && entry.caption[currentLang()]) || '';
+        lbDesc.textContent = caption;
+        lbDesc.hidden = !caption;
         // The dialog names the image actually showing, for someone who
         // cannot see it — a static "gallery" label would not tell a screen
         // reader user which of 24 photos they just landed on, and would go
