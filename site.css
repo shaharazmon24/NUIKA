@@ -232,19 +232,68 @@ html[lang="en"]       [lang-content="he"] { display: none; }
   border-block-end: 1px solid rgba(59, 42, 36, .13);
 }
 
-.nu-mark { flex: 0 0 auto; display: block; line-height: 0; }
-
 /* A mask, not an <img>: the header needs this one file in two different
    colours — terracotta on a light page, cream over the home page's video —
    and only a mask can be recoloured with CSS. 160 ÷ 2.72 (the wordmark's
-   aspect ratio) ≈ 59. */
-.nu-mark__art {
+   aspect ratio) ≈ 59.
+
+   The colour arrives on hover rather than sitting there, so the mark reads as
+   something you can press. The fill is a two-stop gradient twice the width of
+   the box: at rest the quiet half shows, and the transition slides the live
+   half across. It follows the reading direction — entering from the right in
+   Hebrew, from the left in English — so it always sweeps the way the eye is
+   already travelling. */
+:root {
+  --mark-rest: var(--crust);
+  --mark-live: var(--terra);
+}
+.nu-header--on-film { --mark-rest: rgba(246, 240, 228, .5); --mark-live: var(--cream); }
+.nu-footer          { --mark-rest: rgba(246, 240, 228, .5); --mark-live: var(--cream); }
+
+.nu-mark { flex: 0 0 auto; display: block; line-height: 0; }
+
+.nu-mark__art,
+.nu-mark--foot {
   display: block;
-  width: 160px;
-  height: 59px;
-  background: var(--terra);
+  background-image: linear-gradient(to left, var(--mark-live) 50%, var(--mark-rest) 50%);
+  background-size: 200% 100%;
+  /* Full colour by DEFAULT. A phone has no pointer to hover with, so a mark
+     that only fills on hover would sit muted on it forever — and most of
+     Noy's customers are on a phone. The quiet resting half is opted into
+     below, only where hovering is a thing that can happen. */
+  background-position: 100% 0;
+  background-repeat: no-repeat;
+  transition: background-position .85s cubic-bezier(.22, .61, .36, 1);
   -webkit-mask: url(./images/logo.png) center / contain no-repeat;
           mask: url(./images/logo.png) center / contain no-repeat;
+}
+
+/* English reads the other way, so the sweep does too: the gradient flips and
+   the two positions swap with it. */
+[dir="ltr"] .nu-mark__art,
+[dir="ltr"] .nu-mark--foot {
+  background-image: linear-gradient(to right, var(--mark-live) 50%, var(--mark-rest) 50%);
+  background-position: 0 0;
+}
+
+.nu-mark__art { width: 160px; height: 59px; }
+
+@media (hover: hover) {
+  .nu-mark__art,
+  .nu-mark--foot { background-position: 0 0; }
+
+  [dir="ltr"] .nu-mark__art,
+  [dir="ltr"] .nu-mark--foot { background-position: 100% 0; }
+
+  .nu-mark:hover .nu-mark__art,
+  .nu-mark:focus-visible .nu-mark__art,
+  .nu-mark--foot:hover,
+  .nu-mark--foot:focus-visible { background-position: 100% 0; }
+
+  [dir="ltr"] .nu-mark:hover .nu-mark__art,
+  [dir="ltr"] .nu-mark:focus-visible .nu-mark__art,
+  [dir="ltr"] .nu-mark--foot:hover,
+  [dir="ltr"] .nu-mark--foot:focus-visible { background-position: 0 0; }
 }
 
 /* Centred no matter how wide the items are, with the mark and the language
@@ -259,16 +308,81 @@ html[lang="en"]       [lang-content="he"] { display: none; }
   pointer-events: none;
 }
 
+/* The menu answers the pointer with the shop's own divider: a rule that
+   draws outward from the middle, and the three-petal flower blooming in the
+   gap it leaves. Same flower as .divider-flower above the menu in the shop —
+   three rotated ellipses and a centre dot — so the header and the shop are
+   quoting one ornament, not two that resemble each other.
+
+   The flower is a MASK, not an <img>, for the same reason the wordmark is:
+   the header is terracotta on a light page and cream over the film, and only
+   a mask can be recoloured by CSS. --nav-ornament is what switches. */
+:root { --nav-ornament: var(--terra); }
+.nu-header--on-film { --nav-ornament: var(--cream); }
+
 .nu-nav__item {
+  /* .nu-nav is pointer-events: none so its absolute centring cannot swallow
+     clicks meant for the header behind it; every item has to hand the
+     pointer back. Dropping this line while adding the ornament made the
+     whole menu unclickable AND unhoverable — the items rendered as bare blue
+     underlined links and nothing answered the mouse. */
   pointer-events: auto;
   font-size: var(--t-small);
   color: inherit;
   text-decoration: none;
-  padding-block-end: 2px;
-  border-block-end: 1px solid transparent;
+
+  position: relative;
+  padding-block-end: 12px;   /* room for the rule and the flower under it */
+  border-block-end: 0;       /* the 1px border this replaces */
 }
 
-.nu-nav__item.is-current { border-block-end-color: var(--terra); }
+/* Two segments with a gap in the middle, exactly like .divider-flower's
+   ::before and ::after — one element here because a pseudo-element pair is
+   already spent on the line and the flower. Scaling the whole thing from the
+   centre grows both segments outward and keeps the gap on the flower. */
+.nu-nav__item::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: 1px;
+  background:
+    linear-gradient(to right, transparent, var(--nav-ornament)) 0 50% / calc(50% - 13px) 1px no-repeat,
+    linear-gradient(to right, var(--nav-ornament), transparent) 100% 50% / calc(50% - 13px) 1px no-repeat;
+  opacity: .85;
+  transform: scaleX(0);
+  transition: transform .34s cubic-bezier(.65, 0, .35, 1);
+}
+
+.nu-nav__item::before {
+  content: "";
+  position: absolute;
+  inset-block-end: -7px;          /* its centre sits on the rule */
+  inset-inline-start: 50%;
+  margin-inline-start: -8px;      /* logical, so RTL and LTR both centre it */
+  inline-size: 16px;
+  block-size: 16px;
+  background: var(--nav-ornament);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.5'%3E%3Cellipse cx='10' cy='10' rx='2' ry='5'/%3E%3Cellipse cx='10' cy='10' rx='2' ry='5' transform='rotate(60 10 10)'/%3E%3Cellipse cx='10' cy='10' rx='2' ry='5' transform='rotate(120 10 10)'/%3E%3C/g%3E%3Ccircle cx='10' cy='10' r='2.2' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.5'%3E%3Cellipse cx='10' cy='10' rx='2' ry='5'/%3E%3Cellipse cx='10' cy='10' rx='2' ry='5' transform='rotate(60 10 10)'/%3E%3Cellipse cx='10' cy='10' rx='2' ry='5' transform='rotate(120 10 10)'/%3E%3C/g%3E%3Ccircle cx='10' cy='10' r='2.2' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
+  opacity: 0;
+  transform: scale(.3) rotate(-120deg);
+  /* Slightly behind the rule, so the line arrives and the flower opens into
+     the gap it left rather than both landing at once. */
+  transition: opacity .26s ease .09s,
+              transform .44s cubic-bezier(.34, 1.45, .64, 1) .09s;
+}
+
+.nu-nav__item:hover::after,
+.nu-nav__item:focus-visible::after,
+.nu-nav__item.is-current::after { transform: scaleX(1); }
+
+.nu-nav__item:hover::before,
+.nu-nav__item:focus-visible::before,
+.nu-nav__item.is-current::before { opacity: 1; transform: scale(1) rotate(0deg); }
+
+/* The page you are on wears it at rest. */
+.nu-nav__item.is-current { border-block-end: 0; }
 
 .nu-lang {
   margin-inline-start: auto;
@@ -309,16 +423,13 @@ html[lang="en"]       [lang-content="he"] { display: none; }
 
 /* Drawn as a mask, the same idea and the same file as the header's
    .nu-mark__art above — one logo.png, recoloured per element instead of
-   kept as a second image asset. The footer's own ground never changes
-   (always --ink), so this copy is always cream; .nu-mark__art is the one
-   that switches, via .nu-header--on-film. */
-.nu-mark--foot {
-  width: 150px;
-  height: 55px;
-  background: var(--cream);
-  -webkit-mask: url(./images/logo.png) center / contain no-repeat;
-          mask: url(./images/logo.png) center / contain no-repeat;
-}
+   kept as a second image asset.
+
+   Size only. The mask and the hover fill are declared once, up beside
+   .nu-mark__art, for both marks. This rule used to set `background:
+   var(--cream)` as well, and a shorthand here would have quietly wiped the
+   gradient the fill is made of — later in the file, same specificity. */
+.nu-mark--foot { width: 150px; height: 55px; }
 
 .nu-soc-row { display: flex; gap: 14px; justify-content: center; }
 

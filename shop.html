@@ -101,6 +101,11 @@
          this one is 5.43 and 5.21. Surfaces and big display type keep
          #B84830; anything a visitor actually reads uses this. */
       --terra-ink: #9E3C22;
+
+      /* The wordmark's two states. On this page the header sits on wheat and
+         the footer on ink, so each gets its own pair. */
+      --mark-rest: #B8935E;
+      --mark-live: #B84830;
     }
 
     /* RTL scroll */
@@ -1667,14 +1672,58 @@
     }
     .nu-mark { flex: 0 0 auto; display: block; line-height: 0; }
     /* A mask rather than an <img>, exactly as site.css does it, so the one
-       logo file can be tinted per context. 160 ÷ 2.72 ≈ 59. */
-    .nu-mark__art {
+       logo file can be tinted per context. 160 ÷ 2.72 ≈ 59.
+
+       The colour arrives on hover instead of sitting there, so the mark reads
+       as something you can press: a two-stop gradient twice the width of the
+       box, slid across by the transition. It follows the reading direction —
+       in from the right in Hebrew, from the left in English. */
+    .nu-mark__art,
+    .nu-mark--foot {
       display: block;
-      width: 160px;
-      height: 59px;
-      background: #B84830;
+      background-image: linear-gradient(to left, var(--mark-live) 50%, var(--mark-rest) 50%);
+      background-size: 200% 100%;
+      /* Full colour by DEFAULT. A phone has no pointer to hover with, so a mark
+         that only fills on hover would sit muted on it forever — and most of
+         Noy's customers are on a phone. The quiet resting half is opted into
+         below, only where hovering is a thing that can happen. */
+      background-position: 100% 0;
+      background-repeat: no-repeat;
+      transition: background-position .85s cubic-bezier(.22, .61, .36, 1);
       -webkit-mask: url(./images/logo.png) center / contain no-repeat;
               mask: url(./images/logo.png) center / contain no-repeat;
+    }
+
+    /* English reads the other way, so the sweep does too: the gradient flips and
+       the two positions swap with it. */
+    [dir="ltr"] .nu-mark__art,
+    [dir="ltr"] .nu-mark--foot {
+      background-image: linear-gradient(to right, var(--mark-live) 50%, var(--mark-rest) 50%);
+      background-position: 0 0;
+    }
+
+    .nu-mark__art { width: 160px; height: 59px; }
+
+    @media (hover: hover) {
+      .nu-mark__art,
+      .nu-mark--foot { background-position: 0 0; }
+
+      [dir="ltr"] .nu-mark__art,
+      [dir="ltr"] .nu-mark--foot { background-position: 100% 0; }
+
+      .nu-mark:hover .nu-mark__art,
+      .nu-mark:focus-visible .nu-mark__art,
+      .nu-mark--foot:hover,
+      .nu-mark--foot:focus-visible { background-position: 100% 0; }
+
+      [dir="ltr"] .nu-mark:hover .nu-mark__art,
+      [dir="ltr"] .nu-mark:focus-visible .nu-mark__art,
+      [dir="ltr"] .nu-mark--foot:hover,
+      [dir="ltr"] .nu-mark--foot:focus-visible { background-position: 0 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .nu-mark__art, .nu-mark--foot { transition: none; }
     }
     .nu-nav {
       position: absolute;
@@ -1684,19 +1733,68 @@
       gap: 26px;
       pointer-events: none;
     }
+    /* The menu answers the pointer with this page's own divider: the rule
+       draws outward from the middle and the three-petal flower blooms in the
+       gap it leaves. It is the same ornament as .divider-flower above the
+       menu — three rotated ellipses and a centre dot — quoted rather than
+       imitated, and the same rule site.css gives the other four pages.
+
+       A mask rather than an <img>, so one colour token moves it. */
     .nu-nav__item {
       pointer-events: auto;
+      position: relative;
       font-family: var(--font-text);
       font-size: 13px;
       font-weight: 400;
       color: #3B2A24;
       text-decoration: none;
-      padding-block-end: 2px;
-      border-block-end: 1px solid transparent;
-      transition: border-color .2s ease;
+      padding-block-end: 12px;
       white-space: nowrap;
     }
-    .nu-nav__item:hover { border-block-end-color: #B84830; }
+
+    .nu-nav__item::after {
+      content: "";
+      position: absolute;
+      inset-inline: 0;
+      inset-block-end: 0;
+      block-size: 1px;
+      background:
+        linear-gradient(to right, transparent, #B84830) 0 50% / calc(50% - 13px) 1px no-repeat,
+        linear-gradient(to right, #B84830, transparent) 100% 50% / calc(50% - 13px) 1px no-repeat;
+      opacity: .85;
+      transform: scaleX(0);
+      transition: transform .34s cubic-bezier(.65, 0, .35, 1);
+    }
+
+    .nu-nav__item::before {
+      content: "";
+      position: absolute;
+      inset-block-end: -7px;
+      inset-inline-start: 50%;
+      margin-inline-start: -8px;
+      inline-size: 16px;
+      block-size: 16px;
+      background: #B84830;
+      -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.5'%3E%3Cellipse cx='10' cy='10' rx='2' ry='5'/%3E%3Cellipse cx='10' cy='10' rx='2' ry='5' transform='rotate(60 10 10)'/%3E%3Cellipse cx='10' cy='10' rx='2' ry='5' transform='rotate(120 10 10)'/%3E%3C/g%3E%3Ccircle cx='10' cy='10' r='2.2' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
+              mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.5'%3E%3Cellipse cx='10' cy='10' rx='2' ry='5'/%3E%3Cellipse cx='10' cy='10' rx='2' ry='5' transform='rotate(60 10 10)'/%3E%3Cellipse cx='10' cy='10' rx='2' ry='5' transform='rotate(120 10 10)'/%3E%3C/g%3E%3Ccircle cx='10' cy='10' r='2.2' fill='%23000'/%3E%3C/svg%3E") center / contain no-repeat;
+      opacity: 0;
+      transform: scale(.3) rotate(-120deg);
+      transition: opacity .26s ease .09s,
+                  transform .44s cubic-bezier(.34, 1.45, .64, 1) .09s;
+    }
+
+    .nu-nav__item:hover::after,
+    .nu-nav__item:focus-visible::after { transform: scaleX(1); }
+
+    .nu-nav__item:hover::before,
+    .nu-nav__item:focus-visible::before { opacity: 1; transform: scale(1) rotate(0deg); }
+
+    /* shop.html carries no copy of site.css, so the reduced-motion block that
+       zeroes every transition on the other four pages is not here. Someone who
+       asked for less motion gets the ornament, without the journey to it. */
+    @media (prefers-reduced-motion: reduce) {
+      .nu-nav__item::before, .nu-nav__item::after { transition: none; }
+    }
 
     /* The shop's own header tools — language, install, admin — sit where
        site.css puts the lone language button, pushed to the far end. */
@@ -1762,6 +1860,8 @@
     /* A centred column, the same shape site.css gives the other four pages:
        wordmark, then the marks, then the address directly under them. */
     .nu-footer {
+      --mark-rest: rgba(246, 240, 228, .5);
+      --mark-live: #F6F0E4;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -1771,15 +1871,11 @@
       color: #F6F0E4;
       text-align: center;
     }
-    .nu-mark--foot {
-      display: block;
-      width: 150px;
-      height: 55px;
-      flex: 0 0 auto;
-      background: #F6F0E4;
-      -webkit-mask: url(./images/logo.png) center / contain no-repeat;
-              mask: url(./images/logo.png) center / contain no-repeat;
-    }
+    /* Size only. The mask and the hover fill are declared once, up beside
+       .nu-mark__art, for both marks. A `background:` shorthand here would
+       quietly wipe the gradient the fill is made of — later in the file,
+       same specificity, no error anywhere. */
+    .nu-mark--foot { display: block; width: 150px; height: 55px; flex: 0 0 auto; }
     .nu-foot-mid { display: flex; flex-direction: column; gap: 8px; align-items: center; }
     .nu-soc-row { display: flex; gap: 14px; justify-content: center; }
     /* 44px is the tap target; the glyph inside is 22. A mark small enough to

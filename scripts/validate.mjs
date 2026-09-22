@@ -2382,13 +2382,20 @@ if (want('design')) {
     console.log('Header mark:');
     // After F1 the header's wordmark is a CSS mask (.nu-mark__art), not an
     // <img width="…">, so what used to be read out of site.js is checked here
-    // instead. Anchored to a line start so it reads the base rule, never the
-    // "on-film" override two-class selector further down that shares the name.
-    const artRule = css.match(/^\.nu-mark__art\s*\{([^}]*)\}/m);
-    if (!artRule) {
+    // instead.
+    //
+    // Every rule whose selector list names .nu-mark__art, not only a rule
+    // that begins with it. The mask and the hover fill are now declared once
+    // for the header mark and the footer mark together, in a grouped
+    // selector, and a check anchored to "^.nu-mark__art {" reported the
+    // header mark unmasked on a file where it is masked correctly.
+    const artRules = [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)]
+      .filter(m => m[1].split(',').some(sel => sel.trim() === '.nu-mark__art'));
+
+    if (!artRules.length) {
       fail('.nu-mark__art is not defined in site.css — the header would show no mark at all');
     } else {
-      const artBody = artRule[1];
+      const artBody = artRules.map(m => m[2]).join('\n');
       if (/url\(\s*\.\/images\/logo\.png\s*\)/.test(artBody))
         pass('.nu-mark__art masks the cropped wordmark (images/logo.png)');
       else fail('.nu-mark__art does not mask images/logo.png — the header mark would be blank');
@@ -2398,6 +2405,19 @@ if (want('design')) {
       if (!artWidth) fail('.nu-mark__art has no declared width — it renders at 0×0, invisible');
       else if (Number(artWidth[1]) < 130) fail(`.nu-mark__art is ${artWidth[1]}px wide — below its 130px floor, where the umbel's strokes vanish`);
       else pass(`.nu-mark__art is rendered at ${artWidth[1]}px, at or above its 130px floor`);
+
+      // The mark is a link, and a link that looks like a picture needs to
+      // say so. The fill sweeps in on hover; without a transition it snaps,
+      // and without the hover rule nothing happens at all.
+      const marksFill = /background-position/.test(artBody) &&
+                        /linear-gradient/.test(artBody);
+      const hoverFill = /\.nu-mark:hover\s+\.nu-mark__art/.test(css);
+      if (marksFill && hoverFill)
+        pass('the header mark fills with colour on hover, so it reads as something you can press');
+      else if (!marksFill)
+        fail('.nu-mark__art no longer carries the two-stop gradient its hover fill is made of — a solid background shorthand anywhere later in the file will do this silently');
+      else
+        fail('nothing moves .nu-mark__art on hover — the gradient is there but the mark never fills');
     }
 
     const mobile = css.match(/@media\s*\(\s*max-width:\s*720px\s*\)\s*\{([\s\S]*?)\n\}/);
@@ -2479,6 +2499,35 @@ if (want('design')) {
     }
 
 
+
+    // The menu is centred by taking it out of the flow — `.nu-nav` is
+    // absolutely positioned across the whole header — and it is given
+    // `pointer-events: none` so that dead space either side of the four words
+    // cannot swallow clicks meant for the wordmark or the language button.
+    // Every item then has to hand the pointer back with `pointer-events:
+    // auto`, and if it does not, the entire menu is unclickable: no hover, no
+    // focus, no navigation, and nothing on screen says so.
+    //
+    // Measured on 22 Sep 2026: rewriting `.nu-nav__item` to add the hover
+    // ornament dropped that line along with the item's colour and size. The
+    // menu rendered as four bare blue underlined links that did not respond
+    // to the mouse at all, and every check here still passed.
+    for (const [file, css] of [
+      ['site.css', readFileSync(join(ROOT, 'site.css'), 'utf8')],
+      [SHOP,       readFileSync(join(ROOT, SHOP), 'utf8')],
+    ]) {
+      const navBlock  = css.slice(css.indexOf('.nu-nav {'));
+      const navNone   = /\.nu-nav\s*{[^}]*pointer-events:\s*none/.test(css);
+      const itemAuto  = /\.nu-nav__item\s*{[^}]*pointer-events:\s*auto/.test(css);
+      if (!navNone) {
+        pass(`${file}: .nu-nav does not disable pointer events, so its items need nothing to stay clickable`);
+      } else if (itemAuto) {
+        pass(`${file}: the menu items hand the pointer back, so the menu is clickable`);
+      } else {
+        fail(`${file}: .nu-nav is pointer-events:none but .nu-nav__item never restores it with pointer-events:auto — the whole menu is unclickable and unhoverable, and nothing on the page shows it`);
+      }
+      void navBlock;
+    }
     // ── The shop's copy of this menu ──────────────────────────────────────
     //
     // shop.html cannot use site.js: it has its own language toggle and its
@@ -2818,7 +2867,11 @@ if (want('pages')) {
 
     for (const [asset, re] of ASSETS) {
       const versions = new Map();
-      for (const page of PAGES) {
+      // PAGES plus the captions form. It is not a page of the site and never
+      // will be, but it loads the same stylesheet from the same cache, so
+      // leaving it out of this comparison is how it silently falls a version
+      // behind and renders against a stylesheet the others have moved past.
+      for (const page of [...PAGES, 'gallery-captions.html']) {
         const p = join(ROOT, page);
         if (!existsSync(p)) continue;   // already failed above, on its own line
         const m = readFileSync(p, 'utf8').match(re);
