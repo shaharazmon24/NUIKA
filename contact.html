@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bellefair&family=IBM+Plex+Sans+Hebrew:wght@200;300;400;500&display=swap">
-  <link rel="stylesheet" href="./site.css">
+  <link rel="stylesheet" href="./site.css?v=3">
 
   <style>
     /* The contact page's own layout. Prefixed .ct- so nothing here can
@@ -131,6 +131,25 @@
     }
 
     .ct-direct a.link { font-size: inherit; }
+
+    /* The mark sits beside what it points at, and the underline that .link
+       draws belongs under the value — not under the icon, where it reads as
+       a stray rule. */
+    .ct-plat {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      border-block-end: 0;
+    }
+    .ct-plat__icon {
+      inline-size: 19px;
+      block-size: 19px;
+      flex: 0 0 auto;
+      transition: transform .2s cubic-bezier(.34, 1.3, .64, 1);
+    }
+    .ct-plat > .ltr { border-block-end: 1px solid currentColor; }
+    .ct-plat:hover .ct-plat__icon,
+    .ct-plat:focus-visible .ct-plat__icon { transform: scale(1.12); }
   </style>
 </head>
 <body>
@@ -261,22 +280,29 @@
           </figcaption>
         </figure>
 
+        <!-- The platform is said by its mark, not by its name; what stays in
+             words is the part a visitor actually needs to read — the number
+             and the handle. A bare icon here would have deleted both.
+             aria-label carries the platform name for a screen reader, which
+             is the one place dropping the word would have cost something. -->
         <ul class="ct-direct">
           <li>
-            <a class="link" href="https://wa.me/972547382282" target="_blank" rel="noopener">
-              <span lang-content="he">וואטסאפ: <span class="ltr">054-7382282</span></span>
-              <span lang-content="en">WhatsApp: 054-7382282</span>
+            <a class="link ct-plat" href="https://wa.me/972547382282" target="_blank" rel="noopener"
+               aria-label="וואטסאפ" data-label-he="וואטסאפ" data-label-en="WhatsApp">
+              <svg class="ct-plat__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20.5 11.6a8.4 8.4 0 0 1-12.4 7.4L3.5 20.5l1.6-4.5a8.4 8.4 0 1 1 15.4-4.4Z"/><path d="M9.2 8.4c.2-.5.4-.5.7-.5h.5c.2 0 .4 0 .6.5l.8 1.9c.1.2 0 .4-.1.5l-.5.6c-.1.2-.2.3-.1.5a6 6 0 0 0 3 2.9c.2.1.4 0 .5-.1l.5-.6c.2-.2.3-.2.5-.1l1.8.9c.2.1.4.2.4.4a1.9 1.9 0 0 1-1.3 1.6 3.4 3.4 0 0 1-2.5-.3 10 10 0 0 1-4.7-4.4 3.7 3.7 0 0 1-.8-2.1c0-.7.3-1.3.7-1.6Z"/></svg>
+              <span class="ltr">054-7382282</span>
             </a>
           </li>
           <li>
-            <a class="link" href="https://www.instagram.com/nuika_bread/" target="_blank" rel="noopener">
-              <span lang-content="he">אינסטגרם: <span class="ltr">@nuika_bread</span></span>
-              <span lang-content="en">Instagram: @nuika_bread</span>
+            <a class="link ct-plat" href="https://www.instagram.com/nuika_bread/" target="_blank" rel="noopener"
+               aria-label="אינסטגרם" data-label-he="אינסטגרם" data-label-en="Instagram">
+              <svg class="ct-plat__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2" y="2" width="20" height="20" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.6" cy="6.4" r="1.1" fill="currentColor" stroke="none"/></svg>
+              <span class="ltr">@nuika_bread</span>
             </a>
           </li>
           <li>
-            <span lang-content="he">איסוף מרחובות בימי שישי</span>
-            <span lang-content="en">Pickup from Rehovot on Fridays</span>
+            <span lang-content="he">ש. בן ציון 13, רחובות · איסוף בימי שישי</span>
+            <span lang-content="en">S. Ben Zion 13, Rehovot · Friday pickup</span>
           </li>
         </ul>
       </aside>
@@ -285,7 +311,7 @@
 
   <footer class="nu-footer" data-nuika-footer></footer>
 
-  <script src="./site.js?v=2"></script>
+  <script src="./site.js?v=3"></script>
   <script>
     // The form composes one WhatsApp message on the visitor's own device and
     // opens it there. Nothing on this page makes a network request of its

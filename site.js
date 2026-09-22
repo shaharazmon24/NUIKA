@@ -23,10 +23,39 @@
     { key: 'contact', href: './contact.html', he: 'דברו איתי', en: 'Talk to me' }
   ];
 
+  /* The places to find Noy, as marks rather than words.
+
+     Each entry carries its own glyph. An icon with no text needs an
+     accessible name or it reaches a screen reader as "link", so `he`/`en`
+     stay — they are now the aria-label instead of the visible label.
+
+     FACEBOOK: asked for on 22 Sep 2026 and not added, because NUIKA has no
+     Facebook address anywhere in this repo and inventing one would publish a
+     dead link on a real shop. When Shahar sends the page URL it is one entry
+     here and it appears on all five pages at once; nothing else needs
+     touching. */
   var SOCIAL = [
-    { href: 'https://www.instagram.com/nuika_bread/', he: 'אינסטגרם', en: 'Instagram' },
-    { href: 'https://wa.me/972547382282',             he: 'וואטסאפ',  en: 'WhatsApp' }
+    {
+      href: 'https://www.instagram.com/nuika_bread/',
+      he: 'אינסטגרם', en: 'Instagram',
+      icon: '<rect x="2" y="2" width="20" height="20" rx="5.5"/>' +
+            '<circle cx="12" cy="12" r="4.2"/>' +
+            '<circle cx="17.6" cy="6.4" r="1.1" fill="currentColor" stroke="none"/>'
+    },
+    {
+      href: 'https://wa.me/972547382282',
+      he: 'וואטסאפ', en: 'WhatsApp',
+      icon: '<path d="M20.5 11.6a8.4 8.4 0 0 1-12.4 7.4L3.5 20.5l1.6-4.5a8.4 8.4 0 1 1 15.4-4.4Z"/>' +
+            '<path d="M9.2 8.4c.2-.5.4-.5.7-.5h.5c.2 0 .4 0 .6.5l.8 1.9c.1.2 0 .4-.1.5l-.5.6c-.1.2-.2.3-.1.5a6 6 0 0 0 3 2.9c.2.1.4 0 .5-.1l.5-.6c.2-.2.3-.2.5-.1l1.8.9c.2.1.4.2.4.4a1.9 1.9 0 0 1-1.3 1.6 3.4 3.4 0 0 1-2.5-.3 10 10 0 0 1-4.7-4.4 3.7 3.7 0 0 1-.8-2.1c0-.7.3-1.3.7-1.6Z"/>'
+    }
   ];
+
+  /* Street address and pickup day, in one place. It used to say only
+     "רחובות", which is a town, not somewhere a customer can drive to. */
+  var PLACE = {
+    he: 'ש. בן ציון 13, רחובות · איסוף בימי שישי',
+    en: 'S. Ben Zion 13, Rehovot · Friday pickup'
+  };
 
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
@@ -83,17 +112,21 @@
   }
 
   function nuikaFooter() {
+    /* icon markup is ours, from SOCIAL above — never user input — so it goes
+       in whole; href and the label are escaped like everything else. */
     var links = SOCIAL.map(function (s) {
-      return '<a class="nu-soc" href="' + esc(s.href) + '" target="_blank" rel="noopener">' +
-             '<span lang-content="he">' + esc(s.he) + '</span>' +
-             '<span lang-content="en">' + esc(s.en) + '</span></a>';
+      return '<a class="nu-soc" href="' + esc(s.href) + '" target="_blank" rel="noopener"' +
+             ' aria-label="' + esc(s.he) + '" data-label-he="' + esc(s.he) + '" data-label-en="' + esc(s.en) + '">' +
+             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"' +
+             ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
+             s.icon + '</svg></a>';
     }).join('');
     return '' +
       '<a class="nu-mark nu-mark--foot" href="./index.html" aria-label="NUIKA"></a>' +
       '<div class="nu-soc-row">' + links + '</div>' +
       '<p class="nu-fine">' +
-        '<span lang-content="he">רחובות · איסוף בימי שישי</span>' +
-        '<span lang-content="en">Rehovot · Friday pickup</span>' +
+        '<span lang-content="he">' + esc(PLACE.he) + '</span>' +
+        '<span lang-content="en">' + esc(PLACE.en) + '</span>' +
       '</p>' +
       '<a class="nu-to-shop" href="./shop.html">' +
         '<span lang-content="he">למאפייה של NUIKA</span>' +
@@ -150,6 +183,16 @@
     var nodes = document.querySelectorAll('[lang-content]');
     for (var i = 0; i < nodes.length; i++) {
       nodes[i].hidden = nodes[i].getAttribute('lang-content') !== lang;
+    }
+
+    /* An icon-only link has no text to swap, so its accessible name lives in
+       an attribute and the [lang-content] pass above cannot reach it. Without
+       this the social marks announce themselves in Hebrew to an English
+       reader for the life of the page. */
+    var labelled = document.querySelectorAll('[data-label-he][data-label-en]');
+    for (var k = 0; k < labelled.length; k++) {
+      var label = labelled[k].getAttribute('data-label-' + lang);
+      if (label) labelled[k].setAttribute('aria-label', label);
     }
 
     var btn = document.querySelector('[data-nuika-lang]');

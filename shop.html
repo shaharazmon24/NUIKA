@@ -1627,26 +1627,10 @@
     }
 
     /* ── PWA Install button ── */
-    #install-pwa-btn {
-      display: none;
-      align-items: center;
-      gap: 5px;
-      font-family: var(--font-text);
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: #6B2E1E;
-      background: #F5EFE3;
-      border: 1.5px solid #D5C9B5;
-      border-radius: 100px;
-      padding: 5px 12px;
-      cursor: pointer;
-      transition: background 0.2s, border-color 0.2s;
-      white-space: nowrap;
-    }
-    #install-pwa-btn:hover {
-      background: #EFE1C7;
-      border-color: #C4B89A;
-    }
+    /* Hidden until the browser offers an install prompt; everything else
+       about this button comes from .nu-tool. */
+    #install-pwa-btn { display: none; }
+    #install-pwa-btn.is-offered { display: inline-flex; }
 
     /* ── SHARED CHROME ──────────────────────────────────────────────────
        The header and footer of story / gallery / events / contact, rebuilt
@@ -1730,7 +1714,29 @@
       cursor: pointer;
       opacity: .75;
     }
-    .nu-lang:hover { opacity: 1; }
+    .nu-lang {
+      transition: opacity .2s ease, background-color .2s ease, transform .2s cubic-bezier(.34,1.3,.64,1);
+    }
+    .nu-lang:hover { opacity: 1; background: rgba(59,42,36,.07); transform: translateY(-1px); }
+
+    /* The checkout button is the one this page exists for, so it answers the
+       pointer more plainly than anything else on it. */
+    #cart-order-btn-he, #cart-order-btn-en {
+      transition: transform .2s cubic-bezier(.34,1.3,.64,1), box-shadow .2s ease, background-color .2s ease;
+      cursor: pointer;
+    }
+    #cart-order-btn-he:hover, #cart-order-btn-en:hover {
+      transform: translateY(-2px);
+      background: #E0B45A !important;
+      box-shadow: 0 8px 20px rgba(0,0,0,.28);
+    }
+    #cart-order-btn-he:active, #cart-order-btn-en:active { transform: translateY(0); box-shadow: none; }
+
+    .qty-btn { transition: background .18s ease, color .18s ease, transform .18s cubic-bezier(.34,1.3,.64,1); }
+    .qty-btn:hover { background: #6B2E1E; color: #F6F0E4; transform: scale(1.08); }
+
+    .nu-back-home { transition: opacity .2s ease; opacity: .9; }
+    .nu-back-home:hover { opacity: 1; }
 
     /* Under 720px the menu drops to its own row beneath the mark, the same
        breakpoint and the same behaviour as every other page. */
@@ -1748,15 +1754,17 @@
       .nu-nav__item { font-size: 12.5px; }
     }
 
+    /* A centred column, the same shape site.css gives the other four pages:
+       wordmark, then the marks, then the address directly under them. */
     .nu-footer {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 22px;
-      padding: 40px 28px 9rem;
+      gap: 14px;
+      padding: 36px 28px 9rem;
       background: #3B2A24;
       color: #F6F0E4;
+      text-align: center;
     }
     .nu-mark--foot {
       display: block;
@@ -1767,16 +1775,31 @@
       -webkit-mask: url(./images/logo.png) center / contain no-repeat;
               mask: url(./images/logo.png) center / contain no-repeat;
     }
-    .nu-foot-mid { display: flex; flex-direction: column; gap: 6px; align-items: center; }
-    .nu-soc-row { display: flex; gap: 18px; }
+    .nu-foot-mid { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+    .nu-soc-row { display: flex; gap: 14px; justify-content: center; }
+    /* 44px is the tap target; the glyph inside is 22. A mark small enough to
+       miss would be worse than the word it replaced. */
     .nu-soc {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
       color: inherit;
-      font-family: var(--font-text);
-      font-size: 13px;
       text-decoration: none;
-      opacity: .85;
+      border-radius: 50%;
+      opacity: .8;
+      transition: opacity .2s ease, transform .2s cubic-bezier(.34,1.3,.64,1), background-color .2s ease;
     }
-    .nu-soc:hover { opacity: 1; }
+    .nu-soc svg { width: 22px; height: 22px; display: block; }
+    .nu-soc:hover, .nu-soc:focus-visible {
+      opacity: 1;
+      transform: translateY(-2px);
+      background: rgba(246,240,228,.12);
+    }
+    .nu-contacts { display: flex; gap: 10px; justify-content: center; align-items: center; }
+    .nu-contacts a { color: inherit; text-decoration: none; border-block-end: 1px solid currentColor; }
+    .nu-contacts a:hover { opacity: 1; }
     .nu-fine {
       margin: 0;
       font-family: var(--font-text);
@@ -1795,6 +1818,76 @@
     }
     @media (max-width: 720px) {
       .nu-footer { justify-content: center; text-align: center; padding: 32px 18px 9rem; }
+    }
+
+    /* One pill for all three header tools — home, admin, install — instead of
+       three inline style attributes that drifted apart. #install-pwa-btn keeps
+       its own rule below only for `display`, which JS toggles. */
+    .nu-tool {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-family: var(--font-text);
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #6B3A2A;
+      background: #F5EFE3;
+      border: 1.5px solid #D5C9B5;
+      border-radius: 100px;
+      padding: 5px 12px;
+      cursor: pointer;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: background .2s ease, border-color .2s ease, transform .2s cubic-bezier(.34,1.3,.64,1);
+    }
+    .nu-tool:hover {
+      background: #EFE1C7;
+      border-color: #B84830;
+      transform: translateY(-1px);
+    }
+    .nu-tool:active { transform: translateY(0); }
+
+    /* A tooltip, not a title attribute: title waits about a second, cannot be
+       styled, and never appears for a keyboard user at all. This one answers
+       focus as well as hover. */
+    .nu-tip { position: relative; }
+    .nu-tip::after {
+      content: attr(data-tip);
+      position: absolute;
+      inset-block-start: calc(100% + 8px);
+      inset-inline-start: 50%;
+      transform: translateX(50%) translateY(-4px);
+      background: #3B2A24;
+      color: #F6F0E4;
+      font-family: var(--font-text);
+      font-size: 0.72rem;
+      font-weight: 400;
+      line-height: 1.4;
+      padding: 6px 10px;
+      border-radius: 8px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .18s ease, transform .18s ease;
+      z-index: 60;
+    }
+    [dir="ltr"] .nu-tip::after { transform: translateX(-50%) translateY(-4px); }
+    .nu-tip:hover::after,
+    .nu-tip:focus-visible::after { opacity: 1; transform: translateX(50%) translateY(0); }
+    [dir="ltr"] .nu-tip:hover::after,
+    [dir="ltr"] .nu-tip:focus-visible::after { transform: translateX(-50%) translateY(0); }
+
+    /* A tooltip that reaches off the side of a phone is worse than none, and
+       the header tools sit at the very edge there. */
+    @media (max-width: 560px) {
+      .nu-tip::after { display: none; }
+    }
+
+    /* Under 480px the labels go and the pills become their glyphs, so the
+       wordmark keeps its floor width. */
+    @media (max-width: 479px) {
+      .nu-tool__label { display: none; }
+      .nu-tool { padding: 6px 8px; }
     }
 
     /* ── HERO LINE ──────────────────────────────────────────────────────
@@ -1928,6 +2021,25 @@
       }
     }
 
+
+    /* ── ONE ROW OF FIVE ────────────────────────────────────────────────
+       Asked for on 22 Sep 2026: the menu as a single row.
+
+       It is a row of five from 1000px up, where each card gets about 190px
+       and the names still read. Below that it cannot be: five across a
+       375px phone leaves 65px per card, which is narrower than the word
+       "כוסמין" — so the phone keeps two and the tablet three. The ID
+       outranks Tailwind's grid-cols classes, so these win wherever they
+       apply without needing !important.
+
+       The container widens with it. At max-w-5xl (1024px) five cards are
+       cramped; 1180px gives them room without the row spanning a whole
+       desktop. */
+    @media (min-width: 1000px) {
+      #products-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+      #menu { max-width: 1180px; }
+      .product-name { font-size: 1.22rem; }
+    }
     /* ── CARD CONTENTS ──────────────────────────────────────────────────
        The engravings are the best thing on this page and they were being
        shown at about 160×120. A square gives them room without making the
@@ -2029,15 +2141,29 @@
   </nav>
 
   <div class="nu-tools">
-    <button id="admin-entry-btn" onclick="openAdminLogin()" style="display:none;align-items:center;gap:5px;font-family:var(--font-text);font-size:0.78rem;font-weight:600;color:#6B3A2A;background:#F5EFE3;border:1.5px solid #D5C9B5;border-radius:100px;padding:5px 12px;cursor:pointer;" aria-label="לוח ניהול">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      ניהול
+    <!-- The wordmark is already a link home, but a mark is a convention, not
+         a button, and the shop is the one page somebody arrives at from an
+         installed icon with no idea the rest of the site exists. So the way
+         out is also said plainly. -->
+    <a class="nu-home-btn nu-tool nu-tip" href="./index.html"
+       aria-label="לעמוד הבית" data-tip-he="לעמוד הבית של נואיקה" data-tip-en="To the NUIKA home page">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/></svg>
+      <span class="nu-tool__label" lang-content="he">לעמוד הבית</span>
+      <span class="nu-tool__label" lang-content="en">Home</span>
+    </a>
+
+    <button id="admin-entry-btn" onclick="openAdminLogin()" class="nu-tool" style="display:none;" aria-label="לוח ניהול">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span class="nu-tool__label">ניהול</span>
     </button>
-    <button id="install-pwa-btn" onclick="installPWA()" aria-label="התקן כאפליקציה">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v13M8 11l4 4 4-4M20 17v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2"/></svg>
-      <span lang-content="he">התקן</span>
-      <span lang-content="en">Install</span>
+
+    <button id="install-pwa-btn" onclick="installPWA()" class="nu-tool nu-tip" aria-label="התקן כאפליקציה"
+            data-tip-he="התקן את עמוד המאפייה על הטלפון שלך" data-tip-en="Install the bakery on your phone">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 2v13M8 11l4 4 4-4M20 17v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2"/></svg>
+      <span class="nu-tool__label" lang-content="he">התקן</span>
+      <span class="nu-tool__label" lang-content="en">Install</span>
     </button>
+
     <button onclick="toggleLang()" class="nu-lang" id="lang-btn">EN</button>
   </div>
 </header>
@@ -3311,13 +3437,25 @@
   <a class="nu-mark--foot" href="./index.html" aria-label="נואיקה — לעמוד הבית"></a>
 
   <div class="nu-foot-mid">
+    <!-- Marks, not words, and the same two glyphs site.js draws on the other
+         four pages. The number and the handle stay as text: they are the
+         thing worth reading, and an icon on its own would have removed them. -->
     <div class="nu-soc-row">
-      <a class="nu-soc" href="https://wa.me/972547382282" target="_blank" rel="noopener">054-7382282</a>
+      <a class="nu-soc" href="https://wa.me/972547382282" target="_blank" rel="noopener" aria-label="וואטסאפ">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20.5 11.6a8.4 8.4 0 0 1-12.4 7.4L3.5 20.5l1.6-4.5a8.4 8.4 0 1 1 15.4-4.4Z"/><path d="M9.2 8.4c.2-.5.4-.5.7-.5h.5c.2 0 .4 0 .6.5l.8 1.9c.1.2 0 .4-.1.5l-.5.6c-.1.2-.2.3-.1.5a6 6 0 0 0 3 2.9c.2.1.4 0 .5-.1l.5-.6c.2-.2.3-.2.5-.1l1.8.9c.2.1.4.2.4.4a1.9 1.9 0 0 1-1.3 1.6 3.4 3.4 0 0 1-2.5-.3 10 10 0 0 1-4.7-4.4 3.7 3.7 0 0 1-.8-2.1c0-.7.3-1.3.7-1.6Z"/></svg>
+      </a>
+      <a class="nu-soc" href="https://www.instagram.com/nuika_bread" target="_blank" rel="noopener" aria-label="אינסטגרם">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2" y="2" width="20" height="20" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.6" cy="6.4" r="1.1" fill="currentColor" stroke="none"/></svg>
+      </a>
+    </div>
+    <p class="nu-fine nu-contacts">
       <!-- Written forwards, and isolated so it renders forwards. It used to be
            typed backwards ("nuika_bread@") to make it look right on screen,
            which meant copying it, or reading it aloud, gave the wrong handle. -->
-      <a class="nu-soc" href="https://www.instagram.com/nuika_bread" target="_blank" rel="noopener" style="direction:ltr;unicode-bidi:isolate;">@nuika_bread</a>
-    </div>
+      <a href="https://wa.me/972547382282" target="_blank" rel="noopener" style="direction:ltr;unicode-bidi:isolate;">054-7382282</a>
+      <span aria-hidden="true">·</span>
+      <a href="https://www.instagram.com/nuika_bread" target="_blank" rel="noopener" style="direction:ltr;unicode-bidi:isolate;">@nuika_bread</a>
+    </p>
     <p class="nu-fine">
       <span lang-content="he">ש. בן ציון 13, רחובות · איסוף בימי שישי</span>
       <span lang-content="en">S. Ben Zion 13, Rehovot · Friday pickup</span>
@@ -3744,13 +3882,13 @@ window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   _deferredInstallPrompt = e;
   const btn = document.getElementById('install-pwa-btn');
-  if (btn) btn.style.display = 'flex';
+  if (btn) btn.classList.add('is-offered');
 });
 
 window.addEventListener('appinstalled', () => {
   _deferredInstallPrompt = null;
   const btn = document.getElementById('install-pwa-btn');
-  if (btn) btn.style.display = 'none';
+  if (btn) btn.classList.remove('is-offered');
 });
 
 function installPWA() {
@@ -3771,7 +3909,7 @@ function installPWA() {
   _deferredInstallPrompt.userChoice.then(() => {
     _deferredInstallPrompt = null;
     const btn = document.getElementById('install-pwa-btn');
-    if (btn) btn.style.display = 'none';
+    if (btn) btn.classList.remove('is-offered');
   });
 }
 
@@ -4536,7 +4674,7 @@ function updateAdminEntryButton() {
   // Noy loses nothing: she opens the panel from the "ניהול" home-screen icon,
   // and once she is signed in this button reappears for the rest of the session.
   const header = document.getElementById('admin-entry-btn');
-  if (header) header.style.display = IS_ADMIN ? 'flex' : 'none';
+  if (header) header.style.display = IS_ADMIN ? 'inline-flex' : 'none';
 }
 
 // Run at load: on Noy's phone the button is there before Firebase answers.
@@ -6085,9 +6223,23 @@ function toggleLang() {
   document.documentElement.setAttribute('lang', isEn ? 'en' : 'he');
   document.documentElement.setAttribute('dir', isEn ? 'ltr' : 'rtl');
   document.getElementById('lang-btn').textContent = isEn ? 'עב' : 'EN';
+  applyTooltipLang();
   renderOrderSummary();
   updateProgressBar();
 }
+
+// A tooltip is drawn from `content: attr(data-tip)`, and CSS cannot choose
+// between two attributes — so the live one is written here. Also the
+// aria-label, because an icon button's accessible name is an attribute too
+// and the [lang-content] rules cannot reach inside one.
+function applyTooltipLang() {
+  const isEn = document.body.classList.contains('lang-en');
+  document.querySelectorAll('[data-tip-he][data-tip-en]').forEach(el => {
+    const tip = el.getAttribute(isEn ? 'data-tip-en' : 'data-tip-he');
+    if (tip) { el.setAttribute('data-tip', tip); el.setAttribute('aria-label', tip); }
+  });
+}
+applyTooltipLang();
 
 // ─── ADMIN TAB SWITCHING ───────────────────────────
 let currentAdminTab = 'dash';

@@ -2542,7 +2542,7 @@ if (want('pages')) {
 
     need(/<html[^>]+lang="he"/, 'starts in Hebrew, so the CSS hides English before any script runs');
     need(/<html[^>]+dir="rtl"/, 'starts right-to-left');
-    need(/<link[^>]+href="\.\/site\.css"/, 'loads the shared stylesheet');
+    need(/<link[^>]+href="\.\/site\.css\?v=\d+"/, 'loads the shared stylesheet through a versioned URL, so new markup can never be served against a stale cached site.css');
 
     // The version query is not decoration. gallery.html and events.html call
     // window.nuikaEsc, which exists only in the current site.js — and the two
@@ -2693,19 +2693,49 @@ if (want('pages')) {
   // page left behind keeps asking for the URL the stale script is cached
   // under, and it is the only page that breaks — which is exactly the kind of
   // failure nobody reproduces, because the four pages they try all work.
+  //
+  // Both files, and both against each other. site.css carried NO version at
+  // all until 22 Sep 2026 while site.js carried one, so the guard watched
+  // half the pair: the day the footer's markup moved into site.js and its
+  // layout into site.css, a returning visitor could be served the new markup
+  // with up to four hours of stale stylesheet — icons at a default size in a
+  // row that no longer existed — and every check here stayed green.
   {
-    const versions = new Map();
-    for (const page of PAGES) {
-      const p = join(ROOT, page);
-      if (!existsSync(p)) continue;   // already failed above, on its own line
-      const m = readFileSync(p, 'utf8').match(/<script[^>]+src="\.\/site\.js\?v=(\d+)"/);
-      if (m) versions.set(page, m[1]);
+    const ASSETS = [
+      ['site.js',  /<script[^>]+src="\.\/site\.js\?v=(\d+)"/],
+      ['site.css', /<link[^>]+href="\.\/site\.css\?v=(\d+)"/],
+    ];
+    const seen = new Map();   // asset -> Map(page -> version)
+
+    for (const [asset, re] of ASSETS) {
+      const versions = new Map();
+      for (const page of PAGES) {
+        const p = join(ROOT, page);
+        if (!existsSync(p)) continue;   // already failed above, on its own line
+        const m = readFileSync(p, 'utf8').match(re);
+        if (m) versions.set(page, m[1]);
+      }
+      seen.set(asset, versions);
+
+      const distinct = [...new Set(versions.values())];
+      if (distinct.length > 1)
+        fail(`the pages disagree about ${asset}'s version (${[...versions].map(([p, v]) => `${p}=v${v}`).join(', ')}) — whichever page is on the older number is the one that gets the stale file`);
+      else if (distinct.length === 1)
+        pass(`all ${versions.size} pages load ${asset} at the same version (v${distinct[0]})`);
+      else
+        fail(`no page carries a version on ${asset} — it is cached for four hours and nothing forces a refresh when it changes`);
     }
-    const distinct = [...new Set(versions.values())];
-    if (distinct.length > 1)
-      fail(`the pages disagree about site.js's version (${[...versions].map(([p, v]) => `${p}=v${v}`).join(', ')}) — whichever page is on the older number is the one that gets the stale script`);
-    else if (distinct.length === 1)
-      pass(`all ${versions.size} pages load site.js at the same version (v${distinct[0]})`);
+
+    // They are one pair. The markup lives in site.js and its layout lives in
+    // site.css, so a visitor holding a fresh copy of one and a stale copy of
+    // the other sees a broken page. Bumping them together is the discipline;
+    // this is what notices when only one was bumped.
+    const jsV  = [...new Set(seen.get('site.js').values())][0];
+    const cssV = [...new Set(seen.get('site.css').values())][0];
+    if (jsV && cssV && jsV !== cssV)
+      fail(`site.js is at v${jsV} and site.css at v${cssV} — they are served to the same page from different caches, so bump both together or somebody gets one of each`);
+    else if (jsV && cssV)
+      pass(`site.js and site.css are versioned together (v${jsV})`);
   }
 
   console.log('The home page and its film:');
@@ -2969,8 +2999,18 @@ if (want('pages')) {
   const homeAnchors = (uncommented(shop).match(/<a[^>]*>/g) || [])
     .filter(a => HOME_HREFS.includes(hrefOf(a)));
 
-  const CHROME = ['nu-mark', 'nu-mark--foot', 'nu-back-home'];
-  const hasClass   = (a, c) => a.includes(`class="${c}"`) || a.includes(`class='${c}'`);
+  // Every element in the shop that is ALLOWED to lead home, by name. A link
+  // home that is none of these is the pre-cutover bug: markup written when
+  // index.html was the shop, now quietly dropping a customer on the film.
+  const CHROME = ['nu-mark', 'nu-mark--foot', 'nu-back-home', 'nu-home-btn'];
+  // Matches the class whether it stands alone or sits in a list, which the
+  // header's home button does ("nu-home-btn nu-tool nu-tip"). Testing for
+  // `class="nu-home-btn"` alone would have failed the moment it gained a
+  // second class, and the message would have blamed a stray link.
+  const hasClass = (a, c) => {
+    const m = a.match(/class=["']([^"']*)["']/);
+    return !!m && m[1].split(/\s+/).includes(c);
+  };
   const isChrome   = a => CHROME.some(c => hasClass(a, c));
   const sanctioned = homeAnchors.filter(isChrome);
   const strays     = homeAnchors.filter(a => !isChrome(a));
