@@ -1890,6 +1890,18 @@
       .nu-tool { padding: 6px 8px; }
     }
 
+    /* The other half of the oven door: the film page pulls a panel up over
+       itself, and the shop settles in underneath. Only the hero is animated,
+       never the menu — a failed animation on the products is a shop with no
+       products, and no arrival is worth that. */
+    @media (prefers-reduced-motion: no-preference) {
+      .hero-row { animation: shopArrive .5s cubic-bezier(.22, .61, .36, 1) both; }
+    }
+    @keyframes shopArrive {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: none; }
+    }
+
     /* ── HERO LINE ──────────────────────────────────────────────────────
        What used to be the name typed in a display face, now that the real
        wordmark sits in the header directly above it. */

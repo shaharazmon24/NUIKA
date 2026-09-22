@@ -181,6 +181,45 @@ html[lang="en"]       [lang-content="he"] { display: none; }
   }
 }
 
+/* ---------- the oven door ----------
+   Played over the page on the way into the shop. A warm panel rises from the
+   bottom edge and the wordmark settles into the middle of it.
+
+   position: fixed with a high z-index because it has to cover the film on the
+   home page, which paints its own stacking context. It never takes a click:
+   the navigation is already committed by the time it is on screen. */
+.nu-door {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--wheat);
+  display: grid;
+  place-items: center;
+  transform: translateY(100%);
+  transition: transform .46s cubic-bezier(.65, 0, .35, 1);
+  pointer-events: none;
+}
+.nu-door.is-shut { transform: translateY(0); }
+
+.nu-door__mark {
+  inline-size: 190px;
+  block-size: 70px;
+  background: var(--terra);
+  -webkit-mask: url(./images/logo.png) center / contain no-repeat;
+          mask: url(./images/logo.png) center / contain no-repeat;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity .3s ease .16s, transform .4s cubic-bezier(.22, .61, .36, 1) .16s;
+}
+.nu-door.is-shut .nu-door__mark { opacity: 1; transform: translateY(0); }
+
+/* Belt and braces with the JS, which already declines to intercept the click
+   at all when this is set — so the door is never built. If some future path
+   builds one anyway, it appears instantly rather than sliding. */
+@media (prefers-reduced-motion: reduce) {
+  .nu-door, .nu-door__mark { transition: none; }
+}
+
 /* ---------- shared chrome ---------- */
 /* Laid out here because the header and footer belong to every page. A page's
    own layout stays in that page's stylesheet, under its own class prefix. */

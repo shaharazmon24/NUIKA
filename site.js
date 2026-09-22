@@ -223,6 +223,78 @@
     if (btn) nuikaLang(currentLang() === 'he' ? 'en' : 'he');
   });
 
+
+  /* ---------- the way into the shop ----------
+   *
+   * Every link to shop.html plays an oven door closing over the page before
+   * the browser leaves it: a warm panel sweeps up from the bottom, the
+   * wordmark settles into it, and the shop loads behind it.
+   *
+   * This wraps the most important click on the site, so it is built to fail
+   * open. The click is only intercepted once every precondition is met, and
+   * from that point three separate things can still complete the navigation:
+   * the animation's own end, a watchdog timer, and a catch around the whole
+   * attempt. A visitor who asked for less motion is never intercepted at
+   * all, and neither is a middle-click, a modified click or a new tab.
+   */
+  var DOOR_MS = 460;
+
+  function wantsStillness() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+
+  function ovenDoor(go) {
+    var done = false;
+    function finish() { if (done) return; done = true; go(); }
+
+    try {
+      var door = document.createElement('div');
+      door.className = 'nu-door';
+      door.setAttribute('aria-hidden', 'true');
+      door.innerHTML = '<span class="nu-door__mark"></span>';
+      document.body.appendChild(door);
+
+      /* One frame, so the browser has a start state to animate FROM.
+         Without it the class lands in the same style recalculation as the
+         element itself and nothing moves. */
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { door.classList.add('is-shut'); });
+      });
+
+      door.addEventListener('transitionend', function (e) {
+        if (e.propertyName === 'transform') finish();
+      });
+    } catch (e) {
+      finish();      /* no door, but the visitor still gets to the shop */
+      return;
+    }
+
+    /* The watchdog. transitionend does not fire on a background tab, and it
+       does not fire at all if something upstream removed the transition. */
+    setTimeout(finish, DOOR_MS + 140);
+  }
+
+  document.addEventListener('click', function (e) {
+    if (e.defaultPrevented || e.button !== 0) return;
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+
+    var a = e.target.closest && e.target.closest('a[href]');
+    if (!a || a.target === '_blank' || a.hasAttribute('download')) return;
+
+    /* Its own resolved URL against this page's, so './shop.html',
+       'shop.html' and a full https:// address are all the same door — and a
+       link to shop.html on ANOTHER host is not. */
+    var url;
+    try { url = new URL(a.href, location.href); } catch (err) { return; }
+    if (url.origin !== location.origin) return;
+    if (!/\/shop\.html$/.test(url.pathname)) return;
+
+    if (wantsStillness()) return;   /* let the browser navigate plainly */
+
+    e.preventDefault();
+    ovenDoor(function () { location.href = a.href; });
+  });
+
   /* ---------- releasing the movements ---------- */
   /* Someone who asked for less motion gets the final state immediately. The
      CSS already renders it; this makes sure the script never undoes that. */
