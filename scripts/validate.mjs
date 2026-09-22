@@ -943,21 +943,46 @@ if (want('features')) {
   //
   // So: anything that TELLS someone whether the shop is open has to ask the
   // same function the buttons ask.
+  // uncommented(), because `html` is the raw file. Without it the check is
+  // satisfied by a COMMENT: revert the gate to the flag and write the words
+  // ordersAreOpen() anywhere in the same function body and it reports ok.
+  // That is the dead-check shape this file already warns about further down
+  // for js.includes('shop.html').
+  const shopJs = uncommented(html);
+
   const gateReaders = [
     ['function updateOrdersOpenBanner(', 'the notice a customer sees above the menu'],
     ['function describeOrdersState(',    "the line under Noy's orders toggle"],
   ];
   for (const [opener, what] of gateReaders) {
-    const at = html.indexOf(opener);
+    const at = shopJs.indexOf(opener);
     if (at < 0) { fail(`${what}: ${opener}…) is gone — the open/closed state has moved somewhere this check cannot see`); continue; }
     // The function body, up to the first line that starts a new top-level one.
-    const rest = html.slice(at + opener.length);
+    const rest = shopJs.slice(at + opener.length);
     const endAt = rest.search(/\n(?:function |const |let |\/\/ ─── )/);
     const body = endAt < 0 ? rest : rest.slice(0, endAt);
 
     const asksDeadline = body.includes('ordersAreOpen()') || body.includes('getNextTuesdayDeadline()');
     if (asksDeadline) pass(`${what} asks the same gate the order buttons ask`);
     else fail(`${what} decides from the ordersOpen flag alone — a shop past its deadline will look open and then refuse the order, which is the bug that shipped on 22 Sep 2026`);
+  }
+
+  // Asking the right gate is not the same as SAYING the answer. The two
+  // checks above both pass on a shop where the single line
+  // `renderShopStatus(isOpen)` has been deleted: the gate is still consulted,
+  // and the visitor is told nothing at all — no open/closed line and no
+  // minimum-order line either, because the static markup that used to carry
+  // the minimum now lives inside that function.
+  const bannerAt = shopJs.indexOf('function updateOrdersOpenBanner(');
+  if (bannerAt >= 0) {
+    const bannerBody = shopJs.slice(bannerAt).split(String.fromCharCode(10) + 'function ')[0];
+    const call = bannerBody.match(/renderShopStatus\(([^)]*)\)/);
+    if (!call)
+      fail('updateOrdersOpenBanner() never calls renderShopStatus() — the gate is consulted and the answer is never written to the page, so the shop shows neither its open/closed state nor its minimum order');
+    else if (!/^\s*isOpen\s*$/.test(call[1]))
+      fail(`updateOrdersOpenBanner() calls renderShopStatus(${call[1]}) rather than passing the gate's own answer — re-deriving the state a second way is how the two halves drifted apart in the first place`);
+    else
+      pass("the gate's answer reaches the page — updateOrdersOpenBanner() passes it straight to renderShopStatus()");
   }
   // ── Both doors into the app ───────────────────────────────────────────
   //
@@ -2359,7 +2384,9 @@ if (want('design')) {
     // A second copy of a menu is a menu that goes stale. Add a page to NAV
     // here and every page but the shop links to it; rename a file and the
     // shop alone keeps the 404. Nothing would have said so.
-    const shopNav = [...readFileSync(join(ROOT, SHOP), 'utf8')
+    // uncommented(), or wrapping the whole <nav> in <!-- --> leaves the shop
+    // with no menu at all and this check still reporting that it matches.
+    const shopNav = [...uncommented(readFileSync(join(ROOT, SHOP), 'utf8'))
       .matchAll(/class="nu-nav__item"[^>]*href="(\.\/[^"]+)"/g)].map(m => m[1]);
     const siteNav = [...js.matchAll(/href\s*:\s*'(\.\/[^']+)'/g)].map(m => m[1]);
 
@@ -2932,8 +2959,15 @@ if (want('pages')) {
   // the first version of this check built the href pattern by interpolation,
   // its backslashes did not survive, and it matched nothing — reporting a
   // dead end on a shop that had just been given two links home.
+  // Every spelling that lands on the home page, not just the one this repo
+  // happens to write. `href="index.html"`, `href="/"` and `href="/index.html"`
+  // reach the film exactly as `./index.html` does; matching only the last of
+  // them meant a stray link home was neither sanctioned nor a stray, and the
+  // suite stayed green while a customer left the menu.
+  const HOME_HREFS = [`./${HOME}`, HOME, `/${HOME}`, '/'];
+  const hrefOf = a => (a.match(/href=["']([^"']*)["']/) || [])[1];
   const homeAnchors = (uncommented(shop).match(/<a[^>]*>/g) || [])
-    .filter(a => a.includes(`href="./${HOME}"`) || a.includes(`href='./${HOME}'`));
+    .filter(a => HOME_HREFS.includes(hrefOf(a)));
 
   const CHROME = ['nu-mark', 'nu-mark--foot', 'nu-back-home'];
   const hasClass   = (a, c) => a.includes(`class="${c}"`) || a.includes(`class='${c}'`);

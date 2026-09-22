@@ -88,6 +88,14 @@
          The values are what must match, and these are the values. */
       --font-display: 'Bellefair', 'Noto Serif Hebrew', 'Times New Roman', serif;
       --font-text:    'IBM Plex Sans Hebrew', 'Noto Sans Hebrew', 'Segoe UI', system-ui, sans-serif;
+
+      /* Terracotta dark enough to be READ at body sizes. #B84830 is the
+         brand colour and carries 4.23 on the wheat ground and 4.06 on the
+         parchment of the closed notice — both under AA's 4.5, and a 20px
+         regular line does not qualify for the large-text allowance. Measured:
+         this one is 5.43 and 5.21. Surfaces and big display type keep
+         #B84830; anything a visitor actually reads uses this. */
+      --terra-ink: #9E3C22;
     }
 
     /* RTL scroll */
@@ -1653,7 +1661,16 @@
        site.js builds, so the two cannot quietly drift apart. */
 
     .nu-header {
-      position: relative;
+      /* Sticky here, not left to Tailwind's `.sticky` on the element. Both
+         declarations have the same specificity, so which one wins is decided
+         by which <style> the browser sees last — and Tailwind's Play CDN
+         injects its block at runtime, after this one. That holds today and is
+         not something to depend on: pin or inline Tailwind earlier and a
+         `position: relative` here would silently unstick the header.
+         Sticky is also a positioned ancestor, which is what .nu-nav's
+         absolute centring needs. */
+      position: sticky;
+      inset-block-start: 0;
       display: flex;
       align-items: center;
       padding: 14px 20px;
@@ -1783,6 +1800,19 @@
     /* ── HERO LINE ──────────────────────────────────────────────────────
        What used to be the name typed in a display face, now that the real
        wordmark sits in the header directly above it. */
+    /* Read aloud, never drawn. Not `display:none` and not `visibility:hidden`
+       — both remove it from the accessibility tree too, which is the one
+       place it needs to exist. */
+    .u-sr {
+      position: absolute;
+      width: 1px; height: 1px;
+      margin: -1px; padding: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+      border: 0;
+    }
+
     .hero-line {
       margin: 0;
       font-family: var(--font-display);
@@ -1806,7 +1836,7 @@
       font-family: var(--font-display);
       font-size: clamp(1.25rem, 3.2vw, 1.6rem);
       line-height: 1.3;
-      color: #B84830;
+      color: var(--terra-ink);
     }
     .shop-status__note {
       margin: 0.35rem 0 0;
@@ -1816,7 +1846,7 @@
       color: #6B655C;
     }
     .shop-status__note a {
-      color: #AE472C;
+      color: var(--terra-ink);
       text-decoration: none;
       border-block-end: 1px solid currentColor;
     }
@@ -1886,8 +1916,15 @@
     @media (max-width: 767px) {
       #products-grid > .product-card:last-child:nth-child(odd) {
         grid-column: 1 / -1;
-        max-width: calc(50% - 6px);   /* one column, minus half the gap-3 */
+        /* Half the row, less half the gap — and the grid is `gap-3 sm:gap-4`,
+           so the gap is 12px below 640px and 16px above it. One hardcoded
+           `calc(50% - 6px)` made this card 2px wider than a column for the
+           whole 640-767px band. */
+        max-width: calc(50% - 6px);
         margin-inline: auto;
+      }
+      @media (min-width: 640px) {
+        #products-grid > .product-card:last-child:nth-child(odd) { max-width: calc(50% - 8px); }
       }
     }
 
@@ -1931,11 +1968,13 @@
       font-size: 1.3rem;
       line-height: 1;
       color: #6B2E1E;
-      /* No direction override here. The source says `₪30` and Hebrew bidi
-         renders that as "30₪", which is how a price is written in Israel and
-         how every price on this site has always read. An earlier draft added
-         `direction: ltr; unicode-bidi: isolate` for tidiness and silently
-         flipped all of them to "₪30". */
+      /* No direction override here, and the reason is that it changes
+         nothing. Measured in the page: `₪30` in this RTL document renders
+         shekel-then-digits — ₪30 — and adding `direction: ltr;
+         unicode-bidi: isolate` produces the identical glyph order. The
+         comment that stood here claimed both that bidi reversed it and that
+         the declaration flipped it back; neither is true, and left alone it
+         would have sent the next reader fixing a bug that does not exist. */
     }
     /* A filled target instead of a hairline circle: 34px is a finger, 22px
        of outlined SVG was not. */
@@ -2013,9 +2052,16 @@
       <img src="images/hero-sandwich.jpg" width="620" height="900" alt="כריך פוקצ'ה עם עלים ירוקים" />
     </figure>
 
+    <!-- An <h1>, because replacing the typed name with the wordmark left the
+         whole document without one: the two headings here became <p>, and the
+         only <h1>s remaining in the file are inside print-only template
+         strings. The wordmark cannot stand in for it — it is a CSS mask on an
+         empty <span>, so its only accessible name is the link's aria-label.
+         The brand name rides along for screen readers and search engines,
+         which is where it was lost; on screen the line reads as before. -->
     <div class="hero-name">
-      <p class="hero-line" lang-content="he">מאפייה ארטיזנלית עונתית<br />באיסוף עצמי מרחובות</p>
-      <p class="hero-line" lang-content="en">Seasonal artisan bakery<br />Self pickup from Rehovot</p>
+      <h1 class="hero-line" lang-content="he"><span class="u-sr">נואיקה — </span>מאפייה ארטיזנלית עונתית<br />באיסוף עצמי מרחובות</h1>
+      <h1 class="hero-line" lang-content="en"><span class="u-sr">NUIKA — </span>Seasonal artisan bakery<br />Self pickup from Rehovot</h1>
     </div>
 
     <figure class="hero-arch">
@@ -3427,6 +3473,13 @@ let _ordersLoaded   = false;
 // Local caches — populated by Firebase listeners
 let ORDER_LOG = [];
 let _settingsCache = {};
+// Whether Firebase has actually answered about settings yet. Until it has,
+// _settingsCache is {} and getNextTuesdayDeadline() falls back to a computed
+// next-Tuesday-17:00 — so the status line would state a specific closing time
+// on first paint that is nobody's, and keep stating it forever if the read
+// never lands. Ordering still defaults to open when offline, which is the
+// point of the service worker; it is only the CLAIM that waits.
+let _settingsLoaded = false;
 
 // One-time seeding, guarded by a transaction so two devices loading at once
 // cannot both seed. A listener must NEVER seed: an empty tree there means
@@ -3540,6 +3593,7 @@ db.ref(`${ROOT}/products`).on('value', snap => {
 // Settings listener — ordersOpen, bitLink, deadline
 db.ref(`${ROOT}/settings`).on('value', snap => {
   _settingsCache = snap.val() || {};
+  _settingsLoaded = true;
   // The stock tally is keyed by cycle, and the cycle comes from the deadline.
   // Re-check the subscription whenever the deadline can have moved.
   watchStock();
@@ -3939,13 +3993,24 @@ function getStockRemaining(productId) {
 
 // ─── REPEAT LAST ORDER ────────────────────────────
 function checkRepeatOrder() {
+  const banner = document.getElementById('repeat-order-banner');
+  if (!banner) return;
+
+  // Asked here, not left to CSS. `body.orders-closed #repeat-order-banner
+  // { display:none }` cannot win against the inline `display:flex` written
+  // two lines below, so on a closed shop this banner went on rendering
+  // normally — and it is not a .product-card, so nothing disabled it either.
+  // A returning customer tapped "הזמיני שוב כמו שבוע שעבר" and got
+  // alert('ההזמנות סגורות כרגע.'): precisely the behaviour this whole change
+  // exists to delete, surviving on the one control that escaped the class.
+  if (!ordersAreOpen()) { banner.style.display = 'none'; return; }
+
   const last = localStorage.getItem('nuika_last_order');
   if (!last) return;
   try {
     const items = JSON.parse(last);
     if (!items || !items.length) return;
-    const banner = document.getElementById('repeat-order-banner');
-    if (banner) banner.style.display = 'flex';
+    banner.style.display = 'flex';
   } catch(e) {}
 }
 
@@ -4065,6 +4130,12 @@ function renderProducts() {
 
 // ─── TOGGLE PRODUCT ────────────────────────────────
 function toggleProduct(id) {
+  // The closed shop disables cards with `pointer-events: none`, which stops a
+  // finger and nothing else. The cards keep tabindex="0" and an onkeydown, so
+  // Tab+Enter still ran this — and since the cart bar, the quantity badge and
+  // the − 1 + row are all hidden while closed, it changed the cart and
+  // persisted it with no visible result whatsoever. Gate the action itself.
+  if (!ordersAreOpen()) { warnClosed(); return; }
   if (cart[id]) {
     delete cart[id];
   } else {
@@ -4080,6 +4151,7 @@ function toggleProduct(id) {
 
 function changeQty(e, id, delta) {
   e.stopPropagation();
+  if (!ordersAreOpen()) { warnClosed(); return; }
   const newQty = (cart[id] || 0) + delta;
   if (newQty <= 0) {
     delete cart[id];
@@ -4859,6 +4931,17 @@ function updateOrdersOpenBanner() {
   document.body.classList.toggle('orders-closed', !isOpen);
 }
 
+// Firebase events are the only thing that used to move the shop from open to
+// closed, and a deadline passing is not a Firebase event. A page left open
+// across the printed closing time went on saying "open, closing Tuesday
+// 17:00" with a live cart bar, and still refused at the tap. Once a minute is
+// far more often than a weekly deadline needs and costs nothing; the
+// visibility handler covers a phone that was asleep through the whole thing.
+setInterval(() => { try { updateOrdersOpenBanner(); } catch (e) { /* never let a tick break the page */ } }, 60000);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) { try { updateOrdersOpenBanner(); } catch (e) {} }
+});
+
 // The deadline in the visitor's own words: "יום שלישי, 20:00".
 function deadlineLabel(lang) {
   const dl = getNextTuesdayDeadline();
@@ -4880,6 +4963,18 @@ function renderShopStatus(isOpen) {
   const box = document.getElementById('shop-status');
   if (!box) return;
 
+  // Before Firebase answers, say the one thing that is true whatever the
+  // settings turn out to be, and make no claim about opening hours.
+  if (!_settingsLoaded) {
+    box.className = 'shop-status is-loading';
+    box.innerHTML =
+      '<p class="shop-status__note">' +
+        '<span lang-content="he">מינימום ' + MIN_ORDER_ITEMS + ' מוצרים להזמנה · איסוף עצמי מרחובות</span>' +
+        '<span lang-content="en">Minimum ' + MIN_ORDER_ITEMS + ' items · self pickup from Rehovot</span>' +
+      '</p>';
+    return;
+  }
+
   if (isOpen) {
     const he = deadlineLabel('he');
     const en = deadlineLabel('en');
@@ -4890,8 +4985,8 @@ function renderShopStatus(isOpen) {
         '<span lang-content="en">Orders are open' + (en ? ' · closing ' + en : '') + '</span>' +
       '</p>' +
       '<p class="shop-status__note">' +
-        '<span lang-content="he">מינימום 3 מוצרים להזמנה · איסוף עצמי מרחובות</span>' +
-        '<span lang-content="en">Minimum 3 items · self pickup from Rehovot</span>' +
+        '<span lang-content="he">מינימום ' + MIN_ORDER_ITEMS + ' מוצרים להזמנה · איסוף עצמי מרחובות</span>' +
+        '<span lang-content="en">Minimum ' + MIN_ORDER_ITEMS + ' items · self pickup from Rehovot</span>' +
       '</p>';
   } else {
     box.className = 'shop-status is-closed';

@@ -122,7 +122,9 @@ Two checks in `validate.mjs` hold the copy honest: the menu here must name the
 same four destinations `site.js` builds, and the wordmark in both the header
 and the footer must link to `./index.html`. A link home from anywhere *else*
 in the shop fails — since the cutover that address is the film, so a stray one
-silently drops a customer out of the menu.
+silently drops a customer out of the menu. The stray check recognises four
+spellings (`./index.html`, `index.html`, `/index.html`, `/`); an absolute
+`https://nuika.co.il/` would still slip past it.
 
 **One gate decides whether the shop is open.** `ordersAreOpen()` is the flag
 `nuika/settings/ordersOpen` **and** the deadline. Anything that *tells* anyone
