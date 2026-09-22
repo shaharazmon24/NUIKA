@@ -104,6 +104,35 @@ plus four content pages:
 English toggle driven by `lang-content="he"` / `lang-content="en"` attributes on
 every page.
 
+Since 22 Sep 2026 the shop nevertheless carries the **same header and footer**
+as the other four pages — the wordmark, the four-item menu, the language
+button, the footer on ink — written out inside `shop.html` under the same
+`.nu-*` class names. This is a deliberate duplicate, not an oversight:
+
+- Before it, the shop linked to nothing. A customer arriving from the film,
+  or from Noy's installed icon, had no way to reach the story, the gallery,
+  the events board or the contact page. The shop was a dead end, and it is the
+  page where the money happens.
+- Importing `site.css` to get the chrome for free was rejected after reading
+  it: it sets `body` and `h1, h2, h3` globally, and this file is nine thousand
+  lines of markup written against Tailwind's defaults — including every screen
+  of Noy's panel. The chrome would have cost her kitchen and finance layouts.
+
+Two checks in `validate.mjs` hold the copy honest: the menu here must name the
+same four destinations `site.js` builds, and the wordmark in both the header
+and the footer must link to `./index.html`. A link home from anywhere *else*
+in the shop fails — since the cutover that address is the film, so a stray one
+silently drops a customer out of the menu.
+
+**One gate decides whether the shop is open.** `ordersAreOpen()` is the flag
+`nuika/settings/ordersOpen` **and** the deadline. Anything that *tells* anyone
+the shop's state — the notice above the menu, the line under Noy's toggle —
+must ask that same function. It did not until 22 Sep 2026: both tested the
+flag alone, so a shop whose deadline had passed showed no notice, let a
+customer fill a cart, and refused the order with an `alert()` at the last tap.
+Noy's panel read "פתוחה — לקוחות יכולים להזמין" the whole time. `validate.mjs`
+now fails if either one goes back to reading the flag by itself.
+
 `index.html` and `shop.html` are both doors into the installed app: both link
 `manifest.json` and both register `sw.js`. `admin.html` deliberately links no
 manifest — see the comment in the file.

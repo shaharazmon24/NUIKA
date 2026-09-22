@@ -2348,6 +2348,36 @@ if (want('design')) {
       else fail(`missing "${needle}" — ${why}`);
     }
 
+
+    // ── The shop's copy of this menu ──────────────────────────────────────
+    //
+    // shop.html cannot use site.js: it has its own language toggle and its
+    // own everything, and importing site.css to get the chrome would restyle
+    // nine thousand lines including Noy's panel. So the four menu entries are
+    // written out a second time, by hand, inside the shop.
+    //
+    // A second copy of a menu is a menu that goes stale. Add a page to NAV
+    // here and every page but the shop links to it; rename a file and the
+    // shop alone keeps the 404. Nothing would have said so.
+    const shopNav = [...readFileSync(join(ROOT, SHOP), 'utf8')
+      .matchAll(/class="nu-nav__item"[^>]*href="(\.\/[^"]+)"/g)].map(m => m[1]);
+    const siteNav = [...js.matchAll(/href\s*:\s*'(\.\/[^']+)'/g)].map(m => m[1]);
+
+    if (!shopNav.length) {
+      fail(`${SHOP} has no .nu-nav__item links — its copy of the shared menu is gone, and the shop is a dead end again`);
+    } else if (shopNav.join('|') !== siteNav.join('|')) {
+      const missing = siteNav.filter(h => !shopNav.includes(h));
+      const extra   = shopNav.filter(h => !siteNav.includes(h));
+      fail(
+        `${SHOP}'s menu has drifted from the one site.js builds. ` +
+        (missing.length ? `Missing from the shop: ${missing.join(', ')}. ` : '') +
+        (extra.length   ? `Only in the shop: ${extra.join(', ')}. `   : '') +
+        (!missing.length && !extra.length ? 'Same four, different order. ' : '') +
+        `site.js lists ${siteNav.join(', ')}; the shop lists ${shopNav.join(', ')}`
+      );
+    } else {
+      pass(`${SHOP}'s hand-written menu still matches site.js's, entry for entry (${shopNav.length})`);
+    }
     // This was a bare js.includes('shop.html') in the list above. It stopped
     // being a check the moment a comment was written over nuikaHeader()
     // explaining why the WORDMARK does not point at the shop: the comment
