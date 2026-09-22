@@ -248,7 +248,23 @@
       justify-content: center;
       gap: clamp(16px, 4vw, 52px);
     }
+    /* The two windows.
+
+       They used to be photographs with a rounded top — the shape was there,
+       but nothing said "window". Three things say it now, and none of them
+       needs a change to the markup:
+
+       1. A mount. The photo is inset inside the arch and the gap is filled
+          with parchment, the way a print is matted inside a frame, with a
+          hairline of crust drawn just inside the opening.
+       2. A reveal. A soft shadow falls from the top edge inwards, so the
+          picture sits BEHIND the opening rather than on it.
+       3. Breath. The picture drifts, very slowly and in opposite directions
+          in the two windows, the way the film on the home page moves. Anyone
+          who asked for less motion gets a still picture and loses nothing
+          else. */
     .hero-arch {
+      position: relative;
       margin: 0;
       flex: 0 0 auto;
       width: clamp(128px, 21vw, 208px);
@@ -257,14 +273,50 @@
       aspect-ratio: 620 / 900;
       border-radius: 999px 999px 14px 14px;
       overflow: hidden;
+      padding: 7px;
       background: #EFE1C7;
-      box-shadow: 0 10px 30px rgba(59,42,36, 0.10);
+      box-shadow: 0 14px 34px rgba(59, 42, 36, .14);
     }
+
     .hero-arch img {
       width: 100%; height: 100%;
       object-fit: cover;
       display: block;
+      /* Its own, slightly tighter arch, so the mount reads as an even band
+         all the way round the opening. */
+      border-radius: 999px 999px 8px 8px;
     }
+
+    /* The opening: the drawn hairline and the shadow falling in from the top.
+       Sits above the picture and takes no clicks. */
+    .hero-arch::after {
+      content: "";
+      position: absolute;
+      inset: 7px;
+      border-radius: 999px 999px 8px 8px;
+      border: 1px solid rgba(184, 147, 94, .55);
+      box-shadow: inset 0 12px 26px -14px rgba(59, 42, 36, .85);
+      pointer-events: none;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .hero-arch img { animation: archDrift 26s ease-in-out infinite alternate; }
+      /* The second window drifts the other way, so the pair breathes rather
+         than sliding together. */
+      .hero-arch:last-of-type img { animation-name: archDriftBack; }
+    }
+    @keyframes archDrift {
+      from { transform: scale(1.02) translate3d(0, 0, 0); }
+      to   { transform: scale(1.08) translate3d(0, -1.5%, 0); }
+    }
+    @keyframes archDriftBack {
+      from { transform: scale(1.08) translate3d(0, -1.5%, 0); }
+      to   { transform: scale(1.02) translate3d(0, 0, 0); }
+    }
+
+    /* A small step between them. Two identical arches at the same height read
+       as a diagram; offsetting one reads as a composition. */
+    .hero-arch:last-of-type { margin-block-start: clamp(12px, 3vw, 34px); }
     /* Under ~640px three columns will not fit, so the name takes its own line
        above and the two arches sit side by side beneath it. */
     @media (max-width: 639px) {
@@ -2345,7 +2397,7 @@
 <section class="max-w-5xl mx-auto px-4 text-center" style="padding-top:clamp(2rem,5vw,3.5rem);padding-bottom:clamp(1.25rem,3vw,2rem);">
   <div class="hero-row">
     <figure class="hero-arch">
-      <img src="images/hero-sandwich.jpg" width="620" height="900" alt="כריך פוקצ'ה עם עלים ירוקים" />
+      <img src="images/hero-noy.jpg" width="620" height="900" alt="נוי במטבח, מביטה מטה אל העבודה, פרח ורוד מטושטש בחזית" />
     </figure>
 
     <!-- An <h1>, because replacing the typed name with the wordmark left the
@@ -2361,7 +2413,7 @@
     </div>
 
     <figure class="hero-arch">
-      <img src="images/hero-loaf.jpg" width="620" height="900" alt="כיכר מחמצת בציפוי שומשום בשקית נייר" />
+      <img src="images/hero-seeded-loaf.jpg" width="620" height="900" alt="דבש נמזג על כיכר מחמצת מכוסה שומשום וגרעינים" />
     </figure>
   </div>
 </section>
