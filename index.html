@@ -282,6 +282,116 @@
   </div>
   <script src="./site.js?v=3"></script>
   <script>
+    /* The orders line in the footer: open or closed, and how long is left.
+       The old splash gate this page replaced carried one, and it was the
+       thing people actually came back for.
+
+       It reads nuika/settings once over plain REST. No Firebase SDK here —
+       that is ~120KB to learn two fields on a page whose whole point is the
+       film. `settings` is the one node with a public read; orders, admins,
+       kitchen and finance all answer 401, by design.
+
+       One gate, the same one shop.html uses: the flag AND the deadline.
+       The shop's banner and Noy's admin label both used to test the flag
+       alone, so a shop whose deadline had passed announced itself open and
+       then refused at the tap. Repeating that here would put the lie on the
+       front door. */
+    (function () {
+      /* The slot does not exist yet. site.js is a classic script in the body,
+         so document.readyState is still 'loading' when it runs and it defers
+         mount() to DOMContentLoaded — which means the footer, and this
+         element inside it, are built AFTER this script has been evaluated.
+         Reading the element here returned null and the whole feature
+         returned early, silently, with the fetch working perfectly. */
+      function slot() { return document.querySelector('[data-nuika-orders]'); }
+
+      var SETTINGS = 'https://nuika-5371f-default-rtdb.firebaseio.com/nuika/settings.json';
+      var settings = null;
+      var timer    = null;
+
+      /* Noy's deadline if she set one, otherwise the standing rule: the next
+         Tuesday at 17:00. Written out rather than imported because this page
+         shares no script with the shop. */
+      function deadline() {
+        if (settings && settings.deadline) {
+          var d = new Date(settings.deadline);
+          if (!isNaN(d.getTime())) return d;
+        }
+        var now = new Date();
+        var day = now.getDay();
+        var until = (2 - day + 7) % 7;
+        if (day === 2) until = now.getHours() < 17 ? 0 : 7;
+        var t = new Date(now);
+        t.setDate(now.getDate() + until);
+        t.setHours(17, 0, 0, 0);
+        return t;
+      }
+
+      function left(ms, he) {
+        var mins  = Math.floor(ms / 60000);
+        var days  = Math.floor(mins / 1440);
+        var hours = Math.floor((mins % 1440) / 60);
+        var m     = mins % 60;
+        if (days > 0)  return he ? days + ' ימים ו-' + hours + ' שעות' : days + 'd ' + hours + 'h';
+        if (hours > 0) return he ? hours + ' שעות ו-' + m + ' דקות'    : hours + 'h ' + m + 'm';
+        return he ? m + ' דקות' : m + 'm';
+      }
+
+      function paint() {
+        var box = slot();
+        if (!box) return;
+        /* Until the read lands the page says nothing. It used to be possible
+           to state a specific closing time that was only ever a guess, and
+           to keep stating it if the read never returned at all. */
+        if (!settings) { box.hidden = true; return; }
+
+        var he     = document.documentElement.getAttribute('lang') !== 'en';
+        var closed = settings.ordersOpen === false;
+        var ms     = deadline().getTime() - Date.now();
+        if (!closed && ms <= 0) closed = true;
+
+        var text = closed
+          ? (he ? 'ההזמנות סגורות כרגע' : 'Orders are closed right now')
+          : (he ? 'ההזמנות פתוחות · נסגרות בעוד ' + left(ms, true)
+                : 'Orders open · closing in ' + left(ms, false));
+
+        box.hidden = false;
+        box.className = 'nu-orders' + (closed ? ' is-closed' : '');
+        box.textContent = '';
+        var dot = document.createElement('span');
+        dot.className = 'nu-orders__dot';
+        dot.setAttribute('aria-hidden', 'true');
+        var label = document.createElement('span');
+        label.textContent = text;          /* textContent, so nothing from the
+                                              database can ever be markup */
+        box.appendChild(dot);
+        box.appendChild(label);
+
+        /* Once a minute is enough for a line measured in hours, and it stops
+           the countdown going stale on a page left open overnight. */
+        if (!timer) timer = setInterval(paint, 60000);
+      }
+
+      function start() {
+        fetch(SETTINGS, { cache: 'no-store' })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (data) { settings = data || {}; paint(); })
+          .catch(function () { /* offline: the line simply stays away */ });
+      }
+
+      /* After the footer exists. The fetch itself could start earlier, but
+         there is nothing to paint into until site.js has mounted, and one
+         round trip on a page this small is not worth the second code path. */
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+      else start();
+
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden && settings) paint();
+      });
+      if (window.nuikaOnLangChange) window.nuikaOnLangChange(paint);
+    })();
+  </script>
+  <script>
     // The film is decoration. Everything below is about not making it a cost
     // to somebody who did not ask for it.
     (function () {

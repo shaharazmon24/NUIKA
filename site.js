@@ -128,6 +128,11 @@
         '<span lang-content="he">' + esc(PLACE.he) + '</span>' +
         '<span lang-content="en">' + esc(PLACE.en) + '</span>' +
       '</p>' +
+      /* Filled only by a page that asks for it — index.html does, from a
+         single REST read of nuika/settings. Empty and hidden everywhere
+         else, so no other page pays for a network round trip it will not
+         use. */
+      '<p class="nu-orders" data-nuika-orders hidden></p>' +
       '<a class="nu-to-shop" href="./shop.html">' +
         '<span lang-content="he">למאפייה של NUIKA</span>' +
         '<span lang-content="en">To the NUIKA bakery</span>' +

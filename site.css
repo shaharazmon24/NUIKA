@@ -303,6 +303,26 @@ html[lang="en"]       [lang-content="he"] { display: none; }
 
 .nu-fine { margin: 0; font-size: var(--t-label); letter-spacing: .04em; opacity: .6; }
 
+/* The orders line sits directly above the way into the shop, which is where
+   it is worth reading: "closing in two days" and then the button. */
+.nu-orders {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--t-small);
+  line-height: 1.5;
+}
+.nu-orders__dot {
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: var(--sage);
+  flex: 0 0 auto;
+}
+.nu-orders.is-closed .nu-orders__dot { background: var(--terra); }
+.nu-orders.is-closed { opacity: .75; }
+
 .nu-to-shop {
   color: inherit;
   font-size: var(--t-small);
