@@ -214,5 +214,284 @@
       "he": "נוי, מבעד לפרחים",
       "en": "Noy, seen through the flowers"
     }
+  },
+  {
+    "file": "fruit-danishes-sugared.jpg",
+    "thumb": "fruit-danishes-sugared-thumb.jpg",
+    "tag": "sweet",
+    "alt": {
+      "he": "מאפי שמרים במילוי פירות, מפוזרים בסוכר אבקה",
+      "en": "Fruit-filled yeast pastries dusted with icing sugar"
+    }
+  },
+  {
+    "file": "chocolate-babka-knots.jpg",
+    "thumb": "chocolate-babka-knots-thumb.jpg",
+    "tag": "sweet",
+    "alt": {
+      "he": "קשרי בבקה שוקולד על נייר אפייה",
+      "en": "Chocolate babka knots on parchment"
+    }
+  },
+  {
+    "file": "seeded-round-loaf.jpg",
+    "thumb": "seeded-round-loaf-thumb.jpg",
+    "tag": "bread",
+    "alt": {
+      "he": "כיכר עגולה בציפוי זרעים וזעתר",
+      "en": "A round loaf crusted with seeds and za'atar"
+    }
+  },
+  {
+    "file": "traybake-squares-dusted.jpg",
+    "thumb": "traybake-squares-dusted-thumb.jpg",
+    "tag": "sweet",
+    "alt": {
+      "he": "ריבועי אפייה מפוזרים בסוכר אבקה, כף לצידם",
+      "en": "Traybake squares dusted with icing sugar, a spoon beside them"
+    }
+  },
+  {
+    "file": "babka-slice-on-plate.jpg",
+    "thumb": "babka-slice-on-plate-thumb.jpg",
+    "tag": "sweet",
+    "alt": {
+      "he": "פרוסת בבקה שוקולד ואגוזים על צלחת, מדפי המטבח מאחור",
+      "en": "A slice of chocolate and nut babka on a plate, kitchen shelves behind"
+    }
+  },
+  {
+    "file": "cream-filled-pastries.jpg",
+    "thumb": "cream-filled-pastries-thumb.jpg",
+    "tag": "sweet",
+    "alt": {
+      "he": "מאפים במילוי קרם על מגש כהה",
+      "en": "Cream-filled pastries on a dark tray"
+    }
+  },
+  {
+    "file": "seeded-challah-in-hand.jpg",
+    "thumb": "seeded-challah-in-hand-thumb.jpg",
+    "tag": "bread",
+    "alt": {
+      "he": "חלה מכוסה זרעים, מוחזקת ביד",
+      "en": "A seed-covered challah held in one hand"
+    }
+  },
+  {
+    "file": "pastry-dipped-in-labneh.jpg",
+    "thumb": "pastry-dipped-in-labneh-thumb.jpg",
+    "tag": "kitchen",
+    "alt": {
+      "he": "יד טובלת מאפה במילוי עלים בלאבנה ובשמן ירוק",
+      "en": "A hand dipping a leaf-filled pastry into labneh and green oil"
+    }
+  },
+  {
+    "file": "sourdough-crumb-halved.jpg",
+    "thumb": "sourdough-crumb-halved-thumb.jpg",
+    "tag": "bread",
+    "alt": {
+      "he": "כיכר מחמצת חצויה, הפתיל שלה גלוי",
+      "en": "A sourdough loaf cut in half, its open crumb showing"
+    }
+  },
+  {
+    "file": "scored-loaf-against-green.jpg",
+    "thumb": "scored-loaf-against-green-thumb.jpg",
+    "tag": "bread",
+    "alt": {
+      "he": "כיכר מחמצת משוריטת מורמת אל מול הגינה",
+      "en": "A scored sourdough loaf held up against the garden"
+    }
+  },
+  {
+    "file": "babka-knots-tray.jpg",
+    "thumb": "babka-knots-tray-thumb.jpg",
+    "tag": "sweet",
+    "alt": {
+      "he": "מגש קשרי בבקה זהובים",
+      "en": "A tray of golden babka knots"
+    }
+  },
+  {
+    "file": "dark-loaves-on-board.jpg",
+    "thumb": "dark-loaves-on-board-thumb.jpg",
+    "tag": "bread",
+    "alt": {
+      "he": "כיכרות כהות ומוארכות על קרש",
+      "en": "Long dark loaves on a board"
+    }
+  },
+  {
+    "file": "almond-babka-knots.jpg",
+    "thumb": "almond-babka-knots-thumb.jpg",
+    "tag": "sweet",
+    "alt": {
+      "he": "קשרי בבקה בציפוי שקדים פרוסים",
+      "en": "Babka knots under flaked almonds"
+    }
+  },
+  {
+    "file": "loaf-in-window-light.jpg",
+    "thumb": "loaf-in-window-light-thumb.jpg",
+    "tag": "bread",
+    "alt": {
+      "he": "כיכר משוריטת באור חלון מפוספס",
+      "en": "A scored loaf in striped window light"
+    }
+  },
+  {
+    "file": "chocolate-babka-loaves.jpg",
+    "thumb": "chocolate-babka-loaves-thumb.jpg",
+    "tag": "sweet",
+    "alt": {
+      "he": "כיכרות בבקה שוקולד, גבעולים ירוקים לצידן",
+      "en": "Chocolate babka loaves with green stems beside them"
+    }
+  },
+  {
+    "file": "herbs-drying.jpg",
+    "thumb": "herbs-drying-thumb.jpg",
+    "tag": "kitchen",
+    "alt": {
+      "he": "עלי תבלין פרושים לייבוש על בד ורוד",
+      "en": "Herb leaves spread to dry on pink cloth"
+    }
+  },
+  {
+    "file": "savoury-galettes-tray.jpg",
+    "thumb": "savoury-galettes-tray-thumb.jpg",
+    "tag": "kitchen",
+    "alt": {
+      "he": "גלטים מלוחים במילוי גרגרים ועשבי תיבול על מגש",
+      "en": "Savoury galettes filled with grains and herbs on a tray"
+    }
+  },
+  {
+    "file": "sesame-loaf-in-box.jpg",
+    "thumb": "sesame-loaf-in-box-thumb.jpg",
+    "tag": "bread",
+    "alt": {
+      "he": "יד מושטת אל כיכר שומשום בתוך קופסה",
+      "en": "A hand reaching for a sesame loaf in a box"
+    }
+  },
+  {
+    "file": "plum-galette-in-hand.jpg",
+    "thumb": "plum-galette-in-hand-thumb.jpg",
+    "tag": "sweet",
+    "alt": {
+      "he": "גלט שזיפים בשקדים פרוסים, מוחזק מול עציצי תבלין",
+      "en": "A plum galette with flaked almonds, held before herb pots"
+    }
+  },
+  {
+    "file": "babka-knots-on-wood.jpg",
+    "thumb": "babka-knots-on-wood-thumb.jpg",
+    "tag": "sweet",
+    "alt": {
+      "he": "קשרי בבקה על משטח עץ",
+      "en": "Babka knots on a wooden surface"
+    }
+  },
+  {
+    "file": "cherry-babka-knots.jpg",
+    "thumb": "cherry-babka-knots-thumb.jpg",
+    "tag": "sweet",
+    "alt": {
+      "he": "קשרי בבקה בציפוי דובדבנים",
+      "en": "Babka knots topped with cherries"
+    }
+  },
+  {
+    "file": "round-loaf-in-the-garden.jpg",
+    "thumb": "round-loaf-in-the-garden-thumb.jpg",
+    "tag": "bread",
+    "alt": {
+      "he": "כיכר עגולה מורמת מול צמחייה",
+      "en": "A round loaf held up against greenery"
+    }
+  },
+  {
+    "file": "topped-loaf-in-hand.jpg",
+    "thumb": "topped-loaf-in-hand-thumb.jpg",
+    "tag": "bread",
+    "alt": {
+      "he": "כיכר בציפוי עשיר, מוחזקת באור שמש",
+      "en": "A richly topped loaf held in the sunlight"
+    }
+  },
+  {
+    "file": "diamond-scored-loaf.jpg",
+    "thumb": "diamond-scored-loaf-thumb.jpg",
+    "tag": "bread",
+    "alt": {
+      "he": "כיכר מחמצת בשריטת מעוינים, מוחזקת אל מול המרפסת",
+      "en": "A diamond-scored sourdough held up on the balcony"
+    }
+  },
+  {
+    "file": "pearl-sugar-knot.jpg",
+    "thumb": "pearl-sugar-knot-thumb.jpg",
+    "tag": "sweet",
+    "alt": {
+      "he": "קשר בצק גדול בסוכר פנינה, עלי ורד וגרעיני דלעת",
+      "en": "A large dough knot with pearl sugar, rose petals and pumpkin seeds"
+    }
+  },
+  {
+    "file": "babka-loaves-side-by-side.jpg",
+    "thumb": "babka-loaves-side-by-side-thumb.jpg",
+    "tag": "sweet",
+    "alt": {
+      "he": "כיכרות בבקה שוקולד זו לצד זו",
+      "en": "Chocolate babka loaves side by side"
+    }
+  },
+  {
+    "file": "almond-squares-dusted.jpg",
+    "thumb": "almond-squares-dusted-thumb.jpg",
+    "tag": "sweet",
+    "alt": {
+      "he": "ריבועי שקדים מפוזרים בסוכר אבקה",
+      "en": "Almond squares dusted with icing sugar"
+    }
+  },
+  {
+    "file": "pastry-with-labneh.jpg",
+    "thumb": "pastry-with-labneh-thumb.jpg",
+    "tag": "kitchen",
+    "alt": {
+      "he": "מאפה מלוח בגרגרים ועשבי תיבול לצד לאבנה ושמן זית",
+      "en": "A savoury grain-and-herb pastry beside labneh and olive oil"
+    }
+  },
+  {
+    "file": "apple-galette-on-lace.jpg",
+    "thumb": "apple-galette-on-lace-thumb.jpg",
+    "tag": "sweet",
+    "alt": {
+      "he": "גלט תפוחים בקרמל ועשבי תיבול על צלחת תחרה",
+      "en": "An apple galette with caramel and herbs on a lace plate"
+    }
+  },
+  {
+    "file": "almond-crowned-knot.jpg",
+    "thumb": "almond-crowned-knot-thumb.jpg",
+    "tag": "sweet",
+    "alt": {
+      "he": "קשר בצק מכוסה כולו בשקדים פרוסים",
+      "en": "A dough knot covered all over in flaked almonds"
+    }
+  },
+  {
+    "file": "babka-in-striped-light.jpg",
+    "thumb": "babka-in-striped-light-thumb.jpg",
+    "tag": "sweet",
+    "alt": {
+      "he": "בבקה כהה על מדף, באור מפוספס",
+      "en": "A dark babka on a shelf in striped light"
+    }
   }
 ]
