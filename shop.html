@@ -177,6 +177,59 @@
       border-radius: 8px;
       flex-shrink: 0;
     }
+    /* The flyer picker on the event form. A row of two buttons, the preview
+       under them. The real <input type="file"> is hidden and driven by the
+       first button, because a bare file input cannot be styled and reads as
+       something from a different decade next to the rest of this panel. */
+    .ev-img-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 10px 0 0;
+      flex-wrap: wrap;
+    }
+    .ev-img-pick,
+    .ev-img-clear {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-text);
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 100px;
+      cursor: pointer;
+      transition: background .2s ease, border-color .2s ease;
+    }
+    .ev-img-pick {
+      color: #6B3A2A;
+      background: #F5EFE3;
+      border: 1.5px solid #D5C9B5;
+    }
+    .ev-img-pick:hover { background: #EFE1C7; border-color: #B84830; }
+    .ev-img-clear {
+      color: #B45032;
+      background: transparent;
+      border: 1.5px solid #E0C4BA;
+    }
+    .ev-img-clear:hover { background: #F7E9E4; }
+
+    /* Capped, because a flyer is usually portrait and at full width it would
+       push the save button off the bottom of the panel on a phone. */
+    .ev-img-preview {
+      max-inline-size: 100%;
+      max-block-size: 220px;
+      margin-block-start: 10px;
+      border-radius: 8px;
+      border: 1px solid #D5C9B5;
+    }
+    .ev-img-note {
+      margin: 6px 0 0;
+      font-family: var(--font-text);
+      font-size: 0.72rem;
+      color: #6B655C;
+    }
+
     .admin-save-btn {
       background: #6B2E1E;
       color: #EFE6D6;
@@ -3024,6 +3077,22 @@
         <textarea id="evBody" class="field" maxlength="600" rows="3" placeholder="שתיים-שלוש שורות"></textarea>
         <input type="text" id="evCtaLabel" class="field" maxlength="40" placeholder="כפתור — מה כתוב עליו (ריק = בלי כפתור)">
         <input type="text" id="evCtaText" class="field" maxlength="300" placeholder="כפתור — ההודעה שתיפתח בוואטסאפ">
+
+        <!-- The flyer. One picture per event: events.html reads the whole
+             events node in a single request, so every picture here is
+             downloaded by everyone who opens the board, whether or not they
+             scroll to that event. -->
+        <div class="ev-img-row">
+          <button type="button" class="ev-img-pick" onclick="document.getElementById('evImgInput').click()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+            <span id="evImgPickLabel">הוספת פלאייר או תמונה</span>
+          </button>
+          <input type="file" id="evImgInput" accept="image/*" onchange="previewEventImage(this)" style="display:none;">
+          <button type="button" id="evImgClear" class="ev-img-clear" onclick="clearEventImage()" style="display:none;">הסרה</button>
+        </div>
+        <img id="evImgPreview" class="ev-img-preview" alt="" style="display:none;">
+        <p id="evImgNote" class="ev-img-note"></p>
+
         <button type="submit" class="admin-save-btn">שמירה</button>
         <button type="button" class="admin-save-btn" onclick="clearEventForm()">ניקוי</button>
       </form>
@@ -3816,8 +3885,24 @@ function esc(v) {
   }[c]));
 }
 
-function fbError(err) {
-  console.error('Firebase write failed:', err);
+// `context` names what was being written, when knowing that changes what is
+// worth saying. Optional, and every existing caller passes nothing.
+//
+// The default message tells Noy to check her connection, which is right for
+// the common failure and wrong for a refusal. The events rules type every
+// field and reject anything they do not know, so a build whose flyer field
+// has not been published yet refuses the WHOLE event the moment a picture is
+// attached — and "check your internet" would send her hunting a network
+// fault that is not there. The events listener carries a note about the same
+// trap, for the same reason.
+function fbError(err, context) {
+  console.error('Firebase write failed:', context || '', err);
+  if (context === 'flyer' && err && err.code === 'PERMISSION_DENIED') {
+    alert('האירוע לא נשמר, בגלל התמונה.' +
+          '\n\nאפשר להסיר את התמונה ולשמור — הטקסט יישמר כרגיל.' +
+          '\nכדי שתמונות ייקלטו, שחר צריך לעדכן את ההרשאות של בסיס הנתונים.');
+    return;
+  }
   alert('השמירה נכשלה — בדקי חיבור לאינטרנט ונסי שוב.');
 }
 
@@ -8241,9 +8326,11 @@ function initEvents() {
     // That alert says "השמירה נכשלה — בדקי חיבור לאינטרנט", which is wrong
     // twice over here: nothing was being saved, and PERMISSION_DENIED is not
     // a connection problem — it would send Noy chasing a network fault that
-    // does not exist. Measured against the live database, where the
-    // nuika/events rules are not published yet: opening the tab produced
-    // exactly that alert and then an empty list.
+    // does not exist. Measured against the live database on 21 Sep 2026,
+    // while the nuika/events rules were still unpublished: opening the tab
+    // produced exactly that alert and then an empty list. They were published
+    // later the same day, so this path is no longer the everyday case — it is
+    // the one that matters if the rules are ever replaced without it.
     //
     // Firebase detaches a listener it cancels, so _eventsBound has to go back
     // to false. Left true, the tab was wedged for the rest of the page
@@ -8263,11 +8350,148 @@ function initEvents() {
 function clearEventForm() {
   ['evId','evDate','evTitle','evTime','evPlace','evBody','evCtaLabel','evCtaText']
     .forEach(id => { document.getElementById(id).value = ''; });
+  // The flyer lives in a variable, not in a field, so emptying the inputs
+  // does not touch it. Without this line the next event Noy writes from a
+  // cleared form would be saved carrying the previous one's picture.
+  clearEventImage();
+}
+
+// The flyer on an event.
+//
+// Deliberately NOT written as one of this file's box-rule section headings,
+// and that is not a style choice. validate.mjs bounds the events section by
+// the next such heading after the one that opens it, so a sub-heading in that
+// shape here cuts saveEvent() and deleteEvent() out of the region the checks
+// read: four guards go quiet while the file still parses and every other
+// check still passes. Written that way once, then written a second time
+// inside the comment that explained the first.
+// One picture per event, held in the event record as a data URL.
+//
+// Why it is shrunk here rather than stored as it arrives: events.html reads
+// the whole nuika/events node in ONE request and renders every card from it,
+// so a picture attached to a single event is downloaded by everyone who opens
+// the board — including for events that have already passed and sit in the
+// archive. A 4MB phone photo would be about 5.4MB of base64 on every visit.
+// At 1000px and quality 0.8 the same photo lands at roughly 150KB.
+//
+// This is the same shape as previewImage() for a dish photo, and deliberately
+// so: the two failures it guards against were both found on that one. An
+// image the browser cannot decode is REFUSED rather than stored whole, and
+// both axes are bounded rather than the width alone — a phone held upright
+// produces exactly the tall shape that a width-only bound lets through at
+// full size.
+let pendingEventImage = null;   // the data URL waiting to be saved, or null
+let _evImageDecoding  = false;  // a save during decode would store the old one
+
+// 600,000 is the ceiling the database rules enforce. Refusing a few thousand
+// characters earlier means Noy is told what is wrong by this page, in Hebrew,
+// instead of by a PERMISSION_DENIED she cannot act on.
+const EV_IMAGE_MAX_CHARS = 590000;
+
+function setEventImageUI(dataUrl, note) {
+  const preview = document.getElementById('evImgPreview');
+  const clear   = document.getElementById('evImgClear');
+  const label   = document.getElementById('evImgPickLabel');
+  const noteEl  = document.getElementById('evImgNote');
+
+  if (dataUrl) {
+    preview.src = dataUrl;
+    preview.style.display = 'block';
+    clear.style.display = 'inline-flex';
+    label.textContent = 'החלפת התמונה';
+  } else {
+    preview.removeAttribute('src');
+    preview.style.display = 'none';
+    clear.style.display = 'none';
+    label.textContent = 'הוספת פלאייר או תמונה';
+  }
+  noteEl.textContent = note || '';
+}
+
+function clearEventImage() {
+  pendingEventImage = null;
+  const input = document.getElementById('evImgInput');
+  if (input) input.value = '';
+  setEventImageUI(null, '');
+}
+
+function previewEventImage(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+
+  if (file.size > 12 * 1024 * 1024) {
+    alert('הקובץ גדול מדי (' + (file.size / 1048576).toFixed(1) + 'MB).\n\nאפשר לצלם מסך של הפלאייר ולהעלות את צילום המסך.');
+    input.value = '';
+    return;
+  }
+
+  _evImageDecoding = true;
+  setEventImageUI(pendingEventImage, 'מעבדת…');
+
+  const reader = new FileReader();
+  reader.onerror = function () {
+    _evImageDecoding = false;
+    setEventImageUI(pendingEventImage, '');
+    alert('לא הצלחתי לקרוא את הקובץ. נסי תמונה אחרת.');
+    input.value = '';
+  };
+  reader.onload = function (e) {
+    const img = new Image();
+    img.onload = function () {
+      // A flyer carries words, so it gets more room than a dish photo: 1000px
+      // on the long side is enough to read a phone number off it.
+      const MAX = 1000;
+      const scale = Math.min(1, MAX / img.naturalWidth, MAX / img.naturalHeight);
+      const w = Math.round(img.naturalWidth * scale);
+      const h = Math.round(img.naturalHeight * scale);
+
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, w, h);
+
+      let url = c.toDataURL('image/jpeg', 0.8);
+
+      // A picture that is still too big after the resize — a dense flyer, or
+      // a very wide panorama — gets one more pass at lower quality before it
+      // is refused, because refusing is the worst outcome for her.
+      if (url.length > EV_IMAGE_MAX_CHARS) url = c.toDataURL('image/jpeg', 0.6);
+
+      _evImageDecoding = false;
+
+      if (url.length > EV_IMAGE_MAX_CHARS) {
+        input.value = '';
+        setEventImageUI(pendingEventImage, '');
+        alert('התמונה הזאת כבדה מדי גם אחרי הקטנה.\n\nאפשר לצלם אותה מסך, או לשמור אותה מחדש בגודל קטן יותר, ולנסות שוב.');
+        return;
+      }
+
+      pendingEventImage = url;
+      input.value = '';   // so picking the same file again still fires onchange
+      setEventImageUI(url, w + '×' + h + ' · ' + Math.round(url.length / 1024) + 'KB');
+    };
+    // Refused, never stored whole. An undecodable HEIC kept at full size would
+    // sit in a world-readable node and be downloaded by every visitor to the
+    // board, forever — much worse than losing one picture.
+    img.onerror = function () {
+      _evImageDecoding = false;
+      pendingEventImage = null;
+      input.value = '';
+      setEventImageUI(null, '');
+      alert('לא הצלחתי לפתוח את התמונה הזאת — יכול להיות שהיא בפורמט שהדפדפן לא מכיר (למשל HEIC מאייפון).\n\nהכי פשוט: לפתוח אותה, לצלם מסך, ולהעלות את צילום המסך.');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 function saveEvent() {
   if (!_eventsLoaded) { alert('רגע, עוד טוען. נסי שוב בעוד שנייה.'); return; }
   if (_eventSaving) return;
+  // A save while the picture is still being shrunk would store whatever was
+  // there before it — the flyer from the previous event, or nothing.
+  if (_evImageDecoding) { alert('רגע, התמונה עוד מתעבדת.'); return; }
 
   const date  = document.getElementById('evDate').value.trim();
   const title = document.getElementById('evTitle').value.trim();
@@ -8287,6 +8511,12 @@ function saveEvent() {
     created:  (existing && existing.created) || Date.now()
   };
 
+  // Written only when there is one. The record is set() whole, so leaving the
+  // key out IS how "remove the picture" is expressed — and writing an empty
+  // string instead would fail the rules, which require every image to begin
+  // with data:image/.
+  if (pendingEventImage) ev.image = pendingEventImage;
+
   _eventSaving = true;
   const saveBtn = document.querySelector('#evForm button[type="submit"]');
   if (saveBtn) saveBtn.disabled = true;
@@ -8300,7 +8530,7 @@ function saveEvent() {
   // exactly this bug; do not add a fourth.
   const write = db.ref(ROOT + '/events/' + id).set(ev)
     .then(() => { outcome = 'saved'; })
-    .catch(err => { outcome = 'failed'; fbError(err); });
+    .catch(err => { outcome = 'failed'; fbError(err, ev.image ? 'flyer' : ''); });
 
   // Firebase's set() does not settle until the SERVER acknowledges it.
   // Offline that is never: the SDK queues the write locally and the promise
@@ -8353,6 +8583,14 @@ function editEvent(id) {
   document.getElementById('evBody').value     = ev.body || '';
   document.getElementById('evCtaLabel').value = ev.ctaLabel || '';
   document.getElementById('evCtaText').value  = ev.ctaText || '';
+
+  // The saved flyer becomes the pending one, so a save that changes only the
+  // title keeps the picture. Leaving it null here would silently drop the
+  // flyer from every event Noy edits for any other reason — the record is
+  // written whole, and an absent key IS a removal.
+  pendingEventImage = ev.image || null;
+  setEventImageUI(pendingEventImage, pendingEventImage ? 'התמונה השמורה' : '');
+
   document.getElementById('admin-panel').scrollTop = 0;
 }
 
@@ -8386,9 +8624,13 @@ function renderEventsAdmin() {
     const title = esc(ev.title);
     const place = esc(ev.place || '');
     const id    = esc(ev.id);
+    // Not the picture itself — a mark that there is one. Thirty thumbnails of
+    // full-size data URLs in this list would be the whole events node
+    // rendered twice over, on the one page Noy opens from a phone.
+    const flyer = ev.image ? ' · 🖼️ פלאייר' : '';
     return '<div class="admin-card">' +
              '<strong>' + date + '</strong> — ' + title +
-             (place ? ' · ' + place : '') +
+             (place ? ' · ' + place : '') + flyer +
              '<button type="button" class="admin-save-btn" data-ev-edit="' + id + '">עריכה</button>' +
              '<button type="button" class="admin-save-btn" data-ev-del="'  + id + '">מחיקה</button>' +
            '</div>';

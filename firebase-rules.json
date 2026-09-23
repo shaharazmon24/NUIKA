@@ -46,6 +46,9 @@
           "ctaText":  { ".validate": "newData.isString() && newData.val().length <= 300" },
           "created":  { ".validate": "newData.isNumber()" },
 
+          "//image": "A flyer for the event, held as a data URL. The admin shrinks every picture to 1000px on its longest side and re-encodes it as JPEG before it is ever sent, so a phone photo arrives here at roughly 150KB rather than 4MB. Two things are pinned: it must BEGIN with data:image/, which is what stops an http(s) or javascript: value being stored in a field that reaches an <img src>, and it must fit inside 600,000 characters, which is about 440KB of base64 and comfortably above anything the resize can produce. events.html reads this whole node in one go, so every byte here is paid for by every visitor to the board.",
+          "image":    { ".validate": "newData.isString() && newData.val().length <= 600000 && newData.val().beginsWith('data:image/')" },
+
           "$other":   { ".validate": false }
         }
       },

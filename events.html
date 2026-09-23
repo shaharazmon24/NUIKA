@@ -26,6 +26,17 @@
     .ev-card__title{ font-family: Bellefair, serif; font-size: 26px; line-height: 1.2;
                      color: var(--ink); margin: 0 0 6px; }
     .ev-card__meta { font-size: 13px; line-height: 1.7; color: var(--muted); margin: 0; }
+    /* Full width of the card, its own height. A flyer is usually portrait and
+       a photo usually landscape, so nothing is cropped: whatever Noy attached
+       is shown whole. */
+    .ev-card__flyer {
+      display: block;
+      inline-size: 100%;
+      block-size: auto;
+      margin-block-start: 14px;
+      border-radius: 4px;
+    }
+
     .ev-card__body { font-size: 17px; line-height: 1.9; color: var(--ink); margin: 12px 0 0; }
     .ev-card__cta  { margin-block-start: 16px; }
 
@@ -104,6 +115,12 @@
       if (ev.time)  bits += '<p class="ev-card__meta">' + esc(ev.time) + '</p>';
       if (ev.place) bits += '<p class="ev-card__meta">' + esc(ev.place) + '</p>';
       if (ev.body)  bits += '<p class="ev-card__body">' + esc(ev.body) + '</p>';
+
+      /* The flyer. Its scheme was checked at the door, where the node is
+         read, so anything reaching here is already a data: image; esc() is
+         still applied, because a quote inside the value would otherwise
+         break out of the attribute. */
+      if (ev.image) bits += '<img class="ev-card__flyer" src="' + esc(ev.image) + '" alt="" loading="lazy">';
       if (ev.ctaLabel) {
         var text = encodeURIComponent(ev.ctaText || ev.title);
         bits += '<a class="btn btn--primary ev-card__cta" target="_blank" rel="noopener"' +
@@ -210,6 +227,22 @@
           var val = snap.val() || {};
           var list = Object.keys(val).map(function (k) { return val[k]; })
                            .filter(function (e) { return e && e.date && e.title; });
+
+          /* The flyer is the one field whose value a visitor's browser is
+             asked to FETCH rather than read, so its scheme is checked here,
+             at the door, before anything downstream can treat it as a source.
+             esc() protects the attribute it sits in; it does nothing about
+             what the attribute points at, and would pass a javascript: or an
+             http:// value through untouched.
+             
+             Checked here rather than inside cardHTML() on purpose: a value
+             that fails is DROPPED once, at the boundary, instead of every
+             renderer having to remember to re-test it. The database rules say
+             the same thing on the write side — neither is trusted alone. */
+          for (var i = 0; i < list.length; i++) {
+            if (list[i].image && !/^data:image\//.test(list[i].image)) delete list[i].image;
+          }
+
           render(list);
         })
         .catch(function (err) {

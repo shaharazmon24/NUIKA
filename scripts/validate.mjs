@@ -1495,11 +1495,20 @@ if (want('features')) {
         const TAIL = `(?:\\s*\\|\\|\\s*(?:ev\\.\\w+)?)*\\s*\\)+`;
         const ESC_RE = new RegExp(`\\besc\\s*\\(\\s*(?:\\w+\\s*\\(\\s*)?ev\\.\\w+${TAIL}`, 'g');
         const ENC_RE = new RegExp(`\\bencodeURIComponent\\s*\\(\\s*ev\\.\\w+${TAIL}`, 'g');
+        // A presence test, which renders nothing of the value it reads: the
+        // card shows a fixed marker when a field is set, and nothing when it
+        // is not. `ev.image ? '…' : ''` is the shape, and the sister checker
+        // over events.html's cardHTML() has always allowed the same thing
+        // written as `if (ev.x)`. Narrow on purpose — the field name must be
+        // followed by `?`, or close an `if (`, so a value that goes on to be
+        // concatenated into the card is not covered by it.
+        const TEST_RE = /\bev\.\w+(?=\s*\?)|(?<=\bif\s*\(\s*)ev\.\w+(?=\s*\))/g;
         for (const re of [ESC_RE, ENC_RE]) {
           for (const m of cardCode.matchAll(re)) {
             for (const fm of m[0].matchAll(/ev\.\w+/g)) allowed.push([m.index + fm.index, m.index + fm.index + fm[0].length]);
           }
         }
+        for (const m of cardCode.matchAll(TEST_RE)) allowed.push([m.index, m.index + m[0].length]);
         // esc() is not enough inside an inline event-handler attribute, and
         // this is a measurement rather than a precaution. With the buttons
         // built as onclick="editEvent('" + esc(ev.id) + "')", an event whose
@@ -3616,6 +3625,80 @@ if (want('pages')) {
     } else {
       pass(`${file}: the page transition keeps all ${guards.length} of its ways to fail open`);
     }
+  }
+
+  console.log("The flyer on an event:");
+  // Noy can attach one picture to an event. It is held in the event record
+  // as a data URL, which means every byte of it is downloaded by everyone who
+  // opens the events board — events.html reads that whole node in a single
+  // request. Three things keep that honest, and each is checked here.
+  {
+    const evAt2 = html.indexOf('function previewEventImage(');
+    const pv = evAt2 < 0 ? '' : html.slice(evAt2, html.indexOf('\nfunction ', evAt2 + 30));
+
+    if (!pv) {
+      fail('shop.html has no previewEventImage() — Noy cannot attach a flyer to an event at all');
+    } else {
+      // 1. Shrunk before it is ever stored. Without this a 4MB phone photo
+      //    goes in whole, as ~5.4MB of base64, and is re-downloaded by every
+      //    visitor to the board forever. This is the documented failure of
+      //    the product photos, which is why that upload grew the same step.
+      const bounded = /Math\.min\s*\(\s*1\s*,[^)]*naturalWidth[^)]*naturalHeight/.test(pv);
+      const reEncodes = /toDataURL\s*\(\s*['"]image\/jpeg['"]/.test(pv);
+      if (bounded && reEncodes)
+        pass('the flyer is bounded on both axes and re-encoded before it is stored');
+      else if (!bounded)
+        fail('previewEventImage() does not bound BOTH axes before storing — a photo from a phone held upright is exactly the tall shape a width-only bound lets through at full size');
+      else
+        fail('previewEventImage() never re-encodes the picture — whatever the camera produced goes into the database as it is');
+
+      // 2. An image the browser cannot decode is refused, not stored raw.
+      if (/onerror[\s\S]{0,400}pendingEventImage\s*=\s*null/.test(pv))
+        pass('a picture the browser cannot open is refused rather than stored at full size');
+      else
+        fail('previewEventImage() does not clear the pending flyer when decoding fails — an undecodable HEIC would be kept whole in a world-readable node');
+    }
+
+    // 3. The save must not run mid-resize, or it stores the previous picture.
+    const saveAt = html.indexOf('function saveEvent(');
+    const sv = saveAt < 0 ? '' : html.slice(saveAt, html.indexOf('\nfunction ', saveAt + 20));
+    if (/_evImageDecoding/.test(sv)) pass('saveEvent() refuses to run while a flyer is still being resized');
+    else fail('saveEvent() does not check _evImageDecoding — a save during the resize stores the flyer from the event before it');
+
+    // 4. The record is written whole, so an absent key is a removal. Both of
+    //    these were real ways to lose or mis-assign a picture.
+    const clearAt = html.indexOf('function clearEventForm(');
+    const cl = clearAt < 0 ? '' : html.slice(clearAt, html.indexOf('\nfunction ', clearAt + 20));
+    if (/clearEventImage\s*\(\s*\)/.test(cl)) pass('clearing the form drops the flyer with it');
+    else fail('clearEventForm() does not call clearEventImage() — the next event written from a cleared form would carry the previous one’s picture');
+
+    const editAt = html.indexOf('function editEvent(');
+    const ed = editAt < 0 ? '' : html.slice(editAt, html.indexOf('\nfunction ', editAt + 20));
+    if (/pendingEventImage\s*=\s*ev\.image/.test(ed)) pass('editing an event keeps the flyer it already had');
+    else fail('editEvent() does not restore ev.image — editing an event for any other reason would silently delete its flyer, because the record is written whole');
+
+    // 5. The public board must not trust the stored value's scheme. esc()
+    //    guards the attribute; it says nothing about what the attribute
+    //    points at, and would pass a javascript: URL straight through.
+    const evHtml = existsSync(join(ROOT, 'events.html'))
+      ? uncommented(readFileSync(join(ROOT, 'events.html'), 'utf8')) : '';
+    if (/\^data:image/.test(evHtml) && /delete\s+\w+\[\w+\]\.image/.test(evHtml))
+      pass('events.html drops any flyer that is not a data: image, at the point the node is read');
+    else
+      fail('events.html does not check the flyer’s scheme before rendering it — esc() protects the attribute, not what it points at, so a javascript: value would reach an <img src>');
+
+    // 6. And the database says the same thing on the way in.
+    const rulesPath = join(ROOT, 'firebase-rules.json');
+    const rules = existsSync(rulesPath) ? readFileSync(rulesPath, 'utf8') : '';
+    const imgRule = rules.match(/"image":\s*\{\s*"\.validate":\s*"([^"]+)"/);
+    if (!imgRule)
+      fail('firebase-rules.json has no rule for events/$eventId/image — with "$other" set to false, saving an event WITH a flyer is rejected outright and Noy loses the whole event, not just the picture');
+    else if (!/beginsWith\('data:image\//.test(imgRule[1]))
+      fail('the image rule does not pin the value to data:image/ — an http(s) or javascript: value could be written into a field that reaches an <img src>');
+    else if (!/length\s*<=\s*\d+/.test(imgRule[1]))
+      fail('the image rule sets no length ceiling — one oversized write would be downloaded by every visitor to the board');
+    else
+      pass('the database rule pins the flyer to a data: image and caps its size');
   }
   console.log('The events board:');
   {
