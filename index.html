@@ -85,6 +85,47 @@
        with the header and footer as bars above and below. */
     .hm-screen > :not(.hm-film) { position: relative; z-index: 2; }
 
+    /* The footer, on this page only. Everywhere else it is a band of solid
+       ink under a page that scrolled to reach it; here it is a band of solid
+       ink across the bottom of the one screen the film gets — measured at
+       1579x1123 it was 293px tall, 26% of the frame, and at a 1280x800
+       laptop it is 37%. All of that is film nobody sees.
+
+       So it fades in instead of starting: transparent where it meets the
+       picture, ink where the words are. The stops are percentages of the
+       footer's own height so they keep their relationship to the five rows
+       inside it at any size, including the short-screen rule further down
+       that shrinks the whole thing.
+
+       The alpha values are not chosen by eye. .hm-screen::after already
+       darkens the film — .50 where the wordmark sits, .64 at the bottom row
+       — and these stack on top of that. Measured in the browser against a
+       pure white frame, which no frame of this film comes close to (the
+       brightest bottom third of it averages 129 of 255): the social icons read
+       7.2:1, the address 8.8:1, the orders line 9.7:1 and the link to the
+       shop 10.1:1. Lowering any of these is a legibility change, not a
+       taste one.
+
+       Written as rgba(59, 42, 36, …) rather than the --ink token because a
+       token cannot carry an alpha, and this is the same spelling the overlay
+       above already uses for the same colour. */
+    .hm-screen > .nu-footer {
+      background: linear-gradient(to bottom,
+        rgba(59, 42, 36, 0)     0,
+        rgba(59, 42, 36, .28)  14%,
+        rgba(59, 42, 36, .62)  40%,
+        rgba(59, 42, 36, .80)  64%,
+        rgba(59, 42, 36, .88) 100%);
+    }
+
+    /* The wordmark's resting half. site.css mutes it to 50% cream at rest on
+       a pointer device, as the hint that hovering does something — read
+       against solid ink. Against the film showing through the top of the
+       gradient that same 50% measures 2.32:1, under the 3:1 a graphic needs;
+       .72 measures 3.13:1. The lit half is unchanged, so the sweep on hover
+       still reads. */
+    .hm-screen .nu-mark--foot { --mark-rest: rgba(246, 240, 228, .72); }
+
     /* <main> is the 1fr row of .hm-screen. It needs to be a grid itself for
        the block below to anchor to the bottom of it — `align-self: end` on a
        child of a plain block container does nothing at all, which is what was
