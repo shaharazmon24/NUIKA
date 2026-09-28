@@ -7790,6 +7790,7 @@ function addIngredientRow(ing) {
       <input type="text" inputmode="decimal" placeholder="0" class="ing-weight"
         value="${ing ? ing.weightG : ''}" dir="ltr"
         style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#3B2A24;background:#F5EFE3;border:1.5px solid #E5D9C5;border-radius:6px;padding:5px 7px;width:100%;text-align:center;"
+        onfocus="onIngWeightFocus()" onblur="onIngWeightBlur()"
         oninput="onIngWeightInput('${rowId}')" />
     </td>
     <td style="min-width:56px;text-align:center;">
@@ -10047,6 +10048,45 @@ function onYieldCountInput() {
   recalcEditorCosts();
 }
 
+// The rows as they stood when Noy stepped into a weight box.
+//
+// This is the same device as _yieldBase above, for the same reason, found the
+// same way. The input event fires on every keystroke, so changing a flour
+// weight from 200 to 250 is three edits — "2", "25", "250" — and each one used
+// to rescale the recipe from the weights the PREVIOUS keystroke had just
+// written and rounded. At the "2" step the whole recipe is being scaled to two
+// grams of flour, so a 3g yeast is written as 0.0 or 0.1 and its percentage is
+// re-derived from that; by the time the "250" lands, the error has been
+// multiplied back up.
+//
+// Measured in the browser on a nine-ingredient brioche, editing the flour from
+// 200 to 250: the yeast came out 8.6% heavy. With the edited flour as the only
+// flour in the recipe, the salt came out 117% heavy — 13g where 6 were meant.
+// Backspacing the box to empty first rewrote every other ingredient to a
+// fraction of itself, and walking away at that moment left the recipe that way.
+//
+// Every keystroke now scales from this snapshot, so the result is the same as
+// if the number had arrived in one go.
+let _ingBase = null;
+
+function ingSnapshot() {
+  return [...document.querySelectorAll('#re-ing-tbody tr')].map(tr => {
+    const wEl = tr.querySelector('.ing-weight');
+    return { tr, wEl, w: wEl ? weightFromInput(wEl) : 0 };
+  });
+}
+
+// Identity, not length: reopening the editor on another recipe with the same
+// number of rows would otherwise leave a snapshot of detached rows in place,
+// and every write would land on nodes that are no longer on the page.
+function ingBaseIsStale(live) {
+  return !_ingBase || _ingBase.length !== live.length
+      || _ingBase.some((c, i) => c.tr !== live[i]);
+}
+
+function onIngWeightFocus() { _ingBase = ingSnapshot(); }
+function onIngWeightBlur()  { _ingBase = null; recalcEditorCosts(); }
+
 // Flour is the 100% baseline, so changing a flour weight rescales the whole
 // recipe: every non-flour ingredient keeps its baker's percentage and its grams
 // follow. Changing anything else is a local edit and only moves its own
@@ -10056,20 +10096,32 @@ function onIngWeightInput(rowId) {
   if (!tr) { recalcEditorCosts(); return; }
 
   if (isFlourRow(tr)) {
-    const rows = [...document.querySelectorAll('#re-ing-tbody tr')];
-    const flourTotal = rows.reduce((sum, r) =>
-      sum + (isFlourRow(r) ? weightFromInput(r.querySelector('.ing-weight')) : 0), 0);
+    const live = [...document.querySelectorAll('#re-ing-tbody tr')];
+    if (ingBaseIsStale(live)) _ingBase = ingSnapshot();
+    const base = _ingBase;
 
-    // Mid-keystroke the box is empty and the total is 0. Rescaling to zero
-    // would empty the whole recipe, so wait until there is a real number.
-    if (flourTotal > 0) {
-      rows.forEach(r => {
+    const flourNow = live.reduce((sum, r) =>
+      sum + (isFlourRow(r) ? weightFromInput(r.querySelector('.ing-weight')) : 0), 0);
+    const flourBefore = base.reduce((sum, c) =>
+      sum + (isFlourRow(c.tr) ? c.w : 0), 0);
+
+    // Mid-keystroke the box she is typing in is empty. That is a number on its
+    // way in, not an instruction to shrink the recipe to what is left — and it
+    // used to be read as one: clearing the box rewrote every other ingredient
+    // to a fraction of itself, on screen, before the first new digit arrived.
+    const typedNow = weightFromInput(tr.querySelector('.ing-weight'));
+
+    if (typedNow > 0 && flourNow > 0 && flourBefore > 0) {
+      const factor = flourNow / flourBefore;
+      base.forEach(({ tr: r, wEl, w }) => {
         if (r === tr || isFlourRow(r)) return;
-        const pct = parseFloat(r.dataset.pct);
-        if (!Number.isFinite(pct) || pct <= 0) return;
-        const wEl = r.querySelector('.ing-weight');
+        // A box she has emptied stays empty. It used to be refilled from the
+        // percentage still stored on the row, so deleting a weight and then
+        // touching the flour brought the ingredient back with a number she
+        // had never typed.
+        if (!(w > 0)) return;
         if (!wEl || document.activeElement === wEl) return;
-        wEl.value = +((pct / 100) * flourTotal).toFixed(1);
+        wEl.value = +(w * factor).toFixed(1);
       });
     }
   }

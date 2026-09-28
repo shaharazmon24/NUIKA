@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>כמה שאלות על המטבח — NUIKA</title>
+
+  <!-- The same kind of thing as gallery-captions.html, and deliberately built
+       the same way: a tool Shahar hands to Noy, not a page of the site. In no
+       nav, linked from nowhere, noindex, and kept out of the service worker's
+       precache so it never costs a visitor anything.
+
+       It is served from the public domain, so it holds nothing that is not
+       already public: no prices, no recipes, no customer anything. It reads
+       nothing, writes only to this one device's localStorage, and the only
+       thing it ever sends is a WhatsApp message Noy taps to send herself. No
+       database, no credentials, no upload.
+
+       Why it exists: the kitchen was changing Noy's ingredient weights while
+       she typed them. The arithmetic fault behind that is fixed. What is left
+       are decisions about how the kitchen should BEHAVE, and those are hers —
+       guessing at them is how the fault got written in the first place. -->
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#6B2E1E">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bellefair&family=IBM+Plex+Sans+Hebrew:wght@300;400;500;600&display=swap">
+  <link rel="stylesheet" href="./site.css?v=5">
+
+  <style>
+    /* Prefixed .kq- so nothing here can reach another page's styles. */
+
+    /* site.css declares no global box-sizing reset, by design. A width of 100%
+       here would otherwise mean 100% PLUS padding and border, which is what
+       hung the captions form's textarea out of its card. Scoped to this page's
+       own elements rather than declared on *, so it stays a local decision. */
+    .kq-wrap, .kq-wrap *, .kq-send, .kq-send * { box-sizing: border-box; }
+
+    body { padding-block-end: 150px; }
+
+    .kq-wrap { max-inline-size: 720px; margin-inline: auto; padding: 28px 18px 0; }
+
+    .kq-head { text-align: center; margin-block-end: 24px; }
+    .kq-title { font-family: var(--font-display); font-size: var(--t-page); margin: 0 0 12px; }
+    .kq-lede { margin: 0 auto; max-inline-size: 44ch; line-height: 1.85; color: var(--muted); }
+
+    .kq-fixed {
+      margin: 22px auto 0;
+      max-inline-size: 44ch;
+      padding: 16px 20px;
+      background: var(--butter);
+      border-radius: 14px;
+      text-align: start;
+      line-height: 1.85;
+    }
+    .kq-fixed b { font-weight: 600; }
+
+    .kq-count {
+      margin-block: 26px 4px;
+      padding-block-end: 12px;
+      border-block-end: 1px solid rgba(59,42,36,.14);
+      color: var(--muted);
+      font-size: var(--t-label);
+    }
+
+    .kq-group {
+      margin-block-start: 30px;
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      color: var(--terra-deep);
+    }
+    .kq-note {
+      margin: 6px 0 0;
+      color: var(--muted);
+      line-height: 1.8;
+      font-size: 0.92rem;
+    }
+
+    .kq-card {
+      margin-block-start: 16px;
+      padding: 18px 18px 16px;
+      background: var(--cream);
+      border: 1px solid rgba(59,42,36,.12);
+      border-radius: 14px;
+    }
+    .kq-card.is-done { border-color: rgba(184,72,48,.45); }
+
+    .kq-q { margin: 0 0 12px; line-height: 1.7; font-weight: 500; }
+    .kq-q .kq-num { color: var(--terra); font-weight: 600; margin-inline-end: 6px; }
+
+    /* A whole tappable row, not a 13px radio dot. Noy answers this on a
+       phone, one-handed, and the label is the target. */
+    .kq-opt {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 11px 12px;
+      margin-block-end: 7px;
+      border: 1.5px solid rgba(59,42,36,.16);
+      border-radius: 10px;
+      cursor: pointer;
+      line-height: 1.6;
+      transition: background .15s ease, border-color .15s ease;
+      min-block-size: 44px;
+    }
+    .kq-opt:hover { background: var(--butter); }
+    .kq-opt.is-on { background: var(--butter); border-color: var(--terra); }
+    .kq-opt input { margin-block-start: 4px; accent-color: var(--terra); flex: 0 0 auto; }
+
+    .kq-box {
+      inline-size: 100%;
+      min-block-size: 86px;
+      padding: 12px 14px;
+      font-family: var(--font-text);
+      font-size: 1rem;
+      line-height: 1.7;
+      color: var(--ink);
+      background: #FBF7EF;
+      border: 1.5px solid rgba(59,42,36,.16);
+      border-radius: 10px;
+      resize: vertical;
+    }
+    .kq-box:focus { outline: 2px solid var(--terra); outline-offset: 1px; }
+
+    .kq-send {
+      position: fixed;
+      inset-block-end: 0; inset-inline: 0;
+      padding: 14px 18px calc(14px + env(safe-area-inset-bottom));
+      background: rgba(246,240,228,.96);
+      border-block-start: 1px solid rgba(59,42,36,.14);
+      display: flex; gap: 10px; align-items: center; justify-content: center;
+      flex-wrap: wrap;
+      z-index: 5;
+    }
+    .kq-said {
+      color: var(--terra-deep);
+      font-size: var(--t-label);
+      opacity: 0;
+      transition: opacity .2s ease;
+    }
+    .kq-said.is-on { opacity: 1; }
+
+    @media (max-width: 720px) {
+      .kq-wrap { padding-inline: 14px; }
+      .kq-card { padding: 15px 14px 13px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="kq-wrap">
+    <header class="kq-head">
+      <h1 class="kq-title">כמה שאלות על המטבח</h1>
+      <p class="kq-lede">
+        בדקנו את מה שסיפרת — שהמתכון משנה לך מספרים תוך כדי כתיבה.
+        זאת לא הייתה טעות שלך, והמספרים באמת השתנו.
+      </p>
+
+      <div class="kq-fixed">
+        <b>מה שכבר תוקן:</b> כששינית כמות של קמח, כל שאר המרכיבים חושבו מחדש
+        אחרי כל הקלדה — גם באמצע, כשבמשבצת היה עוד ספרה אחת. בגלל זה מרכיבים
+        קטנים כמו שמרים ומלח יצאו בסוף כבדים יותר ממה שכתבת. זה תוקן, ונבדק.
+        <br><br>
+        מה שנשאר זה כמה החלטות על איך המטבח <b>צריך</b> להתנהג — ואלה שלך,
+        לא שלנו. כל שאלה כאן היא שאלה שהתשובה שלה משנה מה נבנה.
+        אין נכון ולא נכון, ואפשר לדלג על מה שלא ברור.
+      </div>
+    </header>
+
+    <p class="kq-count" id="kq-count"></p>
+
+    <main id="kq-list"></main>
+  </div>
+
+  <div class="kq-send">
+    <button class="btn" id="kq-whatsapp" type="button">שליחה לשחר בוואטסאפ</button>
+    <button class="btn btn--ghost" id="kq-copy" type="button">העתקה</button>
+    <span class="kq-said" id="kq-said" role="status" aria-live="polite"></span>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      /* Every question here is one whose answer changes what gets built. A
+         question that is merely interesting wastes her afternoon, so there
+         are none of those. */
+      var GROUPS = [
+        {
+          title: 'מה קרה למתכון',
+          note: 'כדי לוודא שתיקנו את מה שבאמת קרה לך, ולא משהו דומה.',
+          questions: [
+            { id: 'q1', q: 'כשהמספרים השתנו — זה היה מיד אחרי ששינית את הכמות של אחד הקמחים?',
+              opts: ['כן, בדיוק אחרי זה', 'לא, זה קרה במקום אחר', 'לא זוכרת'] },
+            { id: 'q2', q: 'קרה שהמספרים השתנו אחרי ששמרת וחזרת למתכון, בלי שנגעת בכלום?',
+              opts: ['כן', 'לא', 'לא בדקתי'] },
+            { id: 'q3', q: 'הבריוש שסיפרת עליו — כתבת אותו מאפס, או פתחת מתכון קיים ושינית בו?',
+              opts: ['מאפס, מתכון חדש', 'פתחתי קיים ושיניתי', 'גם וגם'] },
+            { id: 'q4', q: 'עוד משהו שאת זוכרת מהרגע שזה קרה? (מה לחצת, מה ראית)',
+              text: 'אפשר לכתוב כאן בחופשיות' }
+          ]
+        },
+        {
+          title: 'המשבצת של "כמות יחידות"',
+          note: 'בטופס המתכון יש משבצת "כמות יחידות". היום, אם כותבים בה מספר אחר — כל המתכון גדל או קטן לפי זה. למשל מתכון של 789 גרם, אם כותבים בה 2 ומשקל היחידה 600, כל המרכיבים מוכפלים בערך פי אחד וחצי.',
+          questions: [
+            { id: 'q5', q: 'ידעת שזה מה שהמשבצת הזאת עושה?',
+              opts: ['כן, אני משתמשת בזה בכוונה', 'לא ידעתי', 'ידעתי אבל לא ציפיתי שזה יקרה ככה'] },
+            { id: 'q6', q: 'מה היית רוצה שהמשבצת הזאת תעשה?',
+              opts: [
+                'רק להראות לי כמה יחידות יוצאות מהמתכון — בלי לשנות שום מספר',
+                'שאני אכתוב כמה יחידות אני רוצה, והמתכון יגדל או יקטן בהתאם',
+                'שיהיו שתי משבצות נפרדות: אחת שמראה, ואחת שמגדילה',
+                'לא בטוחה'
+              ] },
+            { id: 'q7', q: 'המשבצת הזאת מתמלאת לבד במספר שלא כתבת. זה מפריע?',
+              opts: ['כן, זה מבלבל אותי', 'לא, זה דווקא נוח', 'לא שמתי לב'] }
+          ]
+        },
+        {
+          title: 'מה נחשב "קמח"',
+          note: 'המטבח מחשב אחוזי אופים — כל מרכיב ביחס לסך הקמח. לכן חשוב שהוא יֵדע בדיוק מה את סופרת כקמח. היום הוא מזהה לפי המילה "קמח" או "סולת" בשם, ולפי הקטגוריה במזווה — ואם הקטגוריה במזווה אומרת משהו אחר, הוא הולך אחריה.',
+          questions: [
+            { id: 'q8', q: 'מה נחשב אצלך קמח לצורך החישוב? (אפשר לסמן כמה)',
+              multi: ['קמח לבן', 'קמח מלא', 'כוסמין', 'שיפון', 'סולת', 'קמח שקדים', 'קמח אורז', 'קקאו', 'עמילן / קורנפלור'] },
+            { id: 'q9', q: 'מחמצת — נחשבת קמח בחישוב שלך?',
+              opts: [
+                'כן, המחמצת נספרת כקמח',
+                'לא, המחמצת היא מרכיב רגיל',
+                'רק חצי ממנה (הקמח שבתוכה)',
+                'לא משנה לי'
+              ] },
+            { id: 'q10', q: 'את משתמשת בעמודת האחוזים בטופס המתכון?',
+              opts: ['כן, הרבה', 'לפעמים', 'לא, אני עובדת רק בגרמים'] }
+          ]
+        },
+        {
+          title: 'איך את רוצה שזה יתנהג',
+          note: 'כשמשנים כמות של קמח, שאר המרכיבים זזים איתו כדי לשמור על היחסים. זאת ההתנהגות שביקשת בזמנו — השאלה היא מתי בדיוק היא צריכה לקרות.',
+          questions: [
+            { id: 'q11', q: 'כשאת משנה כמות של קמח, את רוצה ששאר המרכיבים יזוזו איתו?',
+              opts: [
+                'כן, תמיד',
+                'רק כשאני מבקשת, בכפתור',
+                'לא, שכל מספר יישאר בדיוק מה שכתבתי'
+              ] },
+            { id: 'q12', q: 'ואם כן — מתי שאר המספרים יזוזו?',
+              opts: [
+                'תוך כדי שאני מקלידה, שאני אראה את זה קורה',
+                'רק כשסיימתי לכתוב את המספר ויצאתי מהמשבצת',
+                'לא משנה לי'
+              ] },
+            { id: 'q13', q: 'ואם את משנה כמות של מים או מחמצת — משהו אחר צריך לזוז?',
+              opts: ['לא, רק הקמח מזיז דברים', 'כן, גם מים ומחמצת', 'לא יודעת'] }
+          ]
+        },
+        {
+          title: 'מחירים ומע״מ',
+          note: 'המטבח מחשב לך עלות למנה, והיום הוא מניח 17% מע״מ על כל מרכיב. בישראל המע״מ הוא 18% מינואר 2025, ולא בטוח שהחישוב הזה מתאים לך בכלל — לכן השאלות האלה.',
+          questions: [
+            { id: 'q14', q: 'המחיר לק״ג שאת מכניסה למזווה — כולל מע״מ או לפני מע״מ?',
+              opts: ['כולל מע״מ, כמו בחשבונית', 'לפני מע״מ', 'תלוי בספק', 'לא יודעת'] },
+            { id: 'q15', q: 'את עוסק פטור או עוסק מורשה?',
+              opts: ['עוסק פטור', 'עוסק מורשה', 'לא בטוחה'] },
+            { id: 'q16', q: 'יש מרכיבים שאת קונה בלי מע״מ בכלל? (למשל ישירות מחקלאי)',
+              text: 'אם כן — אילו?' },
+            { id: 'q17', q: 'בטופס המזווה יש שדה "פחת". מה את מתכוונת שייכנס שם?',
+              text: 'למשל: מה שנזרק, מה שנשפך, שאריות — מה שאת סופרת' }
+          ]
+        },
+        {
+          title: 'מתכונים שאת מדביקה',
+          note: 'יש בדף הניהול אפשרות להדביק מתכון שלם מטקסט. היא עובדת טוב כשכל שורה היא "שם ומספר", ומתבלבלת בשורות אחרות — "2 ביצים" נכנס כשתי גרם, ושורת הכנה כמו "ללוש 10 דקות" נכנסת כמרכיב של 10 גרם.',
+          questions: [
+            { id: 'q18', q: 'את מדביקה מתכונים מאיפשהו, או תמיד מקלידה מחדש?',
+              opts: ['מדביקה מוואטסאפ או מפתקים', 'מדביקה מאקסל', 'תמיד מקלידה', 'גם וגם'] },
+            { id: 'q19', q: 'אם את מדביקה — תעתיקי לכאן שתיים־שלוש שורות בדיוק כמו שהן נראות אצלך, בלי לסדר אותן.',
+              text: 'למשל: 200 גרם קמח מלא' }
+          ]
+        },
+        {
+          title: 'לסיום',
+          note: '',
+          questions: [
+            { id: 'q20', q: 'באיזה מכשיר את עובדת על דף הניהול?',
+              opts: ['בעיקר בטלפון', 'בעיקר במחשב', 'בשניהם, תלוי מתי'] },
+            { id: 'q21', q: 'עוד משהו בדף הניהול שמתנהג מוזר, או שהיית רוצה שיהיה אחרת?',
+              text: 'כל דבר. גם דברים קטנים.' }
+          ]
+        }
+      ];
+
+      var ALL = [];
+      GROUPS.forEach(function (g) { g.questions.forEach(function (q) { ALL.push(q); }); });
+
+      var STORE = 'nuika-kitchen-answers';
+      var draft = read();
+
+      function read() {
+        try { return JSON.parse(localStorage.getItem(STORE) || '{}') || {}; }
+        catch (e) { return {}; }          /* private mode throws rather than returning null */
+      }
+      function write() {
+        try { localStorage.setItem(STORE, JSON.stringify(draft)); }
+        catch (e) { /* out of space or blocked: the answers still work, they
+                       just will not survive a reload. Not worth an alert. */ }
+      }
+
+      var saidEl = document.getElementById('kq-said');
+      var sayTimer = null;
+      function say(text) {
+        saidEl.textContent = text;
+        saidEl.classList.add('is-on');
+        clearTimeout(sayTimer);
+        sayTimer = setTimeout(function () { saidEl.classList.remove('is-on'); }, 2400);
+      }
+
+      function answered(q) {
+        var v = draft[q.id];
+        if (Array.isArray(v)) return v.length > 0;
+        return !!(v && String(v).trim());
+      }
+
+      function refreshCount() {
+        var n = ALL.filter(answered).length;
+        document.getElementById('kq-count').textContent =
+          n === 0 ? 'יש כאן ' + ALL.length + ' שאלות. רובן לחיצה אחת.'
+                  : 'ענית על ' + n + ' מתוך ' + ALL.length + '.';
+      }
+
+      /* Every node is built and its text set with textContent. Nothing on this
+         page is ever assembled as a string of markup, so there is nothing to
+         escape and no way for an answer to become HTML. */
+      function el(tag, cls, text) {
+        var n = document.createElement(tag);
+        if (cls) n.className = cls;
+        if (text != null) n.textContent = text;
+        return n;
+      }
+
+      function card(q, index) {
+        var wrap = el('section', 'kq-card');
+        wrap.id = 'card-' + q.id;
+
+        var head = el('p', 'kq-q');
+        head.appendChild(el('span', 'kq-num', index + '.'));
+        head.appendChild(document.createTextNode(q.q));
+        wrap.appendChild(head);
+
+        function mark() {
+          wrap.classList.toggle('is-done', answered(q));
+          refreshCount();
+        }
+
+        if (q.opts || q.multi) {
+          var list = q.opts || q.multi;
+          var many = !!q.multi;
+          list.forEach(function (label, i) {
+            var row = el('label', 'kq-opt');
+            var input = document.createElement('input');
+            input.type = many ? 'checkbox' : 'radio';
+            input.name = q.id;
+            input.value = label;
+
+            var current = draft[q.id];
+            input.checked = many
+              ? (Array.isArray(current) && current.indexOf(label) !== -1)
+              : current === label;
+            if (input.checked) row.classList.add('is-on');
+
+            input.addEventListener('change', function () {
+              if (many) {
+                var set = Array.isArray(draft[q.id]) ? draft[q.id].slice() : [];
+                var at = set.indexOf(label);
+                if (input.checked && at === -1) set.push(label);
+                if (!input.checked && at !== -1) set.splice(at, 1);
+                draft[q.id] = set;
+              } else {
+                draft[q.id] = label;
+                /* One of these rows is now the answer, so the others must stop
+                   looking like it. The radio group handles the inputs; this
+                   handles the boxes drawn around them. */
+                [].forEach.call(wrap.querySelectorAll('.kq-opt'), function (r) {
+                  r.classList.remove('is-on');
+                });
+              }
+              row.classList.toggle('is-on', input.checked);
+              write();
+              mark();
+            });
+
+            row.appendChild(input);
+            row.appendChild(el('span', null, label));
+            wrap.appendChild(row);
+          });
+        }
+
+        if (q.text) {
+          var box = document.createElement('textarea');
+          box.className = 'kq-box';
+          box.placeholder = q.text;
+          box.value = typeof draft[q.id] === 'string' ? draft[q.id] : '';
+          box.setAttribute('aria-label', q.q);
+          box.addEventListener('input', function () {
+            draft[q.id] = box.value;
+            write();
+            mark();
+          });
+          wrap.appendChild(box);
+        }
+
+        mark();
+        return wrap;
+      }
+
+      function render() {
+        var list = document.getElementById('kq-list');
+        GROUPS.forEach(function (g) {
+          list.appendChild(el('h2', 'kq-group', g.title));
+          if (g.note) list.appendChild(el('p', 'kq-note', g.note));
+          g.questions.forEach(function (q) { list.appendChild(card(q, numberOf(q))); });
+        });
+        refreshCount();
+      }
+
+      /* The number in the message is the number on the screen, taken from the
+         same place: a question's position in ALL. Counting again while
+         building the message is what it did first, and skipping a group with
+         no answers silently shifted every number after it — Noy answered
+         question 8 and Shahar read question 5. */
+      function numberOf(q) { return ALL.indexOf(q) + 1; }
+
+      function message() {
+        var lines = ['תשובות של נוי — המטבח בדף הניהול', ''];
+        GROUPS.forEach(function (g) {
+          if (!g.questions.some(answered)) return;
+          lines.push('— ' + g.title + ' —');
+          g.questions.forEach(function (q) {
+            if (!answered(q)) return;
+            var v = draft[q.id];
+            lines.push(numberOf(q) + '. ' + q.q);
+            lines.push(Array.isArray(v) ? v.join(', ') : String(v).trim());
+            lines.push('');
+          });
+        });
+        var skipped = ALL.length - ALL.filter(answered).length;
+        if (skipped) lines.push('(דילגתי על ' + skipped + ' שאלות)');
+        return lines.join('\n');
+      }
+
+      document.getElementById('kq-whatsapp').addEventListener('click', function () {
+        if (!ALL.filter(answered).length) { say('עוד לא ענית על כלום'); return; }
+        /* wa.me with no number opens WhatsApp's own contact picker, so Noy
+           chooses who to send to and no private number is published here. */
+        window.open('https://wa.me/?text=' + encodeURIComponent(message()), '_blank', 'noopener');
+      });
+
+      document.getElementById('kq-copy').addEventListener('click', function () {
+        if (!ALL.filter(answered).length) { say('עוד לא ענית על כלום'); return; }
+        var text = message();
+        function fallback() {
+          var ta = document.createElement('textarea');
+          ta.value = text;
+          ta.setAttribute('readonly', '');
+          ta.style.position = 'fixed';
+          ta.style.insetInlineStart = '-9999px';
+          document.body.appendChild(ta);
+          ta.select();
+          try { document.execCommand('copy'); say('הועתק'); }
+          catch (e) { say('לא הצלחתי להעתיק'); }
+          document.body.removeChild(ta);
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () { say('הועתק'); }, fallback);
+        } else { fallback(); }
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>

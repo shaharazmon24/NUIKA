@@ -285,12 +285,15 @@ Code changes are for layout, new features, and bugs.
   an unauthenticated read of `nuika/orders` and `nuika/admins` returns
   PERMISSION_DENIED while `nuika/settings` stays public. No password exists in
   the source.
-- **Kitchen saves replace whole subtrees.** `savePantry()`, `saveRecipes()` and
-  `saveWeeklyPlan()` call `.set()` on the entire node built from a local array.
-  Noy uses a phone and a laptop, and the Firebase SDK queues offline writes, so
-  a stale queued write can land later and delete recipes the other device added.
-  `savePlanQty()` shows the correct per-key pattern, with a comment explaining
-  why — four lines above a function that violates it.
+- ~~**Kitchen saves replace whole subtrees.**~~ **Fixed and verified 28 Sep
+  2026.** `savePantry()` and `saveRecipes()` no longer exist: every caller
+  writes the one row it changed, through `savePantryItem_()` / `saveRecipe_()`.
+  `saveWeeklyPlan()` still exists but builds a patch and calls `.update()`.
+  Measured: no `.set()` on `nuika/kitchen/pantry`, `…/recipes` or
+  `…/weeklyPlan` remains anywhere in `shop.html`. The hazard that made it
+  urgent is unchanged, so keep the rule — Noy uses a phone and a laptop, the
+  SDK queues offline writes, and a stale whole-subtree write landing later
+  deletes what the other device added, with no error and no conflict.
 - **`vat: 0` is unrepresentable.** `calcIngCost` uses `(1 + (p.vat || 0.17))`,
   so a genuine zero falls back to 17%, and `savePantryItem` hardcodes `0.17`
   back on every save. The same function guards `pricePerKg` correctly with

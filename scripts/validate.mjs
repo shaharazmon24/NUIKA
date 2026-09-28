@@ -2876,11 +2876,12 @@ if (want('pages')) {
 
     for (const [asset, re] of ASSETS) {
       const versions = new Map();
-      // PAGES plus the captions form. It is not a page of the site and never
-      // will be, but it loads the same stylesheet from the same cache, so
-      // leaving it out of this comparison is how it silently falls a version
-      // behind and renders against a stylesheet the others have moved past.
-      for (const page of [...PAGES, 'gallery-captions.html']) {
+      // PAGES plus the two forms Shahar hands to Noy. Neither is a page of
+      // the site and neither ever will be, but both load the same stylesheet
+      // from the same cache, so leaving one out of this comparison is how it
+      // silently falls a version behind and renders against a stylesheet the
+      // others have moved past.
+      for (const page of [...PAGES, 'gallery-captions.html', 'kitchen-questions.html']) {
         const p = join(ROOT, page);
         if (!existsSync(p)) continue;   // already failed above, on its own line
         const m = readFileSync(p, 'utf8').match(re);
@@ -3588,6 +3589,63 @@ if (want('pages')) {
     }
   }
 
+  console.log("Noy's questions form:");
+  {
+    // The same kind of tool as the captions form, held to the same four
+    // promises, for the same reason: it is served from the public domain and
+    // handed to someone who will open it on a phone and answer it honestly.
+    const FORM = 'kitchen-questions.html';
+    const at = join(ROOT, FORM);
+    if (!existsSync(at)) {
+      fail(`${FORM} is missing — the questions about the kitchen have nowhere to be answered`);
+    } else {
+      const ct = readFileSync(at, 'utf8');
+
+      // 1. Never in a search result. It is not a page of the site.
+      if (/<meta[^>]+name=["']robots["'][^>]+noindex/.test(ct))
+        pass(`${FORM} stays out of search results`);
+      else
+        fail(`${FORM} has lost its noindex — a form addressed to Noy by name would be indexed as a page of the bakery`);
+
+      // 2. No database, in either direction. Answers are Noy's until she
+      //    chooses to send them, and a page on the open web that could read
+      //    or write nuika/ is a much larger thing than a questionnaire.
+      if (!/firebase|db\.ref\(|firebaseio/.test(ct))
+        pass(`${FORM} touches no database — the answers stay on her own device until she sends them`);
+      else
+        fail(`${FORM} has gained a database connection — this page is public, and nothing on it should be able to read or write nuika/`);
+
+      // 3. wa.me with no number opens WhatsApp's own contact picker, so Noy
+      //    chooses the recipient and no private number is published here.
+      const wa = ct.match(/wa\.me\/([^'"?]*)/);
+      if (wa && wa[1] === '')
+        pass(`${FORM} publishes no phone number — WhatsApp asks her who to send to`);
+      else if (wa)
+        fail(`${FORM} hard-codes a phone number into its WhatsApp link (wa.me/${wa[1]}) — that number is then published on the open web`);
+      else
+        fail(`${FORM} has no WhatsApp link — filling it in would have no way to reach anyone`);
+
+      // 4. One source for the question numbers. The first version counted
+      //    again while building the message and skipped whole groups that
+      //    had no answers, so Noy answered question 8 and the message that
+      //    arrived said 5. Both the screen and the message now number from
+      //    a question's position in ALL, through numberOf().
+      const uses = (ct.match(/numberOf\(/g) || []).length;
+      if (uses >= 3)
+        pass(`${FORM} numbers the message and the screen from the same place`);
+      else
+        fail(`${FORM} no longer takes both question numbers from numberOf() — a second counter is how the message came to disagree with what Noy was looking at`);
+    }
+
+    // 5. Never precached. It costs a visitor nothing because no visitor ever
+    //    fetches it.
+    const sw = readFileSync(join(ROOT, 'sw.js'), 'utf8');
+    if (!/kitchen-questions/.test(sw))
+      pass('kitchen-questions.html is not precached — it costs a visitor to the bakery nothing');
+    else
+      fail('sw.js precaches kitchen-questions.html — every visitor to the bakery would download a form written for Noy');
+  }
+
   console.log('Moving between pages:');
   // Since 22 Sep 2026 every internal link on the site is intercepted so a
   // panel can close over the page before the browser leaves it. That is the
@@ -3700,6 +3758,68 @@ if (want('pages')) {
     else
       pass('the database rule pins the flyer to a data: image and caps its size');
   }
+  console.log('Writing a recipe:');
+  {
+    // Noy reported, twice, that the kitchen "changes my recipe while I am
+    // writing it". It did. Changing a flour weight rescales every other
+    // ingredient — that is the baker's-percentage behaviour she asked for —
+    // but the rescale used to run off the weights the PREVIOUS keystroke had
+    // written and rounded. Typing 250 over 200 is three edits, and at the "2"
+    // step the whole recipe is scaled to two grams of flour: a 3g yeast is
+    // written as 0.1 and its percentage re-derived from that, then multiplied
+    // back up. Measured in the browser on a nine-ingredient brioche: the yeast
+    // came out 8.6% heavy, and 117% heavy on the salt when the edited flour
+    // was the only flour in the recipe.
+    //
+    // The fix is the device the unit-count field already used for the identical
+    // bug: snapshot the rows when she enters the box, and scale every keystroke
+    // from the snapshot. These four checks hold that in place.
+    const at = html.indexOf('function onIngWeightInput(');
+    const fn = at < 0 ? '' : html.slice(at, html.indexOf('\nfunction ', at + 30));
+
+    if (!fn) {
+      fail('shop.html has no onIngWeightInput() — a flour weight no longer rescales the recipe at all');
+    } else {
+      // 1. It must scale from the snapshot, not from a value read back off the
+      //    row. dataset.pct is the specific thing that was being read back: it
+      //    is rewritten by recalcEditorCosts() from the rounded weight on every
+      //    keystroke, so reading it here is reading the previous keystroke's
+      //    rounding error and multiplying it.
+      if (/_ingBase/.test(fn) && !/dataset\.pct/.test(fn))
+        pass('a flour weight rescales the recipe from the rows as they were before the edit');
+      else if (/dataset\.pct/.test(fn))
+        fail('onIngWeightInput() reads dataset.pct again — that value is re-derived from the rounded weight on every keystroke, so typing 250 over 200 compounds the rounding instead of scaling once');
+      else
+        fail('onIngWeightInput() no longer scales from a snapshot of the rows — every keystroke will scale from the one before it');
+
+      // 2. A box she has emptied must stay empty. Without this, clearing a
+      //    weight and then touching the flour refilled the row from the
+      //    percentage still stored on it: an ingredient she deleted came back
+      //    carrying a number she had never typed.
+      if (/if\s*\(!\(w > 0\)\)\s*return/.test(fn))
+        pass('an ingredient whose weight she cleared is not refilled behind her');
+      else
+        fail('onIngWeightInput() no longer skips rows that were empty when she started typing — deleting a weight and then touching the flour will resurrect the ingredient');
+
+      // 3. Mid-keystroke the edited box is empty, which is a number on its way
+      //    in, not an instruction to shrink the recipe to whatever flour is
+      //    left. It used to be read as one, on screen, before the first new
+      //    digit arrived.
+      if (/typedNow\s*>\s*0/.test(fn))
+        pass('an empty flour box mid-edit does not shrink the rest of the recipe');
+      else
+        fail('onIngWeightInput() rescales even while the box being typed in is empty — every other ingredient is rewritten to a fraction of itself between the backspace and the first new digit');
+    }
+
+    // 4. The snapshot is only correct if it is taken when she ENTERS the box.
+    //    Taken on the first keystroke it would already describe a half-edited
+    //    recipe, which is the bug again with more steps.
+    if (/class="ing-weight"[\s\S]{0,400}onfocus="onIngWeightFocus\(\)"/.test(html))
+      pass('the snapshot is taken when she steps into the weight box, not after she has started typing');
+    else
+      fail('the ingredient weight box does not call onIngWeightFocus() on focus — the snapshot would be taken mid-edit and describe a recipe that was already half-changed');
+  }
+
   console.log('The events board:');
   {
     // Same reason as home.html, story.html, gallery.html and contact.html
