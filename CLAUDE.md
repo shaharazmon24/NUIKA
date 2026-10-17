@@ -230,6 +230,15 @@ they say why each node is locked.
 
 ## Things that will bite you
 
+**The recipe editor must never lose what Noy typed.** Since 17 Oct 2026 the
+editor (`#recipe-editor-modal`) has no backdrop click-to-close: only the X
+button leaves, through `requestCloseRecipeEditor()`, and only after a question
+when anything is unsaved. Everything she types is copied to `localStorage`
+(`nuika-recipe-drafts-v1`, one draft per recipe or `new`) and offered back on
+the next open and as a banner above the recipe list; the browser Back gesture
+asks the same question instead of leaving the page. If you touch the editor,
+keep all three: no accidental close, the draft, the question.
+
 **Seeding.** Defaults are written exactly once, guarded by `nuika/_seeded`, and
 only into subtrees that do not exist. Never seed from inside a `.on('value')`
 listener: an empty tree there means "Noy deleted everything", not "first run".
@@ -301,17 +310,19 @@ Code changes are for layout, new features, and bugs.
   urgent is unchanged, so keep the rule — Noy uses a phone and a laptop, the
   SDK queues offline writes, and a stale whole-subtree write landing later
   deletes what the other device added, with no error and no conflict.
-- **`vat: 0` is unrepresentable.** `calcIngCost` uses `(1 + (p.vat || 0.17))`,
-  so a genuine zero falls back to 17%, and `savePantryItem` hardcodes `0.17`
-  back on every save. The same function guards `pricePerKg` correctly with
-  `typeof` one line earlier. Whether `pricePerKg` is gross or net is also
+- ~~**`vat: 0` is unrepresentable.**~~ **Fixed 17 Oct 2026.** One constant,
+  `VAT_RATE = 0.18`, and one reader, `itemVat(p)`, in `shop.html`. A stored
+  `vat` of exactly 0.17 (what every row was saved with, and no screen ever let
+  anyone pick another) is read as "the default rate", so the live pantry moved to
+  18% with no database write; a stored 0 is a real rate. New rows are written
+  with `VAT_RATE`. Still open: whether `pricePerKg` is gross or net is
   undefined per supplier — worth settling with Noy before trusting any margin.
 - Product photos uploaded in the admin are stored as base64 inside the products
   node, so every visitor downloads them on every load. They should be resized
   before upload, or moved to Firebase Storage.
 - The committed product images are 1–2 MB each.
-- VAT is hardcoded at 17%; Israel has been at 18% since January 2025. The
-  costing also assumes Noy is a עוסק פטור — worth confirming with her.
+- ~~VAT is hardcoded at 17%~~ **Fixed 17 Oct 2026** (see above). The costing
+  also assumes Noy is a עוסק פטור — worth confirming with her.
 
 ## What `scripts/validate.mjs` does not catch
 

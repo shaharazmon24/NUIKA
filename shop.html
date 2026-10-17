@@ -1337,6 +1337,36 @@
         max-height: 88vh;
       }
     }
+    #re-exit-dialog {
+      position: fixed; inset: 0; z-index: 2200;
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px; background: rgba(59,42,36,0.55);
+    }
+    #re-exit-dialog[hidden] { display: none; }
+    .re-exit-box {
+      background: #FDFAF4; border-radius: 16px; max-width: 420px; width: 100%;
+      padding: 22px 20px 18px; box-shadow: 0 18px 50px rgba(59,42,36,.35);
+      font-family: 'Noto Sans Hebrew', sans-serif; color: #3B2A24;
+    }
+    .re-exit-box h4 { font-family: 'Noto Serif Hebrew', serif; font-size: 1.1rem; margin: 0 0 6px; }
+    .re-exit-box p { margin: 0 0 16px; font-size: 0.92rem; line-height: 1.6; color: #6B655C; }
+    #re-exit-buttons { display: grid; gap: 8px; }
+    #re-exit-buttons button {
+      font-family: 'Noto Sans Hebrew', sans-serif; font-weight: 600; font-size: 0.92rem;
+      border-radius: 10px; padding: 12px 14px; cursor: pointer; border: 1.5px solid #D5C9B5;
+      background: #F0E9D8; color: #3B2A24; text-align: center;
+    }
+    #re-exit-buttons button.re-primary { background: #6B2E1E; border-color: #6B2E1E; color: #FDFAF4; }
+    #re-exit-buttons button.re-danger { background: transparent; border-color: #F5B8B8; color: #C4000A; }
+    .re-draft-banner {
+      grid-column: 1 / -1; background: #FFF6DD; border: 1.5px solid #E6CF8A; border-radius: 12px;
+      padding: 12px 14px; font-family: 'Noto Sans Hebrew', sans-serif; font-size: 0.88rem; color: #3B2A24;
+    }
+    .re-draft-banner .re-draft-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: space-between; padding: 4px 0; }
+    .re-draft-banner button {
+      font-family: inherit; font-weight: 600; font-size: 0.82rem; border-radius: 8px; padding: 6px 12px;
+      cursor: pointer; border: 1.5px solid #D5C9B5; background: #fff; color: #6B2E1E;
+    }
     .re-header {
       position: sticky;
       top: 0;
@@ -3100,7 +3130,10 @@
      RECIPE EDITOR MODAL
 ════════════════════════════════════════════════════════ -->
 <div id="recipe-editor-modal">
-  <div class="re-backdrop" onclick="closeRecipeEditor()"></div>
+  <!-- No onclick on purpose. A tap beside the panel used to close the editor and
+       throw away the whole recipe; only the X button, and only after a question,
+       leaves now. -->
+  <div class="re-backdrop"></div>
   <div class="re-panel">
     <div class="re-header">
       <h3 id="re-title" style="font-family:'Noto Serif Hebrew',serif;font-size:1.1rem;font-weight:700;color:#3B2A24;margin:0;">מתכון חדש</h3>
@@ -3110,9 +3143,16 @@
           הדפס
         </button>
         <button id="re-delete-btn" onclick="deleteRecipe()" style="display:none;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.78rem;font-weight:600;color:#C4000A;background:transparent;border:1.5px solid #F5B8B8;border-radius:8px;padding:5px 10px;cursor:pointer;">מחק</button>
-        <button onclick="closeRecipeEditor()" style="background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+        <button onclick="requestCloseRecipeEditor()" aria-label="יציאה מהמתכון" style="background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
+      </div>
+    </div>
+    <div id="re-exit-dialog" hidden role="alertdialog" aria-modal="true" aria-labelledby="re-exit-title">
+      <div class="re-exit-box">
+        <h4 id="re-exit-title">יש כאן דברים שלא נשמרו</h4>
+        <p id="re-exit-text">מה לעשות עם מה שכתבת?</p>
+        <div id="re-exit-buttons"></div>
       </div>
     </div>
     <div class="re-body">
@@ -6930,60 +6970,60 @@ function renderCustomers() {
 // ─── DEFAULT DATA ────────────────────────────────────────
 const DEFAULT_PANTRY = [
   // קמחים
-  {id:'pi1',name:'קמח רב תכליתי T550',pricePerKg:6,cat:'קמח',supplier:'קמח הארץ',waste:0,vat:0.17},
-  {id:'pi2',name:'קמח פיצה / לחם',pricePerKg:7.9,cat:'קמח',supplier:'סוגת',waste:0,vat:0.17},
-  {id:'pi3',name:'קמח חיטה מלא',pricePerKg:7.6,cat:'קמח',supplier:'קמח הארץ',waste:0,vat:0.17},
-  {id:'pi4',name:'קמח שיפון מלא',pricePerKg:7.6,cat:'קמח',supplier:'קמח הארץ',waste:0,vat:0.17},
-  {id:'pi5',name:'קמח שקדים',pricePerKg:46,cat:'קמח',supplier:'מאיר',waste:0,vat:0.17},
-  {id:'pi6',name:'קמח כוסמין',pricePerKg:10,cat:'קמח',supplier:'',waste:0,vat:0.17},
+  {id:'pi1',name:'קמח רב תכליתי T550',pricePerKg:6,cat:'קמח',supplier:'קמח הארץ',waste:0,vat:0.18},
+  {id:'pi2',name:'קמח פיצה / לחם',pricePerKg:7.9,cat:'קמח',supplier:'סוגת',waste:0,vat:0.18},
+  {id:'pi3',name:'קמח חיטה מלא',pricePerKg:7.6,cat:'קמח',supplier:'קמח הארץ',waste:0,vat:0.18},
+  {id:'pi4',name:'קמח שיפון מלא',pricePerKg:7.6,cat:'קמח',supplier:'קמח הארץ',waste:0,vat:0.18},
+  {id:'pi5',name:'קמח שקדים',pricePerKg:46,cat:'קמח',supplier:'מאיר',waste:0,vat:0.18},
+  {id:'pi6',name:'קמח כוסמין',pricePerKg:10,cat:'קמח',supplier:'',waste:0,vat:0.18},
   // שמנים וחמאה
-  {id:'pi7',name:'חמאה',pricePerKg:39,cat:'שמן וחמאה',supplier:'',waste:0.05,vat:0.17},
-  {id:'pi8',name:'חמאה לבנה תנובה',pricePerKg:39.8,cat:'שמן וחמאה',supplier:'תנובה',waste:0.05,vat:0.17},
-  {id:'pi9',name:'חמאה אירית',pricePerKg:35,cat:'שמן וחמאה',supplier:'',waste:0.05,vat:0.17},
-  {id:'pi10',name:'שמן זית',pricePerKg:50,cat:'שמן וחמאה',supplier:'מאיר',waste:0.05,vat:0.17},
-  {id:'pi11',name:'שמן קנולה',pricePerKg:12,cat:'שמן וחמאה',supplier:'',waste:0,vat:0.17},
-  {id:'pi12',name:'חמאת קקאו',pricePerKg:140,cat:'שמן וחמאה',supplier:'מאיר',waste:0,vat:0.17},
+  {id:'pi7',name:'חמאה',pricePerKg:39,cat:'שמן וחמאה',supplier:'',waste:0.05,vat:0.18},
+  {id:'pi8',name:'חמאה לבנה תנובה',pricePerKg:39.8,cat:'שמן וחמאה',supplier:'תנובה',waste:0.05,vat:0.18},
+  {id:'pi9',name:'חמאה אירית',pricePerKg:35,cat:'שמן וחמאה',supplier:'',waste:0.05,vat:0.18},
+  {id:'pi10',name:'שמן זית',pricePerKg:50,cat:'שמן וחמאה',supplier:'מאיר',waste:0.05,vat:0.18},
+  {id:'pi11',name:'שמן קנולה',pricePerKg:12,cat:'שמן וחמאה',supplier:'',waste:0,vat:0.18},
+  {id:'pi12',name:'חמאת קקאו',pricePerKg:140,cat:'שמן וחמאה',supplier:'מאיר',waste:0,vat:0.18},
   // חלב וביצים
-  {id:'pi13',name:'ביצים',pricePerKg:22,cat:'חלב וביצים',supplier:'',waste:0.05,vat:0.17},
-  {id:'pi14',name:'חלב מלא 3%',pricePerKg:7,cat:'חלב וביצים',supplier:'',waste:0.05,vat:0.17},
-  {id:'pi15',name:'חלב שיבולת שועל',pricePerKg:12,cat:'חלב וביצים',supplier:'',waste:0.05,vat:0.17},
-  {id:'pi16',name:'אבקת חלב',pricePerKg:100,cat:'חלב וביצים',supplier:'גרובשטיין',waste:0.05,vat:0.17},
+  {id:'pi13',name:'ביצים',pricePerKg:22,cat:'חלב וביצים',supplier:'',waste:0.05,vat:0.18},
+  {id:'pi14',name:'חלב מלא 3%',pricePerKg:7,cat:'חלב וביצים',supplier:'',waste:0.05,vat:0.18},
+  {id:'pi15',name:'חלב שיבולת שועל',pricePerKg:12,cat:'חלב וביצים',supplier:'',waste:0.05,vat:0.18},
+  {id:'pi16',name:'אבקת חלב',pricePerKg:100,cat:'חלב וביצים',supplier:'גרובשטיין',waste:0.05,vat:0.18},
   // ממתיקים
-  {id:'pi17',name:'סוכר לבן',pricePerKg:5.8,cat:'ממתיקים',supplier:'',waste:0.05,vat:0.17},
-  {id:'pi18',name:'אבקת סוכר',pricePerKg:12.9,cat:'ממתיקים',supplier:'',waste:0.05,vat:0.17},
-  {id:'pi19',name:'דבש',pricePerKg:30,cat:'ממתיקים',supplier:'',waste:0.05,vat:0.17},
-  {id:'pi20',name:'תמר יהלום',pricePerKg:38,cat:'ממתיקים',supplier:'מאיר',waste:0.05,vat:0.17},
+  {id:'pi17',name:'סוכר לבן',pricePerKg:5.8,cat:'ממתיקים',supplier:'',waste:0.05,vat:0.18},
+  {id:'pi18',name:'אבקת סוכר',pricePerKg:12.9,cat:'ממתיקים',supplier:'',waste:0.05,vat:0.18},
+  {id:'pi19',name:'דבש',pricePerKg:30,cat:'ממתיקים',supplier:'',waste:0.05,vat:0.18},
+  {id:'pi20',name:'תמר יהלום',pricePerKg:38,cat:'ממתיקים',supplier:'מאיר',waste:0.05,vat:0.18},
   // אגוזים וזרעים
-  {id:'pi21',name:'פקאן אמריקאי',pricePerKg:68,cat:'אגוזים וזרעים',supplier:'מאיר',waste:0.05,vat:0.17},
-  {id:'pi22',name:'אגוז מלך',pricePerKg:32,cat:'אגוזים וזרעים',supplier:'מאיר',waste:0.05,vat:0.17},
-  {id:'pi23',name:'שקדים טבעיים',pricePerKg:48,cat:'אגוזים וזרעים',supplier:'מאיר',waste:0.05,vat:0.17},
-  {id:'pi24',name:'שקד מולבן',pricePerKg:58,cat:'אגוזים וזרעים',supplier:'מאיר',waste:0.05,vat:0.17},
-  {id:'pi25',name:'אגוזי לוז',pricePerKg:60,cat:'אגוזים וזרעים',supplier:'',waste:0.05,vat:0.17},
-  {id:'pi26',name:'פיסטוקים',pricePerKg:100,cat:'אגוזים וזרעים',supplier:'',waste:0.05,vat:0.17},
+  {id:'pi21',name:'פקאן אמריקאי',pricePerKg:68,cat:'אגוזים וזרעים',supplier:'מאיר',waste:0.05,vat:0.18},
+  {id:'pi22',name:'אגוז מלך',pricePerKg:32,cat:'אגוזים וזרעים',supplier:'מאיר',waste:0.05,vat:0.18},
+  {id:'pi23',name:'שקדים טבעיים',pricePerKg:48,cat:'אגוזים וזרעים',supplier:'מאיר',waste:0.05,vat:0.18},
+  {id:'pi24',name:'שקד מולבן',pricePerKg:58,cat:'אגוזים וזרעים',supplier:'מאיר',waste:0.05,vat:0.18},
+  {id:'pi25',name:'אגוזי לוז',pricePerKg:60,cat:'אגוזים וזרעים',supplier:'',waste:0.05,vat:0.18},
+  {id:'pi26',name:'פיסטוקים',pricePerKg:100,cat:'אגוזים וזרעים',supplier:'',waste:0.05,vat:0.18},
   // שמרים
-  {id:'pi27',name:'שמרים יבשים',pricePerKg:30,cat:'שמרים',supplier:'',waste:0.05,vat:0.17},
-  {id:'pi28',name:'שמרים טריים',pricePerKg:43.2,cat:'שמרים',supplier:'',waste:0.05,vat:0.17},
+  {id:'pi27',name:'שמרים יבשים',pricePerKg:30,cat:'שמרים',supplier:'',waste:0.05,vat:0.18},
+  {id:'pi28',name:'שמרים טריים',pricePerKg:43.2,cat:'שמרים',supplier:'',waste:0.05,vat:0.18},
   // שוקולד ומילויים
-  {id:'pi29',name:'שוקולד לבן גרובשטיין',pricePerKg:68,cat:'שוקולד',supplier:'גרובשטיין',waste:0,vat:0.17},
-  {id:'pi30',name:'נוטלה',pricePerKg:33.2,cat:'שוקולד',supplier:'',waste:0.05,vat:0.17},
+  {id:'pi29',name:'שוקולד לבן גרובשטיין',pricePerKg:68,cat:'שוקולד',supplier:'גרובשטיין',waste:0,vat:0.18},
+  {id:'pi30',name:'נוטלה',pricePerKg:33.2,cat:'שוקולד',supplier:'',waste:0.05,vat:0.18},
   // תבלינים
-  {id:'pi31',name:'מלח',pricePerKg:1.5,cat:'תבלינים',supplier:'',waste:0,vat:0.17},
-  {id:'pi32',name:'קינמון',pricePerKg:39,cat:'תבלינים',supplier:'',waste:0.05,vat:0.17},
-  {id:'pi33',name:'פרג טחון',pricePerKg:26,cat:'תבלינים',supplier:'',waste:0.05,vat:0.17},
-  {id:'pi34',name:'שומשום לבן',pricePerKg:22,cat:'תבלינים',supplier:'',waste:0,vat:0.17},
-  {id:'pi35',name:'שומשום מלא',pricePerKg:24,cat:'תבלינים',supplier:'',waste:0,vat:0.17},
+  {id:'pi31',name:'מלח',pricePerKg:1.5,cat:'תבלינים',supplier:'',waste:0,vat:0.18},
+  {id:'pi32',name:'קינמון',pricePerKg:39,cat:'תבלינים',supplier:'',waste:0.05,vat:0.18},
+  {id:'pi33',name:'פרג טחון',pricePerKg:26,cat:'תבלינים',supplier:'',waste:0.05,vat:0.18},
+  {id:'pi34',name:'שומשום לבן',pricePerKg:22,cat:'תבלינים',supplier:'',waste:0,vat:0.18},
+  {id:'pi35',name:'שומשום מלא',pricePerKg:24,cat:'תבלינים',supplier:'',waste:0,vat:0.18},
   // דגנים
-  {id:'pi36',name:'כוסמת ירוקה אורגנית',pricePerKg:12,cat:'דגנים',supplier:'מאיר',waste:0,vat:0.17},
-  {id:'pi37',name:'שיבולת שועל שלמה',pricePerKg:8,cat:'דגנים',supplier:'',waste:0,vat:0.17},
+  {id:'pi36',name:'כוסמת ירוקה אורגנית',pricePerKg:12,cat:'דגנים',supplier:'מאיר',waste:0,vat:0.18},
+  {id:'pi37',name:'שיבולת שועל שלמה',pricePerKg:8,cat:'דגנים',supplier:'',waste:0,vat:0.18},
   // פירות יבשים
-  {id:'pi38',name:'צימוקים סולטנה',pricePerKg:24,cat:'פירות יבשים',supplier:'מאיר',waste:0.05,vat:0.17},
-  {id:'pi39',name:'תאנים מיובשות',pricePerKg:35,cat:'פירות יבשים',supplier:'',waste:0.05,vat:0.17},
+  {id:'pi38',name:'צימוקים סולטנה',pricePerKg:24,cat:'פירות יבשים',supplier:'מאיר',waste:0.05,vat:0.18},
+  {id:'pi39',name:'תאנים מיובשות',pricePerKg:35,cat:'פירות יבשים',supplier:'',waste:0.05,vat:0.18},
   // גבינות וירקות
-  {id:'pi40',name:'פטה עיזים',pricePerKg:110,cat:'גבינות',supplier:'אברמנטו',waste:0.05,vat:0.17},
-  {id:'pi41',name:'זיתי קלמטה',pricePerKg:58,cat:'ירקות',supplier:'אברמנטו',waste:0.05,vat:0.17},
+  {id:'pi40',name:'פטה עיזים',pricePerKg:110,cat:'גבינות',supplier:'אברמנטו',waste:0.05,vat:0.18},
+  {id:'pi41',name:'זיתי קלמטה',pricePerKg:58,cat:'ירקות',supplier:'אברמנטו',waste:0.05,vat:0.18},
   // ריבות
-  {id:'pi42',name:'ריבת תות',pricePerKg:25,cat:'ריבות',supplier:'',waste:0.05,vat:0.17},
-  {id:'pi43',name:'מחית וניל',pricePerKg:453,cat:'תבלינים',supplier:'',waste:0.05,vat:0.17},
+  {id:'pi42',name:'ריבת תות',pricePerKg:25,cat:'ריבות',supplier:'',waste:0.05,vat:0.18},
+  {id:'pi43',name:'מחית וניל',pricePerKg:453,cat:'תבלינים',supplier:'',waste:0.05,vat:0.18},
 ];
 
 const DEFAULT_RECIPES = [
@@ -7088,6 +7128,15 @@ var PANTRY = [];
 var RECIPES = [];
 var WEEKLY_PLAN = {}; // { recipeId: quantity }
 var _currentKitchenTab = 'pantry';
+// Israel's VAT has been 18% since January 2025. Every place that needs the
+// rate reads it from here; 0.17 appears below once, as the old stored value.
+const VAT_RATE = 0.18;
+function itemVat(p) {
+  // typeof, not truthiness: a genuine 0 (an exempt item) is a real rate. 0.17 is
+  // the value every row was stored with before the change, and no screen ever
+  // let anyone choose it, so it means "the default rate" and follows VAT_RATE.
+  return (p && typeof p.vat === 'number' && p.vat !== 0.17) ? p.vat : VAT_RATE;
+}
 var _editingRecipeId = null;
 var _editingPantryId = null;
 
@@ -7166,7 +7215,7 @@ function calcIngCost(weightG, pantryId) {
   // typeof, not truthiness: a genuine 0 price should cost 0, not "unknown".
   if (!p || typeof p.pricePerKg !== 'number') return null;
   const wKg = weightG / 1000;
-  return wKg * p.pricePerKg * (1 + (p.waste || 0)) * (1 + (p.vat || 0.17));
+  return wKg * p.pricePerKg * (1 + (p.waste || 0)) * (1 + itemVat(p));
 }
 
 // Returns { totalCost, knownCost, unknownCount, costPerUnit, fc, profitPerUnit }
@@ -7259,7 +7308,7 @@ function renderRecipeGrid() {
   const grid = document.getElementById('recipe-grid');
   if (!grid) return;
   if (!RECIPES.length) {
-    grid.innerHTML = `<div class="k-empty" style="grid-column:1/-1;"><div class="k-empty-icon">📖</div>אין מתכונים עדיין<br><button class="k-add-btn" onclick="openRecipeEditor(null)" style="margin-top:12px;">הוסף מתכון ראשון</button></div>`;
+    grid.innerHTML = reDraftBannerHtml() + `<div class="k-empty" style="grid-column:1/-1;"><div class="k-empty-icon">📖</div>אין מתכונים עדיין<br><button class="k-add-btn" onclick="openRecipeEditor(null)" style="margin-top:12px;">הוסף מתכון ראשון</button></div>`;
     return;
   }
   // Newest at the top, as Noy asked. Sorted on a copy: RECIPES itself is read
@@ -7267,7 +7316,7 @@ function renderRecipeGrid() {
   // array underneath them is the kind of thing that surfaces somewhere else.
   const ordered = RECIPES.slice().sort((a, b) => recipeCreatedAt(b) - recipeCreatedAt(a));
 
-  grid.innerHTML = ordered.map(r => {
+  grid.innerHTML = reDraftBannerHtml() + ordered.map(r => {
     const cost = calcRecipeCost(r);
     const warn = cost.unknownCount > 0
       ? `<div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.68rem;color:#9B8B75;margin-top:2px;">${cost.unknownCount} מרכיב ללא מחיר</div>` : '';
@@ -7436,7 +7485,7 @@ function generateShoppingList() {
           cat:  pItem ? pItem.cat  : 'אחר',
           pantryId: ing.pantryId,
           totalG: 0,
-          costPerKg: pItem ? pItem.pricePerKg * (1+(pItem.waste||0)) * (1+(pItem.vat||0.17)) : 0
+          costPerKg: pItem ? pItem.pricePerKg * (1+(pItem.waste||0)) * (1+itemVat(pItem)) : 0
         };
       }
       aggregate[key].totalG += ing.weightG * scale;
@@ -7561,7 +7610,7 @@ function printShoppingList() {
 }
 
 // ─── RECIPE EDITOR ───────────────────────────────────────
-function openRecipeEditor(recipeId) {
+function openRecipeEditor(recipeId, opts) {
   if (!kitchenReady()) return;
   _editingRecipeId = recipeId;
   const modal = document.getElementById('recipe-editor-modal');
@@ -7613,6 +7662,7 @@ function openRecipeEditor(recipeId) {
   modal.classList.add('open');
   document.body.style.overflow = 'hidden';
   recalcEditorCosts();
+  reAfterOpen(opts || {});
 }
 
 // Closing an editor used to release the body scroll lock outright, even though
@@ -7625,12 +7675,219 @@ function restoreScrollLock() {
 }
 
 function closeRecipeEditor() {
+  reStopTracking();
   document.getElementById('recipe-editor-modal').classList.remove('open');
   restoreScrollLock();
   _editingRecipeId = null;
   // The editor blocked repaints while it was open; take any that piled up now.
   if (_kitchenRepaintPending) requestKitchenRepaint();
 }
+
+// ─── RECIPE EDITOR: nothing she has typed is lost ────────────────────────
+// Noy writes a recipe over many minutes, and one stray tap beside the panel
+// used to close it and throw all of it away. Three rules now:
+//   1. Only the X button leaves, and only after a question.
+//   2. What she types is copied to this device every moment (a "draft"), so a
+//      refresh, a swipe-back, a dead battery or a closed tab loses nothing.
+//   3. Saving the recipe is a separate, deliberate act (the big button).
+// Drafts live in localStorage because they are per-device scratch work, the
+// same standing as the cart: nothing here is shared, and nothing reads it but
+// this editor. One draft per recipe (key = its id, or 'new').
+const RE_DRAFTS_KEY = 'nuika-recipe-drafts-v1';
+let _reSnapshot = '';
+let _reTracking = false;
+let _reHistoryPushed = false;
+let _reIgnorePop = false;
+let _reDraftTimer = null;
+
+function reLoadDrafts() {
+  try {
+    const d = JSON.parse(localStorage.getItem(RE_DRAFTS_KEY) || '{}');
+    return (d && typeof d === 'object') ? d : {};
+  } catch (e) { return {}; }
+}
+function reStoreDrafts(d) {
+  try {
+    if (Object.keys(d).length) localStorage.setItem(RE_DRAFTS_KEY, JSON.stringify(d));
+    else localStorage.removeItem(RE_DRAFTS_KEY);
+  } catch (e) { /* private mode or full: the editor still works, just without the net */ }
+}
+
+// Everything on the form, as plain strings. Rows with nothing in them are left
+// out, so adding or deleting an empty row is not a "change".
+function reCollect() {
+  const val = id => { const el = document.getElementById(id); return el ? String(el.value) : ''; };
+  const rows = [];
+  document.querySelectorAll('#re-ing-tbody tr').forEach(tr => {
+    const row = {
+      name:     tr.querySelector('.ing-name')?.value || '',
+      pantryId: tr.querySelector('.ing-pantry-id')?.value || '',
+      weight:   tr.querySelector('.ing-weight')?.value || '',
+      pct:      tr.querySelector('.ing-baker-pct')?.value || ''
+    };
+    if (row.name.trim() || row.weight.trim()) rows.push(row);
+  });
+  return {
+    name: val('re-name'), category: val('re-category'), yieldCount: val('re-yield-count'),
+    yieldWeight: val('re-yield-weight'), price: val('re-price'), prep: val('re-prep-time'),
+    bake: val('re-bake-time'), temp: val('re-bake-temp'), notes: val('re-notes'), rows
+  };
+}
+function reIsDirty() { return _reTracking && JSON.stringify(reCollect()) !== _reSnapshot; }
+function reKey() { return _editingRecipeId || 'new'; }
+
+function reSaveDraft(force) {
+  if (!_reTracking) return;
+  clearTimeout(_reDraftTimer);
+  const drafts = reLoadDrafts();
+  if (!force && !reIsDirty()) { delete drafts[reKey()]; reStoreDrafts(drafts); return; }
+  const data = reCollect();
+  data.recipeId = _editingRecipeId || null;
+  data.savedAt = Date.now();
+  drafts[reKey()] = data;
+  reStoreDrafts(drafts);
+}
+function reScheduleDraft() {
+  if (!_reTracking) return;
+  clearTimeout(_reDraftTimer);
+  _reDraftTimer = setTimeout(() => reSaveDraft(false), 350);
+}
+function reDiscardDraft(key) {
+  const drafts = reLoadDrafts();
+  delete drafts[key || reKey()];
+  reStoreDrafts(drafts);
+}
+
+function reHistoryPush() {
+  try { history.pushState({ nuikaRecipeEditor: 1 }, ''); _reHistoryPushed = true; } catch (e) {}
+}
+function reAfterOpen(opts) {
+  _reSnapshot = JSON.stringify(reCollect());
+  _reTracking = true;
+  if (!_reHistoryPushed) reHistoryPush();
+  const draft = reLoadDrafts()[reKey()];
+  if (!draft) return;
+  if (opts.restore) { reRestoreDraft(draft); return; }
+  // A draft is only worth asking about when it differs from what is on screen.
+  reAskExit({
+    title: 'יש כאן טיוטה שלא נשמרה',
+    text: 'נשמרה ' + new Date(draft.savedAt).toLocaleString('he-IL', { dateStyle: 'short', timeStyle: 'short' }) +
+          '. להמשיך מאיפה שהפסקת, או להתחיל מחדש?',
+    buttons: [
+      { label: 'להמשיך מהטיוטה', kind: 're-primary', fn: () => reRestoreDraft(draft) },
+      { label: 'להתחיל מחדש (הטיוטה תימחק)', kind: 're-danger', fn: () => reDiscardDraft() }
+    ]
+  });
+}
+function reRestoreDraft(d) {
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  set('re-name', d.name); set('re-category', d.category); set('re-yield-count', d.yieldCount);
+  set('re-yield-weight', d.yieldWeight); set('re-price', d.price); set('re-prep-time', d.prep);
+  set('re-bake-time', d.bake); set('re-bake-temp', d.temp); set('re-notes', d.notes);
+  const tbody = document.getElementById('re-ing-tbody');
+  tbody.innerHTML = '';
+  // weightG and bakerPct go into value="" attributes, so they are escaped here:
+  // a draft is text she typed, and a stray quote must not break the row.
+  (d.rows || []).forEach(r => addIngredientRow({
+    name: r.name, pantryId: r.pantryId, weightG: esc(r.weight), bakerPct: esc(r.pct)
+  }));
+  for (let i = 0; i < 2; i++) addIngredientRow();
+  recalcEditorCosts();
+}
+
+// The question. Three honest ways out, none of them the default.
+function reAskExit(cfg) {
+  const dlg = document.getElementById('re-exit-dialog');
+  document.getElementById('re-exit-title').textContent = cfg.title;
+  document.getElementById('re-exit-text').textContent = cfg.text;
+  const box = document.getElementById('re-exit-buttons');
+  box.innerHTML = '';
+  cfg.buttons.forEach(b => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = b.kind || '';
+    btn.textContent = b.label;
+    btn.addEventListener('click', () => { dlg.hidden = true; b.fn(); });
+    box.appendChild(btn);
+  });
+  dlg.hidden = false;
+  const first = box.querySelector('button');
+  if (first) first.focus({ preventScroll: true });
+}
+
+function requestCloseRecipeEditor() {
+  if (!reIsDirty()) { reDiscardDraft(); closeRecipeEditor(); return; }
+  reSaveDraft(true);          // safe before she even answers
+  reAskExit({
+    title: 'יש כאן דברים שלא נשמרו',
+    text: 'מה לעשות עם מה שכתבת?',
+    buttons: [
+      { label: 'חזרה למתכון', kind: 're-primary', fn: () => {} },
+      { label: 'לצאת, ולשמור לי טיוטה להמשך', kind: '', fn: () => { reSaveDraft(true); closeRecipeEditor(); renderRecipeGrid(); } },
+      { label: 'לצאת ולמחוק את מה שכתבתי', kind: 're-danger', fn: () => { reDiscardDraft(); closeRecipeEditor(); renderRecipeGrid(); } }
+    ]
+  });
+}
+
+function reStopTracking() {
+  clearTimeout(_reDraftTimer);
+  _reTracking = false;
+  const dlg = document.getElementById('re-exit-dialog');
+  if (dlg) dlg.hidden = true;
+  if (_reHistoryPushed) {
+    _reHistoryPushed = false;
+    _reIgnorePop = true;
+    try { history.back(); } catch (e) { _reIgnorePop = false; }
+  }
+}
+
+// The back gesture / back button. It used to leave the whole page. Now it asks
+// the same question, and the editor stays where it is.
+window.addEventListener('popstate', () => {
+  if (_reIgnorePop) { _reIgnorePop = false; return; }
+  if (!_reTracking) return;
+  _reHistoryPushed = false;           // the browser just used up our entry
+  if (reIsDirty()) { reHistoryPush(); requestCloseRecipeEditor(); }
+  else { reDiscardDraft(); closeRecipeEditor(); }
+});
+// Refresh, closed tab, phone locking: copy the draft out right now.
+window.addEventListener('pagehide', () => reSaveDraft(false));
+document.addEventListener('visibilitychange', () => { if (document.hidden) reSaveDraft(false); });
+window.addEventListener('beforeunload', e => {
+  if (reIsDirty()) { reSaveDraft(true); e.preventDefault(); e.returnValue = ''; }
+});
+document.addEventListener('input',  e => { if (e.target.closest && e.target.closest('#recipe-editor-modal')) reScheduleDraft(); });
+document.addEventListener('change', e => { if (e.target.closest && e.target.closest('#recipe-editor-modal')) reScheduleDraft(); });
+
+// Drafts left behind (closed tab, crash, "save a draft") show above the recipe
+// list, so they are found without having to remember which recipe it was.
+function reDraftBannerHtml() {
+  const drafts = reLoadDrafts();
+  const keys = Object.keys(drafts);
+  if (!keys.length) return '';
+  const rows = keys.map(k => {
+    const d = drafts[k];
+    const label = d.name ? esc(d.name) : (k === 'new' ? 'מתכון חדש' : 'מתכון');
+    const when = new Date(d.savedAt || Date.now()).toLocaleString('he-IL', { dateStyle: 'short', timeStyle: 'short' });
+    return '<div class="re-draft-row"><span>' + (k === 'new' ? '📝 ' : '✏️ ') + '<strong>' + label +
+           '</strong> — טיוטה שלא נשמרה (' + esc(when) + ')</span><span>' +
+           '<button type="button" data-re-resume="' + esc(k) + '">להמשיך</button> ' +
+           '<button type="button" data-re-drop="' + esc(k) + '">למחוק טיוטה</button></span></div>';
+  }).join('');
+  return '<div class="re-draft-banner" id="re-draft-banner">' + rows + '</div>';
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest ? e.target.closest('[data-re-resume],[data-re-drop]') : null;
+  if (!t) return;
+  if (t.hasAttribute('data-re-resume')) {
+    const k = t.getAttribute('data-re-resume');
+    openRecipeEditor(k === 'new' ? null : k, { restore: true });
+  } else {
+    if (!confirm('למחוק את הטיוטה? מה שכתבת בה לא יהיה אפשר להחזיר.')) return;
+    reDiscardDraft(t.getAttribute('data-re-drop'));
+    renderRecipeGrid();
+  }
+});
 
 let _ingRowCounter = 0;
 function addIngredientRow(ing) {
@@ -7716,7 +7973,7 @@ function onIngNameInput(input, rowId) {
 
 function removeIngredientRow(rowId) {
   const row = document.getElementById(rowId);
-  if (row) { row.remove(); recalcEditorCosts(); }
+  if (row) { row.remove(); recalcEditorCosts(); reScheduleDraft(); }
 }
 
 // One place that turns a weight field into a number. The field is a text input
@@ -8985,7 +9242,7 @@ function commitMultiRecipeImport() {
     const existing = PANTRY.find(p => normaliseIngName(p.name) === normaliseIngName(name));
     if (existing) return existing;
     const item = { id: 'pi_' + Date.now() + '_' + newPantry.length, name,
-                   cat: 'אחר', supplier: '', waste: 0, vat: 0.17 };
+                   cat: 'אחר', supplier: '', waste: 0, vat: VAT_RATE };
     newPantry.push(item);
     PANTRY.push(item);
     patch[`pantry/${item.id}`] = item;
@@ -9613,7 +9870,7 @@ function commitRecipeImport() {
       cat: (catEl && catEl.value) || 'אחר',
       supplier: '',
       waste: 0,
-      vat: 0.17
+      vat: VAT_RATE
     };
     // pricePerKg is omitted rather than zeroed when she leaves it blank.
     // calcIngCost treats a missing price as "unknown" and the recipe says
@@ -9746,7 +10003,7 @@ function editRowPrice(rowId) {
   if (raw !== '' && (!Number.isFinite(price) || price < 0)) { alert('מחיר לא תקין.'); return; }
 
   if (!item) {
-    item = { id: 'pi_' + Date.now(), name, cat: 'אחר', supplier: '', waste: 0, vat: 0.17 };
+    item = { id: 'pi_' + Date.now(), name, cat: 'אחר', supplier: '', waste: 0, vat: VAT_RATE };
     PANTRY.push(item);
   }
   // Blank clears the price back to "unknown" rather than storing a zero, which
@@ -10218,6 +10475,7 @@ function saveRecipe() {
   }
 
   saveRecipe_(saved);
+  reDiscardDraft();           // saved for real: the draft has done its job
   closeRecipeEditor();
   renderRecipeGrid();
 }
@@ -10225,6 +10483,7 @@ function saveRecipe() {
 function deleteRecipe() {
   if (!_editingRecipeId) return;
   if (!confirm('למחוק מתכון זה?')) return;
+  reDiscardDraft();
   const idx = RECIPES.findIndex(r => r.id === _editingRecipeId);
   if (idx !== -1) RECIPES.splice(idx, 1);
   delete WEEKLY_PLAN[_editingRecipeId];
@@ -10304,7 +10563,7 @@ function savePantryItem() {
     cat,
     supplier,
     waste: (parseFloat(wasteStr) || 0) / 100,
-    vat: 0.17
+    vat: VAT_RATE
   };
 
   // Write only this row. A snapshot can replace PANTRY at any moment, so if the
