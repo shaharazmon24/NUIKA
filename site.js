@@ -17,11 +17,11 @@
      esc() stops an attribute breakout but NOT a javascript: URL — that would
      need the scheme checked as well. */
   var NAV = [
+    { key: 'shop',    href: './shop.html',    he: 'תפריט והזמנות', en: 'Menu & orders' },
     { key: 'story',   href: './story.html',   he: 'האג\'נדה',  en: 'Agenda' },
     { key: 'gallery', href: './gallery.html', he: 'גלריה',     en: 'Gallery' },
     { key: 'events',  href: './events.html',  he: 'פופ-אפים',  en: 'Pop-ups' },
-    { key: 'contact', href: './contact.html', he: 'דברו איתי', en: 'Talk to me' },
-    { key: 'shop',    href: './shop.html',    he: 'תפריט והזמנות', en: 'Menu & orders' }
+    { key: 'contact', href: './contact.html', he: 'דברו איתי', en: 'Talk to me' }
   ];
 
   /* The places to find Noy, as marks rather than words.

@@ -260,10 +260,12 @@ html[lang="en"]       [lang-content="he"] { display: none; }
    Hebrew, from the left in English — so it always sweeps the way the eye is
    already travelling. */
 :root {
+  /* Ink-brown at rest (Noy's colour), terracotta when the pointer is on it. */
   --mark-rest: var(--ink);
-  --mark-live: var(--ink);
+  --mark-live: var(--terra-deep);
 }
-.nu-header--on-film { --mark-rest: rgba(246, 240, 228, .5); --mark-live: var(--cream); }
+/* Over the film the mark is cream, and fills with a light terracotta on hover. */
+.nu-header--on-film { --mark-rest: var(--cream); --mark-live: #F2B49B; }
 
 .nu-mark { flex: 0 0 auto; display: block; line-height: 0; }
 
@@ -276,7 +278,7 @@ html[lang="en"]       [lang-content="he"] { display: none; }
      that only fills on hover would sit muted on it forever — and most of
      Noy's customers are on a phone. The quiet resting half is opted into
      below, only where hovering is a thing that can happen. */
-  background-position: 100% 0;
+  background-position: 0 0;
   background-repeat: no-repeat;
   transition: background-position .85s cubic-bezier(.22, .61, .36, 1);
   -webkit-mask: url(./images/logo.png) center / contain no-repeat;
@@ -288,7 +290,7 @@ html[lang="en"]       [lang-content="he"] { display: none; }
 [dir="ltr"] .nu-mark__art,
 [dir="ltr"] .nu-mark--foot {
   background-image: linear-gradient(to right, var(--mark-live) 50%, var(--mark-rest) 50%);
-  background-position: 0 0;
+  background-position: 100% 0;
 }
 
 .nu-mark__art { width: 128px; height: 74px; }
@@ -419,7 +421,6 @@ html[lang="en"]       [lang-content="he"] { display: none; }
 
 /* `color` above recolours the nav text and the language button for free, but
    the mark is a background-colour mask, not text — it needs its own rule. */
-.nu-header--on-film .nu-mark__art { background: var(--cream); }
 
 /* A centred column, not a row with the pieces pushed to the corners. The
    marks sit in the middle and the address sits directly under them, which is

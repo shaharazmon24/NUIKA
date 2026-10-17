@@ -129,8 +129,8 @@
 
       /* The wordmark's two states. On this page the header sits on wheat and
          the footer on ink, so each gets its own pair. */
-      --mark-rest: #3B2A24;
-      --mark-live: #3B2A24;
+      --mark-rest: #3B2A24;   /* Noy's ink-brown at rest */
+      --mark-live: #AE472C;   /* terracotta while the pointer is on it */
     }
 
     /* RTL scroll */
@@ -1809,7 +1809,7 @@
          that only fills on hover would sit muted on it forever — and most of
          Noy's customers are on a phone. The quiet resting half is opted into
          below, only where hovering is a thing that can happen. */
-      background-position: 100% 0;
+      background-position: 0 0;
       background-repeat: no-repeat;
       transition: background-position .85s cubic-bezier(.22, .61, .36, 1);
       -webkit-mask: url(./images/logo.png) center / contain no-repeat;
@@ -1821,7 +1821,7 @@
     [dir="ltr"] .nu-mark__art,
     [dir="ltr"] .nu-mark--foot {
       background-image: linear-gradient(to right, var(--mark-live) 50%, var(--mark-rest) 50%);
-      background-position: 0 0;
+      background-position: 100% 0;
     }
 
     .nu-mark__art { width: 128px; height: 74px; }
@@ -2360,14 +2360,14 @@
     <span class="nu-mark__art"></span>
   </a>
 
-  <!-- The same five destinations site.js builds, in the same order. An entry
+  <!-- The same five destinations site.js builds, in the same order (the shop first). An entry
        here without one there is what validate.mjs is watching for. -->
   <nav class="nu-nav" aria-label="תפריט האתר">
+    <a class="nu-nav__item is-current" href="./shop.html" aria-current="page"><span lang-content="he">תפריט והזמנות</span><span lang-content="en">Menu &amp; orders</span></a>
     <a class="nu-nav__item" href="./story.html"><span lang-content="he">האג'נדה</span><span lang-content="en">Agenda</span></a>
     <a class="nu-nav__item" href="./gallery.html"><span lang-content="he">גלריה</span><span lang-content="en">Gallery</span></a>
     <a class="nu-nav__item" href="./events.html"><span lang-content="he">פופ-אפים</span><span lang-content="en">Pop-ups</span></a>
     <a class="nu-nav__item" href="./contact.html"><span lang-content="he">דברו איתי</span><span lang-content="en">Talk to me</span></a>
-    <a class="nu-nav__item is-current" href="./shop.html" aria-current="page"><span lang-content="he">תפריט והזמנות</span><span lang-content="en">Menu &amp; orders</span></a>
   </nav>
 
   <div class="nu-tools">

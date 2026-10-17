@@ -1,5 +1,5 @@
 // Bump this version on every deploy that must reach existing users.
-const CACHE = 'nuika-v20';
+const CACHE = 'nuika-v21';
 
 // Relative paths, so the same worker is correct whether the site is served
 // from the domain root (nuika.co.il) or a subdirectory.
@@ -40,8 +40,8 @@ const ASSETS = [
   // without it. The shop used to show ./logo.png.png as an <img>, which is
   // why this file was never listed.
   './images/logo.png',
-  './site.css?v=8',
-  './site.js?v=8',
+  './site.css?v=9',
+  './site.js?v=9',
   './icon-192.png',
   './icon-512.png',
   './manifest.json',
