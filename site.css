@@ -219,7 +219,7 @@ html[lang="en"]       [lang-content="he"] { display: none; }
 
 .nu-door__mark {
   inline-size: 190px;
-  block-size: 70px;
+  block-size: 110px;
   background: var(--terra);
   -webkit-mask: url(./images/logo.png) center / contain no-repeat;
           mask: url(./images/logo.png) center / contain no-repeat;
@@ -260,11 +260,10 @@ html[lang="en"]       [lang-content="he"] { display: none; }
    Hebrew, from the left in English — so it always sweeps the way the eye is
    already travelling. */
 :root {
-  --mark-rest: var(--crust);
-  --mark-live: var(--terra);
+  --mark-rest: var(--ink);
+  --mark-live: var(--ink);
 }
 .nu-header--on-film { --mark-rest: rgba(246, 240, 228, .5); --mark-live: var(--cream); }
-.nu-footer          { --mark-rest: rgba(246, 240, 228, .5); --mark-live: var(--cream); }
 
 .nu-mark { flex: 0 0 auto; display: block; line-height: 0; }
 
@@ -292,7 +291,7 @@ html[lang="en"]       [lang-content="he"] { display: none; }
   background-position: 0 0;
 }
 
-.nu-mark__art { width: 160px; height: 59px; }
+.nu-mark__art { width: 128px; height: 74px; }
 
 @media (hover: hover) {
   .nu-mark__art,
@@ -445,7 +444,6 @@ html[lang="en"]       [lang-content="he"] { display: none; }
    .nu-mark__art, for both marks. This rule used to set `background:
    var(--cream)` as well, and a shorthand here would have quietly wiped the
    gradient the fill is made of — later in the file, same specificity. */
-.nu-mark--foot { width: 150px; height: 55px; }
 
 .nu-soc-row { display: flex; gap: 14px; justify-content: center; }
 
@@ -504,7 +502,7 @@ html[lang="en"]       [lang-content="he"] { display: none; }
 
 @media (max-width: 720px) {
   .nu-header { flex-wrap: wrap; gap: 14px; padding: 14px 18px; }
-  .nu-mark__art { width: 130px; height: 48px; }   /* the floor, never below it */
+  .nu-mark__art { width: 112px; height: 65px; }   /* the floor, never below it */
   .nu-nav { position: static; order: 3; width: 100%; gap: 16px; flex-wrap: wrap; }
   .nu-footer { padding: 28px 18px; gap: 12px; }
 }

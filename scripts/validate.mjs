@@ -2231,10 +2231,10 @@ if (want('assets')) {
 if (want('design')) {
   console.log('Design system assets:');
 
-  // The supplied logo is 2400x1400 but the drawing occupies only 1915x703 —
-  // 60% of the file's area is empty margin. A browser measures the file, not
-  // the drawing, which is why the logo came out tiny everywhere it was used.
-  // The cropped copy is what the site ships.
+  // Noy's own handwritten logo, cut out of her paper on 17 Oct 2026: 928x536,
+  // transparent, cropped to the ink. A browser measures the file, not the
+  // drawing, so margins left in the file make the logo render tiny. (The old
+  // wordmark was 1915x703 for the same reason.)
   const png = rel => {
     const p = join(ROOT, rel);
     if (!existsSync(p)) return null;
@@ -2246,8 +2246,8 @@ if (want('design')) {
   const logo = png('images/logo.png');
   if (!logo) fail('images/logo.png is missing — the cropped wordmark the site ships');
   else if (logo === 'not-png') fail('images/logo.png is not a PNG');
-  else if (logo.w === 1915 && logo.h === 703) pass('images/logo.png is the cropped 1915x703 wordmark');
-  else fail(`images/logo.png is ${logo.w}x${logo.h} — expected 1915x703 (margins not cropped?)`);
+  else if (logo.w === 928 && logo.h === 536) pass('images/logo.png is the cropped 928x536 logo, Noy\'s own handwriting');
+  else fail(`images/logo.png is ${logo.w}x${logo.h} — expected 928x536 (margins not cropped, or the old logo is back?)`);
 
   const umbel = png('images/umbel.png');
   if (!umbel) fail('images/umbel.png is missing — the mark used below 130px');
@@ -2409,11 +2409,11 @@ if (want('design')) {
         pass('.nu-mark__art masks the cropped wordmark (images/logo.png)');
       else fail('.nu-mark__art does not mask images/logo.png — the header mark would be blank');
 
-      // Below 130px wide the finest strokes of the umbel fade out.
+      // Below 112px wide the thin strokes of the handwriting fade out.
       const artWidth = artBody.match(/width\s*:\s*(\d+)px/);
       if (!artWidth) fail('.nu-mark__art has no declared width — it renders at 0×0, invisible');
-      else if (Number(artWidth[1]) < 130) fail(`.nu-mark__art is ${artWidth[1]}px wide — below its 130px floor, where the umbel's strokes vanish`);
-      else pass(`.nu-mark__art is rendered at ${artWidth[1]}px, at or above its 130px floor`);
+      else if (Number(artWidth[1]) < 112) fail(`.nu-mark__art is ${artWidth[1]}px wide — below its 112px floor, where the lettering's thin strokes vanish`);
+      else pass(`.nu-mark__art is rendered at ${artWidth[1]}px, at or above its 112px floor`);
 
       // The mark is a link, and a link that looks like a picture needs to
       // say so. The fill sweeps in on hover; without a transition it snaps,
@@ -2434,8 +2434,8 @@ if (want('design')) {
     const mobileWidth = mobileArt && mobileArt[1].match(/width\s*:\s*(\d+)px/);
     if (!mobile) fail('no @media (max-width: 720px) block — cannot verify the mobile logo floor');
     else if (!mobileWidth) fail('the mobile block never sets a width for .nu-mark__art — it would fall back to the 160px desktop size, or worse, to nothing');
-    else if (Number(mobileWidth[1]) < 130) fail(`the mobile override shrinks .nu-mark__art to ${mobileWidth[1]}px — below the 130px floor where the umbel's strokes vanish`);
-    else pass(`the mobile override keeps .nu-mark__art at ${mobileWidth[1]}px, at or above its 130px floor`);
+    else if (Number(mobileWidth[1]) < 112) fail(`the mobile override shrinks .nu-mark__art to ${mobileWidth[1]}px — below the 112px floor where the lettering's thin strokes vanish`);
+    else pass(`the mobile override keeps .nu-mark__art at ${mobileWidth[1]}px, at or above its 112px floor`);
 
     console.log('Bilingual language toggle:');
     // Comments are prose and can say "html" or "display: revert" in passing —
@@ -2554,7 +2554,7 @@ if (want('design')) {
     // URL was invisible to this check and the shop's menu could grow an item
     // site.js has never heard of.
     const shopNav = [...uncommented(readFileSync(join(ROOT, SHOP), 'utf8'))
-      .matchAll(/class="nu-nav__item"[^>]*href="([^"]+)"/g)].map(m => m[1]);
+      .matchAll(/class="nu-nav__item[^"]*"[^>]*href="([^"]+)"/g)].map(m => m[1]);
     const siteNav = [...js.matchAll(/href\s*:\s*'(\.\/[^']+)'/g)].map(m => m[1]);
 
     if (!shopNav.length) {
@@ -2566,7 +2566,7 @@ if (want('design')) {
         `${SHOP}'s menu has drifted from the one site.js builds. ` +
         (missing.length ? `Missing from the shop: ${missing.join(', ')}. ` : '') +
         (extra.length   ? `Only in the shop: ${extra.join(', ')}. `   : '') +
-        (!missing.length && !extra.length ? 'Same four, different order. ' : '') +
+        (!missing.length && !extra.length ? 'Same entries, different order. ' : '') +
         `site.js lists ${siteNav.join(', ')}; the shop lists ${shopNav.join(', ')}`
       );
     } else {
@@ -2598,12 +2598,12 @@ if (want('design')) {
     // decision too, taken here, rather than a quiet edit that drops a
     // customer on contact.html into the menu when they reach for home.
     const marks = [...js.matchAll(/class="nu-mark[^"]*"\s+href="\.\/([^"]+)"/g)].map(m => m[1]);
-    if (marks.length !== 2)
-      fail(`site.js builds ${marks.length} wordmark link(s), expected 2 — the header mark and the footer mark`);
+    if (marks.length !== 1)
+      fail(`site.js builds ${marks.length} wordmark link(s), expected 1 — the header mark only; Noy asked on 17 Oct 2026 for the logo top-right and not also in the middle of the page`);
     else if (marks.every(t => t === HOME))
-      pass(`both wordmarks point at ./${HOME} — the logo is the way home on every page`);
+      pass(`the wordmark points at ./${HOME} — the logo is the way home on every page`);
     else
-      fail(`the wordmarks point at ${[...new Set(marks)].map(t => `./${t}`).join(', ')} — both must be ./${HOME}; a logo that opens the menu is not a way home`);
+      fail(`the wordmark points at ${[...new Set(marks)].map(t => `./${t}`).join(', ')} — it must be ./${HOME}; a logo that opens the menu is not a way home`);
 
     // The logo itself — the mask URL and the 130px floor, on both the base
     // rule and the mobile override — is asserted against site.css under
@@ -3041,9 +3041,9 @@ if (want('pages')) {
   }
   console.log('The home page\'s words:');
   // Noy's own sentence, chosen in the design review. Not a placeholder.
-  homeNeed(/אופה מה שאני הכי רוצה לאכול/, 'carries the line the design settled on');
-  homeNeed(/I bake what I most want to eat/, 'and its English');
-  homeNeed(/למאפייה של NUIKA/, 'the way into the shop');
+  homeNeed(/נואיקה מאפייה ארטיזנלית/, 'carries the line Noy chose (changed 17 Oct 2026 from "I bake what I most want to eat")');
+  homeNeed(/NUIKA artisan bakery/, 'and its English');
+  homeNeed(/לתפריט והזמנות/, 'the way into the shop');
 
   // Presence is not attachment. Swapping the two buttons' classes and hrefs
   // leaves every string in the file, so substring checks stay green while the
@@ -3256,7 +3256,6 @@ if (want('pages')) {
   // dead end this is here to catch, waved through.
   for (const [cls, what] of [
     ['nu-mark',      "the header wordmark — a customer's only way out of the menu"],
-    ['nu-mark--foot', 'the footer wordmark'],
   ]) {
     if (sanctioned.some(a => hasClass(a, cls)))
       pass(`${SHOP}: ${what} links to ./${HOME}`);
@@ -3283,10 +3282,15 @@ if (want('pages')) {
 
   // Noy wrote this about herself. It is quoted, not adapted — a paraphrase
   // here would be putting words in a real person's mouth on her own website.
-  storyNeed('אני קודם כל בודקת מה אני בעצמי הכי הייתי רוצה לאכול', 'movement 1, in her words');
-  storyNeed('אשכרה', 'movement 2 ends on her word');
+  storyNeed('אני קודם כל מדמיינת מה בא לי לאכול', 'movement 1, in her words (rewritten by Noy 17 Oct 2026)');
+  storyNeed('ולהגיד אשכרה.', 'movement 2 ends on her word, set in the running text rather than as a giant line of its own (Noy, 17 Oct 2026)');
   storyNeed('זאת מאפייה של אישה אחת', 'movement 3, in her words');
-  storyNeed('הכל נגמר מהר. אז יאללה', 'movement 3 ends on her line');
+  storyNeed('והכל נגמר מהר. אז יאללה.', 'movement 3 ends on her line');
+  storyNeed('ללחמי מחמצת, מאפים ומתוקים', 'the philosophy paragraph says sourdough breads, not just breads (Noy, 17 Oct 2026)');
+  // The two things Noy took OUT on 17 Oct 2026. Pinned absent, so a restore
+  // from an old copy cannot quietly bring them back.
+  if (/st-mv-claim|st-mv-punch/.test(storyCode)) fail('the story still carries the three claims or the giant punchlines Noy removed on 17 Oct 2026');
+  else pass('the three claims and the giant punchlines stay removed');
 
   // The brief's own check here read 'לא מושחת'. Noy's actual sentence is
   // "...אם אתם מחפשים מושחת, זה לא המקום" — "מושחת" and "לא" are not
@@ -3303,14 +3307,11 @@ if (want('pages')) {
   // 'רוב הקמחים מלאים', but the claim reads "...אשתמש ברוב של קמחים מלאים" —
   // "של", not the "ה" the check assumed, sits between "רוב" and "קמחים".
   // Narrowed to a substring that is actually present in her sentence.
-  storyNeed('ברוב של קמחים מלאים', 'the first of the three claims');
-  storyNeed('תמיד אמעיט בסוכר', 'the second');
-  storyNeed('מתוק מדי', 'the third');
   storyNeed('shop.html', 'a way into the shop from the end of the story');
 
   const moves = (story.match(/class="[^"]*st-move/g) || []).length;
-  if (moves === 4) pass('four movements, as the design settled');
-  else fail(`the story has ${moves} movements, not 4`);
+  if (moves === 3) pass('three movements (the fourth, with the three claims, was removed at Noy\'s request on 17 Oct 2026)');
+  else fail(`the story has ${moves} movements, not 3`);
 
   console.log('The gallery:');
   // Same reason as story.html above: readFileSync unguarded would throw

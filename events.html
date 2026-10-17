@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>אירועים — NUIKA</title>
-  <meta name="description" content="דוכנים, סדנאות והזמנות לחג אצל נואיקה. מה קרוב, ומה כבר היה.">
+  <title>פופ-אפים — NUIKA</title>
+  <meta name="description" content="הפופ-אפים של נואיקה: איפה אפשר לפגוש אותי ולטעום, מה קרוב, ומה כבר היה.">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bellefair&family=IBM+Plex+Sans+Hebrew:wght@300;400&display=swap">
-  <link rel="stylesheet" href="./site.css?v=5">
+  <link rel="stylesheet" href="./site.css?v=6">
 
   <style>
     /* The events board's own layout. Prefixed .ev- so nothing here can
@@ -49,6 +49,12 @@
     .ev-empty__line{ font-family: Bellefair, serif; font-size: 26px; color: var(--ink); margin: 0 0 8px; }
     .ev-empty__sub { font-size: 13px; line-height: 1.7; color: var(--muted); margin: 0 0 24px; }
 
+    .ev-invite     { text-align: center; margin-block-start: 56px; padding-block-start: 40px;
+                     border-block-start: 1px solid rgba(59,42,36,.14); display: grid;
+                     justify-items: center; gap: 20px; }
+    .ev-invite__line { font-family: Bellefair, serif; font-weight: 400; font-size: 26px;
+                       line-height: 1.3; color: var(--ink); margin: 0; text-wrap: balance; }
+
     @media (max-width: 600px) {
       .ev-main    { padding: 72px 16px 48px; }
       .ev-title   { font-size: 34px; }
@@ -60,18 +66,34 @@
 
   <main class="ev-main">
     <h1 class="ev-title">
-      <span lang-content="he">אירועים</span>
-      <span lang-content="en">Events</span>
+      <span lang-content="he">פופ-אפים</span>
+      <span lang-content="en">Pop-ups</span>
     </h1>
 
     <section id="evUpcoming" class="ev-list" aria-labelledby="evUpcomingH"></section>
     <section id="evEmpty" class="ev-empty" hidden></section>
     <section id="evPast" class="ev-list ev-list--past" aria-labelledby="evPastH" hidden></section>
+
+    <!-- Always on the page, whether or not a pop-up is listed: someone reading
+         about the next one may be the person who wants it at their own place.
+         Static markup, so nothing here passes through innerHTML. The message
+         is "hi Noy, I'd love you to come to a pop-up at our place". -->
+    <section class="ev-invite" aria-labelledby="evInviteH">
+      <h2 id="evInviteH" class="ev-invite__line">
+        <span lang-content="he">רוצים שאגיע לפופ אפ אצלכם? כתבו לי</span>
+        <span lang-content="en">Want me to come and pop up at your place? Write to me</span>
+      </h2>
+      <a class="btn btn--primary" target="_blank" rel="noopener"
+         href="https://wa.me/972547382282?text=%D7%94%D7%99%D7%99%20%D7%A0%D7%95%D7%99%2C%20%D7%90%D7%A9%D7%9E%D7%97%20%D7%A9%D7%AA%D7%92%D7%99%D7%A2%D7%99%20%D7%9C%D7%A4%D7%95%D7%A4%20%D7%90%D7%A4%20%D7%90%D7%A6%D7%9C%D7%A0%D7%95">
+        <span lang-content="he">כתבו לי בוואטסאפ</span>
+        <span lang-content="en">Write to me on WhatsApp</span>
+      </a>
+    </section>
   </main>
 
   <footer class="nu-footer" data-nuika-footer></footer>
 
-  <script src="./site.js?v=5"></script>
+  <script src="./site.js?v=6"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <script>
@@ -169,13 +191,10 @@
         em.innerHTML = '';
       } else {
         em.innerHTML =
-          '<p class="ev-empty__line"><span lang-content="he">אין אירוע קרוב כרגע.</span>' +
-          '<span lang-content="en">Nothing coming up right now.</span></p>' +
-          '<p class="ev-empty__sub"><span lang-content="he">כשיהיה, זה יופיע כאן. אפשר גם פשוט לכתוב לי.</span>' +
-          '<span lang-content="en">When there is, it shows up here. Or just write to me.</span></p>' +
-          '<a class="btn btn--primary" target="_blank" rel="noopener" href="https://wa.me/' + encodeURIComponent(WHATSAPP) +
-          '?text=' + encodeURIComponent('היי נוי, אשמח לשמוע על אירועים קרובים') + '">' +
-          '<span lang-content="he">דברו איתי</span><span lang-content="en">Talk to me</span></a>';
+          '<p class="ev-empty__line"><span lang-content="he">אין פופ-אפ קרוב כרגע.</span>' +
+          '<span lang-content="en">No pop-up coming up right now.</span></p>' +
+          '<p class="ev-empty__sub"><span lang-content="he">כשיהיה, זה יופיע כאן.</span>' +
+          '<span lang-content="en">When there is, it shows up here.</span></p>';
       }
       em.hidden = !!upcoming.length;
 

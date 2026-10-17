@@ -4,7 +4,11 @@
       "PowerShell($env:PATH = [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"User\"\\); python --version 2>&1)",
       "Bash(ls \"C:\\\\Projects\\\\NUIKA\\\\\" && ls \"C:\\\\Projects\\\\NUIKA\\\\images\\\\\" 2>/dev/null || echo \"no images folder\")",
       "WebSearch",
-      "WebFetch(domain:sourdoughsophia.co.uk)"
+      "WebFetch(domain:sourdoughsophia.co.uk)",
+      "Bash(cd C:/Projects/NUIKA && grep -n \"nu-mark\\\\|umbel\\\\|logo\" site.css | head -50; echo \"=== PDF details ===\"; ls -la \"C:/Users/User/Downloads/לוגו נואיקה.pdf\"; echo \"=== tools for raster ===\"; which pdftoppm magick convert mutool gs 2>/dev/null; node -v)",
+      "Bash(node -I \"C:/Users/User/AppData/Local/Temp/claude/C--Projects-NUIKA/467d5c0d-cf7b-45bd-9cf8-ddbe02256b01/scratchpad/pdf-inspect.mjs\" \"C:/Users/User/Downloads/לוגו נואיקה.pdf\")",
+      "Bash(node \"C:/Users/User/AppData/Local/Temp/claude/C--Projects-NUIKA/467d5c0d-cf7b-45bd-9cf8-ddbe02256b01/scratchpad/pdf-inspect.mjs\" \"C:/Users/User/Downloads/לוגו נואיקה.pdf\")",
+      "Bash(node \"C:/Users/User/AppData/Local/Temp/claude/C--Projects-NUIKA/467d5c0d-cf7b-45bd-9cf8-ddbe02256b01/scratchpad/pdf-extract-jpeg.mjs\" \"C:/Users/User/Downloads/לוגו נואיקה.pdf\" \"C:/Users/User/AppData/Local/Temp/claude/C--Projects-NUIKA/467d5c0d-cf7b-45bd-9cf8-ddbe02256b01/scratchpad/noy-logo\")"
     ]
   }
 }

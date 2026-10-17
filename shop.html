@@ -77,6 +77,28 @@
        Tailwind config above. */
     body { background-color: #EFE6D6; font-family: var(--font-text); }
 
+    /* One picture behind the whole menu (Noy, 17 Oct 2026), fixed so the
+       cards slide over it. A real element rather than background-attachment:
+       fixed, because iOS Safari ignores that and repaints it on every scroll.
+       The veil is what keeps the prices readable: the picture is a mood, not
+       content, so it is held back to roughly one part in eight. */
+    .shop-bg {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background: url(./images/hero-open-sandwich.jpg) center / cover no-repeat;
+      /* The source frames carry a 6px black letterbox top and bottom; scaling
+         up a hair pushes it off the edge on a tall phone screen. */
+      transform: scale(1.04);
+    }
+    .shop-bg::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(239, 230, 214, .87);
+    }
+
     /* ── GLOBAL TYPOGRAPHY ─────────────────────────── */
     h1, h2, h3 { text-wrap: balance; }
     p { text-wrap: pretty; }
@@ -104,8 +126,8 @@
 
       /* The wordmark's two states. On this page the header sits on wheat and
          the footer on ink, so each gets its own pair. */
-      --mark-rest: #B8935E;
-      --mark-live: #B84830;
+      --mark-rest: #3B2A24;
+      --mark-live: #3B2A24;
     }
 
     /* RTL scroll */
@@ -292,92 +314,6 @@
     .ord-btn:hover:not(:disabled) { background: #EFE1C7; border-color: #B84830; }
     .ord-btn:disabled { opacity: 0.3; cursor: default; }
 
-    /* Hero: two arched photos with the name between them. The arch is the
-       shape the whole page is built around — it repeats the oven mouth. */
-    .hero-row {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: center;
-      gap: clamp(16px, 4vw, 52px);
-    }
-    /* The two windows.
-
-       They used to be photographs with a rounded top — the shape was there,
-       but nothing said "window". Three things say it now, and none of them
-       needs a change to the markup:
-
-       1. A mount. The photo is inset inside the arch and the gap is filled
-          with parchment, the way a print is matted inside a frame, with a
-          hairline of crust drawn just inside the opening.
-       2. A reveal. A soft shadow falls from the top edge inwards, so the
-          picture sits BEHIND the opening rather than on it.
-       3. Breath. The picture drifts, very slowly and in opposite directions
-          in the two windows, the way the film on the home page moves. Anyone
-          who asked for less motion gets a still picture and loses nothing
-          else. */
-    .hero-arch {
-      position: relative;
-      margin: 0;
-      flex: 0 0 auto;
-      width: clamp(128px, 21vw, 208px);
-      /* Matches the exported crop, so the box is the right height before the
-         photo arrives and the name does not jump on load. */
-      aspect-ratio: 620 / 900;
-      border-radius: 999px 999px 14px 14px;
-      overflow: hidden;
-      padding: 7px;
-      background: #EFE1C7;
-      box-shadow: 0 14px 34px rgba(59, 42, 36, .14);
-    }
-
-    .hero-arch img {
-      width: 100%; height: 100%;
-      object-fit: cover;
-      display: block;
-      /* Its own, slightly tighter arch, so the mount reads as an even band
-         all the way round the opening. */
-      border-radius: 999px 999px 8px 8px;
-    }
-
-    /* The opening: the drawn hairline and the shadow falling in from the top.
-       Sits above the picture and takes no clicks. */
-    .hero-arch::after {
-      content: "";
-      position: absolute;
-      inset: 7px;
-      border-radius: 999px 999px 8px 8px;
-      border: 1px solid rgba(184, 147, 94, .55);
-      box-shadow: inset 0 12px 26px -14px rgba(59, 42, 36, .85);
-      pointer-events: none;
-    }
-
-    @media (prefers-reduced-motion: no-preference) {
-      .hero-arch img { animation: archDrift 26s ease-in-out infinite alternate; }
-      /* The second window drifts the other way, so the pair breathes rather
-         than sliding together. */
-      .hero-arch:last-of-type img { animation-name: archDriftBack; }
-    }
-    @keyframes archDrift {
-      from { transform: scale(1.02) translate3d(0, 0, 0); }
-      to   { transform: scale(1.08) translate3d(0, -1.5%, 0); }
-    }
-    @keyframes archDriftBack {
-      from { transform: scale(1.08) translate3d(0, -1.5%, 0); }
-      to   { transform: scale(1.02) translate3d(0, 0, 0); }
-    }
-
-    /* No step between them. One arch was offset about 22px lower on purpose —
-       two identical arches at the same height read as a diagram, and an
-       offset reads as a composition. It did not read that way: it read as a
-       mistake, which is the only verdict that counts. They are the same size
-       and now the same height. */
-    /* Under ~640px three columns will not fit, so the name takes its own line
-       above and the two arches sit side by side beneath it. */
-    @media (max-width: 639px) {
-      .hero-name { order: -1; flex-basis: 100%; }
-      .hero-arch { width: clamp(130px, 40vw, 170px); }
-    }
     .edit-modal-box {
       background: #FDFAF4;
       border-radius: 24px 24px 0 0;
@@ -807,17 +743,6 @@
       transition: background 0.15s, color 0.15s;
     }
     .qty-btn:hover { background: #6B2E1E; color: #EFE6D6; }
-
-    .divider-flower {
-      display: flex; align-items: center; gap: 16px;
-      color: #B84830;
-    }
-    .divider-flower::before, .divider-flower::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: linear-gradient(to right, transparent, #C4B89A 40%, #C4B89A 60%, transparent);
-    }
 
     /* ── PAPER TEXTURE ──────────────────────────── */
     body::after {
@@ -1789,7 +1714,7 @@
 
     .nu-door__mark {
       inline-size: 190px;
-      block-size: 70px;
+      block-size: 110px;
       background: #B84830;
       -webkit-mask: url(./images/logo.png) center / contain no-repeat;
               mask: url(./images/logo.png) center / contain no-repeat;
@@ -1866,7 +1791,7 @@
       background-position: 0 0;
     }
 
-    .nu-mark__art { width: 160px; height: 59px; }
+    .nu-mark__art { width: 128px; height: 74px; }
 
     @media (hover: hover) {
       .nu-mark__art,
@@ -2009,7 +1934,7 @@
        breakpoint and the same behaviour as every other page. */
     @media (max-width: 720px) {
       .nu-header { flex-wrap: wrap; gap: 10px; padding: 12px 16px; }
-      .nu-mark__art { width: 130px; height: 48px; }   /* the floor, never below it */
+      .nu-mark__art { width: 112px; height: 65px; }   /* the floor, never below it */
       .nu-nav {
         position: static;
         order: 3;
@@ -2024,8 +1949,6 @@
     /* A centred column, the same shape site.css gives the other four pages:
        wordmark, then the marks, then the address directly under them. */
     .nu-footer {
-      --mark-rest: rgba(246, 240, 228, .5);
-      --mark-live: #F6F0E4;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -2039,7 +1962,6 @@
        .nu-mark__art, for both marks. A `background:` shorthand here would
        quietly wipe the gradient the fill is made of — later in the file,
        same specificity, no error anywhere. */
-    .nu-mark--foot { display: block; width: 150px; height: 55px; flex: 0 0 auto; }
     .nu-foot-mid { display: flex; flex-direction: column; gap: 8px; align-items: center; }
     .nu-soc-row { display: flex; gap: 14px; justify-content: center; }
     /* 44px is the tap target; the glyph inside is 22. A mark small enough to
@@ -2155,18 +2077,6 @@
       .nu-tool { padding: 6px 8px; }
     }
 
-    /* The other half of the oven door: the film page pulls a panel up over
-       itself, and the shop settles in underneath. Only the hero is animated,
-       never the menu — a failed animation on the products is a shop with no
-       products, and no arrival is worth that. */
-    @media (prefers-reduced-motion: no-preference) {
-      .hero-row { animation: shopArrive .5s cubic-bezier(.22, .61, .36, 1) both; }
-    }
-    @keyframes shopArrive {
-      from { opacity: 0; transform: translateY(10px); }
-      to   { opacity: 1; transform: none; }
-    }
-
     /* ── HERO LINE ──────────────────────────────────────────────────────
        What used to be the name typed in a display face, now that the real
        wordmark sits in the header directly above it. */
@@ -2181,16 +2091,6 @@
       clip-path: inset(50%);
       white-space: nowrap;
       border: 0;
-    }
-
-    .hero-line {
-      margin: 0;
-      font-family: var(--font-display);
-      font-weight: 400;
-      color: #6B2E1E;
-      font-size: clamp(1.6rem, 4.4vw, 2.6rem);
-      line-height: 1.35;
-      letter-spacing: 0.01em;
     }
 
     /* ── SHOP STATUS ────────────────────────────────────────────────────
@@ -2393,6 +2293,10 @@
 </head>
 <body class="font-sans text-ink">
 
+<!-- The picture behind the menu. Decorative, so it carries no alt text and is
+     hidden from assistive technology. -->
+<div class="shop-bg" aria-hidden="true"></div>
+
 <!-- ============ HEADER ============ -->
 <header class="nu-header sticky top-0 z-40" style="background:rgba(239,230,214,0.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
   <!-- The wordmark is the way home, and home is the film page — the same
@@ -2408,13 +2312,14 @@
     <span class="nu-mark__art"></span>
   </a>
 
-  <!-- The same four destinations site.js builds, in the same order. A fifth
-       entry here without one there is what validate.mjs is watching for. -->
+  <!-- The same five destinations site.js builds, in the same order. An entry
+       here without one there is what validate.mjs is watching for. -->
   <nav class="nu-nav" aria-label="תפריט האתר">
-    <a class="nu-nav__item" href="./story.html"><span lang-content="he">הסיפור</span><span lang-content="en">Story</span></a>
+    <a class="nu-nav__item" href="./story.html"><span lang-content="he">האג'נדה</span><span lang-content="en">Agenda</span></a>
     <a class="nu-nav__item" href="./gallery.html"><span lang-content="he">גלריה</span><span lang-content="en">Gallery</span></a>
-    <a class="nu-nav__item" href="./events.html"><span lang-content="he">אירועים</span><span lang-content="en">Events</span></a>
+    <a class="nu-nav__item" href="./events.html"><span lang-content="he">פופ-אפים</span><span lang-content="en">Pop-ups</span></a>
     <a class="nu-nav__item" href="./contact.html"><span lang-content="he">דברו איתי</span><span lang-content="en">Talk to me</span></a>
+    <a class="nu-nav__item is-current" href="./shop.html" aria-current="page"><span lang-content="he">תפריט והזמנות</span><span lang-content="en">Menu &amp; orders</span></a>
   </nav>
 
   <div class="nu-tools">
@@ -2445,52 +2350,21 @@
   </div>
 </header>
 
-<!-- ============ HERO ============ -->
-<!-- The wordmark now sits in the header, so the name is not typed out a
-     second time here. What replaces it is the thing a visitor actually needs
-     in the first screen of a shop: what this is, and whether it is open. -->
-<section class="max-w-5xl mx-auto px-4 text-center" style="padding-top:clamp(2rem,5vw,3.5rem);padding-bottom:clamp(1.25rem,3vw,2rem);">
-  <div class="hero-row">
-    <figure class="hero-arch">
-      <img src="images/hero-open-sandwich.jpg" width="620" height="900" alt="כריכים פתוחים על לחם מחמצת כהה: גבינה לבנה, פרוסות עגבנייה ושמיר" />
-    </figure>
+<!-- The page opens straight on the menu (Noy, 17 Oct 2026). The photographs,
+     the headline and the divider that used to sit here are gone.
 
-    <!-- An <h1>, because replacing the typed name with the wordmark left the
-         whole document without one: the two headings here became <p>, and the
-         only <h1>s remaining in the file are inside print-only template
-         strings. The wordmark cannot stand in for it — it is a CSS mask on an
-         empty <span>, so its only accessible name is the link's aria-label.
-         The brand name rides along for screen readers and search engines,
-         which is where it was lost; on screen the line reads as before. -->
-    <div class="hero-name">
-      <h1 class="hero-line" lang-content="he"><span class="u-sr">נואיקה — </span>מאפייה ארטיזנלית עונתית<br />באיסוף עצמי מרחובות</h1>
-      <h1 class="hero-line" lang-content="en"><span class="u-sr">NUIKA — </span>Seasonal artisan bakery<br />Self pickup from Rehovot</h1>
-    </div>
-
-    <figure class="hero-arch">
-      <img src="images/hero-seeded-loaf.jpg" width="620" height="900" alt="דבש נמזג על כיכר מחמצת מכוסה שומשום וגרעינים" />
-    </figure>
-  </div>
-</section>
-
-<!-- ============ DIVIDER ============ -->
-<div class="max-w-5xl mx-auto px-4 py-4">
-  <div class="divider-flower">
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-      <g stroke="#B84830" stroke-width="1.2" fill="none">
-        <ellipse cx="10" cy="10" rx="2" ry="5" transform="rotate(0 10 10)"/>
-        <ellipse cx="10" cy="10" rx="2" ry="5" transform="rotate(60 10 10)"/>
-        <ellipse cx="10" cy="10" rx="2" ry="5" transform="rotate(120 10 10)"/>
-        <circle cx="10" cy="10" r="2.2" fill="#B84830"/>
-      </g>
-    </svg>
-  </div>
-</div>
+     What stays is the h1, hidden from the eye and read aloud: the page would
+     otherwise have no top-level heading at all. -->
 
 <!-- ============ PRODUCTS ============ -->
 <section id="menu" class="max-w-5xl mx-auto px-4 pb-44">
   <!-- Whether the shop is taking orders, said once and said here, before the
        menu rather than after a tap. Written by renderShopStatus(). -->
+  <h1 class="u-sr">
+    <span lang-content="he">נואיקה — תפריט והזמנות</span>
+    <span lang-content="en">NUIKA — menu and orders</span>
+  </h1>
+
   <div id="shop-status" class="shop-status"></div>
 
   <!-- Repeat last order banner (shown if previous order exists) -->
@@ -2780,7 +2654,7 @@
       </button>
       <button class="admin-tab-btn" id="atab-events" onclick="switchAdminTab('events')" role="tab">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        אירועים
+        פופ-אפים
       </button>
       <button class="admin-tab-btn" id="atab-kitchen" onclick="switchAdminTab('kitchen')" role="tab" style="position:relative;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2h18l-2 7H5L3 2z"/><path d="M5 9l1 11h12l1-11"/><path d="M9 13h6"/></svg>
@@ -3061,7 +2935,7 @@
   </div>
 
   <div id="admin-tab-events" class="admin-tab-content">
-    <h2 style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.2rem;font-weight:700;margin:0 0 18px;">אירועים</h2>
+    <h2 style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.2rem;font-weight:700;margin:0 0 18px;">פופ-אפים</h2>
 
     <div class="admin-card">
       <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;margin:0 0 12px;">
@@ -3727,8 +3601,6 @@
      ink, the two places to reach Noy, and the way back to the film. Its
      bottom padding clears the fixed cart bar. -->
 <footer class="nu-footer">
-  <a class="nu-mark--foot" href="./index.html" aria-label="נואיקה — לעמוד הבית"></a>
-
   <div class="nu-foot-mid">
     <!-- Marks, not words, and the same two glyphs site.js draws on the other
          four pages. The number and the handle stay as text: they are the

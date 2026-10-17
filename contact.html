@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>דברו איתי — NUIKA</title>
-  <meta name="description" content="יצירת קשר עם נוי מ-NUIKA: הזמנה, אירוע, סדנה או שאלה — הודעת וואטסאפ שנפתחת אצלכם, בלי שום דבר שנשמר בדרך.">
+  <meta name="description" content="יצירת קשר עם נוי מ-NUIKA: הזמנה, אירוע או שאלה — הודעת וואטסאפ שנפתחת אצלכם, בלי שום דבר שנשמר בדרך.">
 
   <!-- Loaded here, not with @import, which would block rendering. Bellefair
        carries real Hebrew; without this the page quietly falls back to Times. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bellefair&family=IBM+Plex+Sans+Hebrew:wght@200;300;400;500&display=swap">
-  <link rel="stylesheet" href="./site.css?v=5">
+  <link rel="stylesheet" href="./site.css?v=6">
 
   <style>
     /* The contact page's own layout. Prefixed .ct- so nothing here can
@@ -162,8 +162,8 @@
         <span lang-content="en">Talk to me</span>
       </h1>
       <p class="u-small">
-        <span lang-content="he">הזמנה, אירוע, סדנה או סתם שאלה — כתבו כמה מילים, ותקבלו הודעה מוכנה לשליחה בוואטסאפ שלכם.</span>
-        <span lang-content="en">An order, an event, a workshop, or just a question — write a few words, and get a message ready to send from your own WhatsApp.</span>
+        <span lang-content="he">הזמנה, אירוע או סתם שאלה — כתבו כמה מילים, ותקבלו הודעה מוכנה לשליחה בוואטסאפ שלכם.</span>
+        <span lang-content="en">An order, an event, or just a question — write a few words, and get a message ready to send from your own WhatsApp.</span>
       </p>
     </div>
 
@@ -206,14 +206,14 @@
             <span lang-content="he">נושא</span>
             <span lang-content="en">Subject</span>
           </legend>
-          <!-- These four keep name="ctSubject", unlike the fields above: it
+          <!-- These three keep name="ctSubject", unlike the fields above: it
                is what makes them a single mutually-exclusive radio group at
                all (a radio input with no name is alone in its own group of
                one — the browser would let more than one chip show checked
                at once), and the script below finds the checked one by that
                same name (form.querySelector('input[name="ctSubject"]:checked')).
-               Its value is always one of four fixed words (order / event /
-               workshop / question), never customer-entered text, so it
+               Its value is always one of three fixed words (order / event /
+               question), never customer-entered text, so it
                carries none of the exposure the name/phone/message fields
                did — onsubmit="return false" on the form above is what stops
                it (and everything else here) from ever reaching a URL. -->
@@ -227,11 +227,6 @@
               <input type="radio" name="ctSubject" value="event">
               <span lang-content="he">אירוע</span>
               <span lang-content="en">Event</span>
-            </label>
-            <label class="ct-chip">
-              <input type="radio" name="ctSubject" value="workshop">
-              <span lang-content="he">סדנה</span>
-              <span lang-content="en">Workshop</span>
             </label>
             <label class="ct-chip">
               <input type="radio" name="ctSubject" value="question">
@@ -311,7 +306,7 @@
 
   <footer class="nu-footer" data-nuika-footer></footer>
 
-  <script src="./site.js?v=5"></script>
+  <script src="./site.js?v=6"></script>
   <script>
     // The form composes one WhatsApp message on the visitor's own device and
     // opens it there. Nothing on this page makes a network request of its
@@ -326,7 +321,6 @@
       var SUBJECT_LABELS = {
         order:    { he: 'הזמנה', en: 'Order' },
         event:    { he: 'אירוע', en: 'Event' },
-        workshop: { he: 'סדנה',  en: 'Workshop' },
         question: { he: 'שאלה',  en: 'Question' }
       };
 

@@ -17,10 +17,11 @@
      esc() stops an attribute breakout but NOT a javascript: URL — that would
      need the scheme checked as well. */
   var NAV = [
-    { key: 'story',   href: './story.html',   he: 'הסיפור',    en: 'Story' },
+    { key: 'story',   href: './story.html',   he: 'האג\'נדה',  en: 'Agenda' },
     { key: 'gallery', href: './gallery.html', he: 'גלריה',     en: 'Gallery' },
-    { key: 'events',  href: './events.html',  he: 'אירועים',   en: 'Events' },
-    { key: 'contact', href: './contact.html', he: 'דברו איתי', en: 'Talk to me' }
+    { key: 'events',  href: './events.html',  he: 'פופ-אפים',  en: 'Pop-ups' },
+    { key: 'contact', href: './contact.html', he: 'דברו איתי', en: 'Talk to me' },
+    { key: 'shop',    href: './shop.html',    he: 'תפריט והזמנות', en: 'Menu & orders' }
   ];
 
   /* The places to find Noy, as marks rather than words.
@@ -74,11 +75,14 @@
     }).join('');
   }
 
-  /* The full wordmark is never rendered below 130px wide — under that its
-     finest strokes fade out. The header sits at 160px, which measures 59px
-     tall and leaves the flower legible. */
+  /* The logo is Noy's own handwriting, cut out of her paper (928x536). It is
+     never rendered below 112px wide — under that the thin strokes of the
+     lettering fade out. The header sits at 128px, which measures 74px tall.
 
-  /* Both wordmarks below point at './index.html', and after the cutover that
+     There is ONE mark, top corner only. The centred copy in the footer was
+     removed on Noy's request ("not also in the middle of the page"). */
+
+  /* The wordmark below points at './index.html', and after the cutover that
      is the FILM home page, not the shop. This was decided, not inherited.
 
      On the open web it is simply right: the logo is the way home, and home is
@@ -122,7 +126,6 @@
              s.icon + '</svg></a>';
     }).join('');
     return '' +
-      '<a class="nu-mark nu-mark--foot" href="./index.html" aria-label="NUIKA"></a>' +
       '<div class="nu-soc-row">' + links + '</div>' +
       '<p class="nu-fine">' +
         '<span lang-content="he">' + esc(PLACE.he) + '</span>' +
