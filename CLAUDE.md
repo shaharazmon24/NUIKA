@@ -338,6 +338,13 @@ project has lost work before.
   know that `site.js` changed and the number did not, and it will not catch a
   downgrade to a number visitors already hold. **Change `site.js` → bump
   `?v=` in all five pages and `CACHE` in `sw.js`, by hand.**
+  **Never request the new `?v=N` URL until the deploy has landed.** GitHub Pages
+  serves the file for any query string, so a `curl` of `site.js?v=N` made while
+  the old build is still live returns the OLD file, and Cloudflare caches that
+  answer under the new address for four hours (measured 17 Oct 2026: visitors got
+  the old menu order from `?v=9` until the number was moved to 10). To check a
+  deploy, request a throwaway address (`site.js?check=123`) or a file nobody
+  asks for yet, never the version the pages use.
 - **The escaping guard is text analysis, not a parser.** An apostrophe inside a
   regex literal makes the statement splitter swallow the rest of a statement —
   a silent pass. Safe today only because `contact.html` holds the pages' only
