@@ -3,6 +3,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- The menu is public, so it can be read with a plain request. This starts it
+       NOW, ahead of the font stylesheet (which would hold a later script back for
+       ~170ms), Tailwind and the three Firebase scripts; the Firebase connection (several round trips before its first
+       answer) used to be the thing the whole menu waited for. The live listeners
+       still attach later and keep everything current. -->
+  <link rel="preconnect" href="https://nuika-5371f-default-rtdb.firebaseio.com" crossorigin />
+  <script>
+    (function () {
+      var base = 'https://nuika-5371f-default-rtdb.firebaseio.com/nuika/';
+      function get(p) {
+        return fetch(base + p + '.json').then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+      }
+      var settings = get('settings');
+      window.__nuikaPre = { products: get('products'), settings: settings };
+    })();
+  </script>
+
   <title>נואיקה — מאפייה ארטיזנלית עונתית</title>
 
   <!-- Version stamp. Rewritten automatically by scripts/ship.mjs on every
@@ -617,6 +635,9 @@
       object-fit: cover;
       transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94);
     }
+    /* A photo that arrives after the dish fades in over the card's own colour. */
+    .illus-wrap img[data-photo] { opacity: 0; transition: opacity .7s ease, transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94); }
+    .illus-wrap img[data-photo].is-ready { opacity: 1; }
     .product-card:hover .illus-wrap img {
       transform: scale(1.04);
     }
@@ -2142,6 +2163,14 @@
     /* ── SHOP STATUS ────────────────────────────────────────────────────
        Open or closed, said before the menu instead of inside an alert box
        after a tap. */
+    @media (prefers-reduced-motion: no-preference) {
+      .menu-reveal .product-card { animation: dishArrive .85s cubic-bezier(.22, .61, .36, 1) both; animation-delay: calc(var(--i, 0) * 70ms); }
+      @keyframes dishArrive {
+        from { opacity: 0; transform: scale(.955); filter: blur(7px); }
+        60%  { filter: blur(0); }
+        to   { opacity: 1; transform: none; filter: blur(0); }
+      }
+    }
     .menu-loading-msg { grid-column: 1 / -1; text-align: center; margin: 0 0 6px; color: #5C564D; font-family: var(--font-text); font-size: 0.95rem; }
     .menu-loading-msg.menu-failed { padding: 28px 12px; line-height: 1.9; }
     .menu-retry { margin-top: 10px; font-family: var(--font-text); font-weight: 600; color: #FDFAF4; background: #6B2E1E; border: 0; border-radius: 999px; padding: 10px 22px; cursor: pointer; }
@@ -3948,8 +3977,12 @@ function productSortFn(a, b) {
 }
 
 // Products listener — runs whenever products change in Firebase
-db.ref(`${ROOT}/products`).on('value', snap => {
-  const data = snap.val();
+db.ref(`${ROOT}/products`).on('value', snap => applyProductsData(snap.val()));
+
+// Everything that happens when the menu arrives. Called by the live listener above
+// and by the early public read further down, whichever answers first; the second
+// call is harmless because renderProducts() skips a redraw that would be identical.
+function applyProductsData(data) {
   _productsLoaded = true;
   PRODUCTS.length = 0;
   // Coerce the id once, here. A string id sorts as NaN and then fails every
@@ -3982,7 +4015,8 @@ db.ref(`${ROOT}/products`).on('value', snap => {
 
   const panel = document.getElementById('admin-panel');
   if (panel && panel.classList.contains('open')) renderAdminProducts();
-});
+  slimProductPhotos();
+}
 
 // Settings listener — ordersOpen, bitLink, deadline
 db.ref(`${ROOT}/settings`).on('value', snap => {
@@ -4004,6 +4038,7 @@ let _ordersAttached = false;
 function attachAdminListeners() {
   if (!IS_ADMIN || _ordersAttached) return;
   _ordersAttached = true;
+  slimProductPhotos();
   db.ref(`${ROOT}/orders`).on('value', ordersSnapshot, err => {
     // A denial here means the session is not really an admin. Without this the
     // panel rendered empty with no error and would not re-attach on retry.
@@ -4330,6 +4365,7 @@ function currentCycle() {
 // abort the whole file.
 var STOCK_USED = {};
 var _stockRef = null;
+var _stockLive = false;   // true once the live stock listener has answered at least once
 
 function watchStock() {
   const key = String(currentCycle().start);
@@ -4339,6 +4375,7 @@ function watchStock() {
   const ref = db.ref(path);
   const cb = snap => {
     STOCK_USED = snap.val() || {};
+    _stockLive = true;
     if (_productsLoaded) {
       pruneCart();
       renderProducts();
@@ -4464,7 +4501,70 @@ function menuProducts() {
 // longer on offer, and could tap them. Nothing is drawn from it any more: until
 // the real menu has arrived the grid shows a loading state, and if it never
 // arrives it says so and offers a retry.
+// ─── PRODUCT PHOTOS ─────────────────────────────────
+// A dish's photo is one of: a file path (images/…), a data URI stored inline (how
+// every photo used to be saved, and the fallback), or a marker 'photo:<id>@<time>'
+// pointing at nuika/productPhotos/<id>. The marker is why the menu is small: the
+// photo is fetched separately, after the dishes are already on screen, and fades in.
+// The time in the marker changes whenever she uploads a new photo, so a customer who
+// already has the menu open picks the new photo up without a reload.
+const BLANK_GIF = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+const PHOTO_URL_BASE = 'https://nuika-5371f-default-rtdb.firebaseio.com/nuika/productPhotos/';
+const _photoCache = {};     // marker -> data URI
+const _photoPending = {};   // marker -> true while a request is in flight
+function photoSrc(p) {
+  const il = (p && p.illustration) || '';
+  return il.startsWith('photo:') ? (_photoCache[il] || '') : il;
+}
+function ensurePhotos(list) {
+  (list || []).forEach(p => {
+    const marker = p && p.illustration;
+    if (typeof marker !== 'string' || !marker.startsWith('photo:') || _photoCache[marker] || _photoPending[marker]) return;
+    const id = marker.slice(6).split('@')[0];
+    _photoPending[marker] = true;
+    const attempt = n => fetch(PHOTO_URL_BASE + encodeURIComponent(id) + '.json')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        // Only an image ever reaches an <img src>: the rules enforce this on write, and it is checked again here.
+        if (typeof d === 'string' && d.startsWith('data:image/')) { _photoCache[marker] = d; paintPhoto(marker); }
+        else if (n < 2) setTimeout(() => attempt(n + 1), 2500);
+      })
+      .catch(() => { if (n < 2) setTimeout(() => attempt(n + 1), 2500); })
+      .finally(() => { if (_photoCache[marker] || n >= 2) delete _photoPending[marker]; });
+    attempt(0);
+  });
+}
+function paintPhoto(marker) {
+  document.querySelectorAll('img[data-photo]').forEach(img => {
+    if (img.getAttribute('data-photo') !== marker) return;
+    img.onload = () => img.classList.add('is-ready');
+    img.src = _photoCache[marker];
+    if (img.complete) img.classList.add('is-ready');
+  });
+}
+// Stores a new photo and returns what the product's `illustration` should become: the
+// marker if the photo node accepted it, or the data URI itself if it did not (rules
+// not published yet, or no connection): the dish keeps its photo either way.
+async function storePhoto(id, dataUrl) {
+  const marker = 'photo:' + id + '@' + Date.now();
+  try {
+    // Never let an offline phone hold the save button forever: after 8s keep the photo inline.
+    await Promise.race([
+      db.ref(`${ROOT}/productPhotos/${id}`).set(dataUrl),
+      new Promise((_, rej) => setTimeout(() => rej({ code: 'timeout' }), 8000))
+    ]);
+    _photoCache[marker] = dataUrl;
+    return marker;
+  } catch (e) {
+    console.warn('productPhotos refused the write; keeping the photo inline', e && e.code);
+    return dataUrl;
+  }
+}
+
+let _menuSig = null;        // what the grid currently shows, so an identical redraw can be skipped
+let _menuRevealed = false;  // the soft fade-in plays once per visit
 function renderProductsLoading() {
+  _menuSig = null;
   const grid = document.getElementById('products-grid');
   grid.setAttribute('aria-busy', 'true');
   grid.innerHTML = '<p class="menu-loading-msg" role="status">' +
@@ -4485,6 +4585,13 @@ setTimeout(() => {
 function renderProducts() {
   const grid = document.getElementById('products-grid');
   if (!_productsLoaded) { renderProductsLoading(); return; }
+  // The early read and the live listener both deliver the menu, and so do the stock
+  // tally and the order log. Rebuilding the whole grid for an answer that changes
+  // nothing is what made dishes flicker, and would replay the reveal.
+  const sig = JSON.stringify([menuProducts(), menuProducts().map(p => getStockRemaining(p.id)), IS_ADMIN]);
+  if (sig === _menuSig && grid.querySelector('.product-card')) return;
+  _menuSig = sig;
+  grid.classList.remove('menu-reveal');   // a redraw mid-reveal shows the final state, not a restart
   grid.setAttribute('aria-busy', 'false');
   grid.innerHTML = menuProducts().map(p => {
     const remaining = getStockRemaining(p.id);
@@ -4523,7 +4630,9 @@ function renderProducts() {
       <!-- Illustration -->
       <div class="illus-wrap">
         ${p.illustration
-          ? `<img src="${esc(p.illustration)}" alt="${esc(p.nameHe)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;" />`
+          ? (String(p.illustration).startsWith('photo:')
+              ? `<img src="${esc(photoSrc(p) || BLANK_GIF)}" data-photo="${esc(p.illustration)}" class="${_photoCache[p.illustration] ? 'is-ready' : ''}" alt="${esc(p.nameHe)}" style="width:100%;height:100%;object-fit:cover;" />`
+              : `<img src="${esc(p.illustration)}" alt="${esc(p.nameHe)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;" />`)
           : (p.svg || '')}
       </div>
 
@@ -4555,6 +4664,19 @@ function renderProducts() {
     </div>
   `;
   }).join('');
+  ensurePhotos(menuProducts());
+  revealMenu(grid);
+}
+
+// A gentle arrival, once: each dish fades up out of a soft blur and settles from a
+// hair smaller, one after another. Nothing slides. Skipped entirely for anyone who
+// asked their device for reduced motion (the CSS below is inside that query).
+function revealMenu(grid) {
+  if (_menuRevealed || !grid.querySelector('.product-card')) return;
+  _menuRevealed = true;
+  grid.querySelectorAll('.product-card').forEach((c, i) => c.style.setProperty('--i', Math.min(i, 14)));
+  grid.classList.add('menu-reveal');
+  setTimeout(() => grid.classList.remove('menu-reveal'), 2200);
 }
 
 // ─── TOGGLE PRODUCT ────────────────────────────────
@@ -5155,7 +5277,7 @@ function productRow(p, i, arr) {
   return `
     <div class="admin-card" style="${parked ? 'opacity:0.6;' : ''}">
       ${arrows}
-      <img src="${esc(p.illustration || '')}" alt="${esc(p.nameHe)}"
+      <img src="${esc(photoSrc(p) || BLANK_GIF)}" data-photo="${esc(p.illustration || '')}" alt="${esc(p.nameHe)}"
         onerror="this.style.display='none'"
         style="width:56px;height:56px;object-fit:cover;border-radius:8px;flex-shrink:0;" />
       <div style="flex:1;min-width:0;">
@@ -6225,7 +6347,9 @@ function openEditProduct(id) {
   const preview = document.getElementById('edit-img-preview');
   const placeholder = document.getElementById('edit-img-placeholder');
   if (p.illustration) {
-    preview.src = p.illustration;
+    preview.setAttribute('data-photo', p.illustration);
+    preview.src = photoSrc(p) || BLANK_GIF;
+    ensurePhotos([p]);
     preview.style.display = 'block';
     placeholder.style.display = 'none';
   } else {
@@ -6303,7 +6427,7 @@ function previewImage(input) {
     // the write limit outright. Shrink it here, before it is ever saved.
     const img = new Image();
     img.onload = function() {
-      const MAX = 900;
+      const MAX = 640;   // a card is about 280px wide; 640 is sharp on a phone and a third the bytes of 900
       // Both axes. Bounding width alone let a tall photo (900×5000) through at
       // full size, which is exactly the shape a phone produces held upright.
       const scale = Math.min(1, MAX / img.naturalWidth, MAX / img.naturalHeight);
@@ -6316,7 +6440,7 @@ function previewImage(input) {
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, 0, 0, w, h);
 
-      pendingImageDataUrl = c.toDataURL('image/jpeg', 0.82);
+      pendingImageDataUrl = c.toDataURL('image/jpeg', 0.8);
       _imageDecoding = false;
 
       const preview = document.getElementById('edit-img-preview');
@@ -6338,6 +6462,49 @@ function previewImage(input) {
     img.src = e.target.result;
   };
   reader.readAsDataURL(file);
+}
+
+// The photos Noy uploaded before 17 Oct 2026 are stored inside the products node as
+// 900px, ~180KB base64 strings, which every visitor downloads before seeing a
+// single dish (929KB in all). When she opens the panel, each such photo is
+// re-encoded at 640px and moved to nuika/productPhotos, and the dish keeps only a
+// small marker. One product at a time, per-key writes, never for a visitor.
+// If the photo node refuses the write (the rules have not been published yet), the
+// smaller photo is written back inline instead: still a saving, nothing is lost.
+const SLIM_MAX = 640;
+const _slimTried = {};
+let _slimBusy = false;
+async function slimProductPhotos() {
+  if (!IS_ADMIN || !_productsLoaded || _slimBusy) return;
+  _slimBusy = true;
+  try {
+    for (const p of PRODUCTS.slice()) {
+      const src = p.illustration;
+      if (typeof src !== 'string' || !src.startsWith('data:image/') || src.length < 30000 || _slimTried[p.id]) continue;
+      _slimTried[p.id] = true;
+      const img = new Image();
+      img.src = src;
+      try { await img.decode(); } catch (e) { continue; }
+      let out = src;
+      if (Math.max(img.naturalWidth, img.naturalHeight) > SLIM_MAX * 1.1) {
+        const k = Math.min(1, SLIM_MAX / img.naturalWidth, SLIM_MAX / img.naturalHeight);
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.naturalWidth * k);
+        c.height = Math.round(img.naturalHeight * k);
+        const ctx = c.getContext('2d');
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        const smaller = c.toDataURL('image/jpeg', 0.8);
+        if (smaller.length < src.length) out = smaller;
+      }
+      const marker = await storePhoto(p.id, out);
+      if (marker.startsWith('photo:')) {
+        await db.ref(`${ROOT}/products/${p.id}/illustration`).set(marker).catch(fbError);
+      } else if (out.length < src.length * 0.85) {
+        await db.ref(`${ROOT}/products/${p.id}/illustration`).set(out).catch(fbError);
+      }
+    }
+  } finally { _slimBusy = false; }
 }
 
 async function saveProductEdit() {
@@ -6426,6 +6593,8 @@ async function saveProductEdit() {
   // seconds later and no way to tell which state the shop was actually in.
   const btn = document.getElementById('save-product-btn');
   if (btn) btn.disabled = true;
+  // A new photo goes to its own node first; the dish then carries only a marker.
+  if (pendingImageDataUrl) target.illustration = await storePhoto(target.id, pendingImageDataUrl);
   saveOneProduct(target)
     .then(() => {
       if (btn) btn.disabled = false;
@@ -6455,6 +6624,7 @@ function deleteProduct() {
   // screen and stay orderable by every customer.
   db.ref(`${ROOT}/products/${id}`).remove()
     .then(() => {
+      db.ref(`${ROOT}/productPhotos/${id}`).remove().catch(() => {});   // best effort; an orphan photo harms nothing
       const idx = PRODUCTS.findIndex(x => x.id === id);
       if (idx !== -1) PRODUCTS.splice(idx, 1);
       delete cart[id];
@@ -6818,6 +6988,33 @@ window.addEventListener('scroll', () => {
 
 // ─── INIT ──────────────────────────────────────────
 renderProducts();
+applyPrefetchedMenu();
+
+// The menu, settings and this week's stock, all public, read before the Firebase
+// connection exists. Painted once, together, so the grid never shows dishes first
+// and then rewrites them with the stock a moment later.
+function applyPrefetchedMenu() {
+  const pre = window.__nuikaPre;
+  if (!pre) return;
+  // The tally's address depends only on the settings, so it is requested as soon
+  // as those are in, beside the menu download rather than after it.
+  const stock = pre.settings.then(settings => {
+    if (_productsLoaded) return undefined;
+    if (!_settingsLoaded && settings) { _settingsCache = settings; _settingsLoaded = true; }
+    const url = 'https://nuika-5371f-default-rtdb.firebaseio.com/' + ROOT + '/stockUsed/' + String(currentCycle().start) + '.json';
+    return Promise.race([
+      fetch(url).then(r => r.ok ? r.json() : null).catch(() => undefined),
+      new Promise(res => setTimeout(() => res(undefined), 1500))   // never hold the menu hostage to the tally
+    ]);
+  });
+  Promise.all([pre.products, stock]).then(([products, tally]) => {
+    if (_productsLoaded) return;                           // the live listener got here first
+    if (!products || typeof products !== 'object') return; // empty or refused: leave it to the live listener
+    if (tally !== undefined && !_stockLive) STOCK_USED = tally || {};
+    ensurePhotos(Object.values(products).filter(p => p && p.inMenu !== false));   // photos start downloading the moment the dishes are known
+    applyProductsData(products);
+  });
+}
 
 
 // ─── DEADLINE MANAGEMENT ───────────────────────────

@@ -146,6 +146,7 @@ manifest — see the comment in the file.
 |---|---|
 | `nuika/products` | menu, prices, sold-out flags, stock caps, tags |
 | `nuika/orders` | every order, keyed by timestamp |
+| `nuika/productPhotos/{id}` | One photo per dish, as an image data URI. **Public read, admin write. Requires the rules to be published** (see below). A dish's `illustration` is then a marker `photo:<id>@<time>`; the marker is why `nuika/products` is small. Without the rules the code falls back to storing the photo inline, as before. |
 | `nuika/settings` | `ordersOpen`, `bitLink`, `payboxLink`, `deadline` |
 | `nuika/events` | Noy's events board — one record per event, each with `date` (`YYYY-MM-DD`), `title`, and optionally `place`, `time`, `body`, `ctaLabel`, `ctaText`, `created`. Public read (`events.html` shows it with no sign-in), admin write only. **Requires the rules to be published — see below.** |
 | `nuika/kitchen/pantry` | ingredients and prices |
@@ -229,6 +230,24 @@ eleven comments have to come out first. They are worth keeping in the file:
 they say why each node is locked.
 
 ## Things that will bite you
+
+**The menu has to load fast, and it does so in three ways. Do not undo any of them.**
+(1) `shop.html` starts reading `products`, `settings` and this week's `stockUsed` with
+plain `fetch()` from the very top of `<head>`, before Tailwind and the Firebase SDK
+have downloaded (`window.__nuikaPre`, applied by `applyPrefetchedMenu()`); the live
+listeners attach later and stay authoritative. Measured 17 Oct 2026: first dish at
+1.8-3.9 s before, about 1.1 s after, and the remainder was the 929KB products node.
+(2) Photos do not live in `nuika/products` any more but in `nuika/productPhotos`: when
+Noy opens the admin panel, `slimProductPhotos()` moves each old inline photo there
+(re-encoded at 640px) and leaves a marker. Customers fetch photos AFTER the dishes
+are on screen and they fade in. **Until the rules for `productPhotos` are published
+(`firebase-rules.paste.json` is the ready-to-paste copy), the same function only
+shrinks the photo inline.** Check with: `curl -s -o /dev/null -w '%{http_code}'
+https://nuika-5371f-default-rtdb.firebaseio.com/nuika/productPhotos.json` (200 = live).
+(3) `renderProducts()` skips a redraw that would change nothing; it used to rebuild the
+whole grid on every answer, which flickered. The soft reveal plays once per visit.
+The grid never draws `PRODUCTS` before Firebase has answered: that array is the
+first-run SEED, an old menu, and showing it was a bug.
 
 **The recipe editor must never lose what Noy typed.** Since 17 Oct 2026 the
 editor (`#recipe-editor-modal`) has no backdrop click-to-close: only the X

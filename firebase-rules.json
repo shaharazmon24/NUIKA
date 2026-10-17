@@ -29,6 +29,15 @@
         ".write": "auth != null && root.child('nuika/admins').child(auth.uid).val() === true"
       },
 
+      "productPhotos": {
+        "//": "One photo per dish, kept OUT of nuika/products on purpose. Every visitor downloads the whole products node before seeing a single dish; with the photos inside it that was 929KB. Public read (customers see the photos), admin write only, and every value must be an image data URI of a sane size.",
+        ".read": true,
+        ".write": "auth != null && root.child('nuika/admins').child(auth.uid).val() === true",
+        "$productId": {
+          ".validate": "newData.isString() && newData.val().length <= 400000 && newData.val().beginsWith('data:image/')"
+        }
+      },
+
       "events": {
         "//": "Noy's events board. Public read — events.html shows it to anyone, with no sign-in. Admin write only. Every field is typed for the same reason orders are: Noy's own text lands in the admin panel through innerHTML, and an untyped field is an injection route into a page holding a live database handle.",
         ".read": true,
