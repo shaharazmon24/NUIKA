@@ -240,7 +240,7 @@ listeners attach later and stay authoritative. Measured 17 Oct 2026: first dish 
 (2) Photos do not live in `nuika/products` any more but in `nuika/productPhotos`: when
 Noy opens the admin panel, `slimProductPhotos()` moves each old inline photo there
 (re-encoded at 640px) and leaves a marker. Customers fetch photos AFTER the dishes
-are on screen and they fade in. **Until the rules for `productPhotos` are published
+are on screen and they fade in. **Published by Shahar and verified from outside (HTTP 200) on 17 Oct 2026; the four inline photos were moved the same day and `nuika/products` fell from 929KB to 2.3KB. Had they not been published,
 (`firebase-rules.paste.json` is the ready-to-paste copy), the same function only
 shrinks the photo inline.** Check with: `curl -s -o /dev/null -w '%{http_code}'
 https://nuika-5371f-default-rtdb.firebaseio.com/nuika/productPhotos.json` (200 = live).
