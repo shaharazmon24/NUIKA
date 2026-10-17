@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bellefair&family=IBM+Plex+Sans+Hebrew:wght@200;300;400;500&display=swap">
-  <link rel="stylesheet" href="./site.css?v=6">
+  <link rel="stylesheet" href="./site.css?v=7">
 
   <style>
     /* The gallery page's own layout. Prefixed .gl- so nothing here can
@@ -98,8 +98,9 @@
       background: var(--wheat);
     }
 
-    /* Every fourth tile runs wide instead of square — the mix of shapes the
-       brief asks for, never the other way around. */
+    /* Landscape photos (the film frames) run wide; everything else is square.
+       gallery.json says which with "wide": true — never the other way around,
+       a portrait photo is not stretched into a wide tile. */
     .gl-tile--wide { grid-column: span 2; aspect-ratio: 2 / 1; }
 
     .gl-tile[hidden] { display: none; }
@@ -232,7 +233,7 @@
     <button type="button" class="gl-lb-close" id="glLbClose">×</button>
   </div>
 
-  <script src="./site.js?v=6"></script>
+  <script src="./site.js?v=7"></script>
   <script>
     // The gallery grid and its enlarged view. The manifest is fetched, not
     // hardcoded, so a new photo shoot only ever means editing gallery.json —
@@ -297,7 +298,11 @@
         });
 
       function tileHTML(entry, index) {
-        var wide = index % 4 === 0 ? ' gl-tile--wide' : '';
+        /* Wide is a property of the PHOTO, not of its place in the list. It
+           used to be every fourth tile, which was right while every picture
+           was a 2.66:1 film frame, and wrong the moment the order changed:
+           a tall phone photo in a wide tile loses two thirds of itself. */
+        var wide = entry.wide ? ' gl-tile--wide' : '';
         var alt = (entry.alt && entry.alt[currentLang()]) || '';
         return '<button type="button" class="gl-tile' + wide + '" data-index="' + index + '">' +
           '<img class="gl-thumb" src="' + esc('./images/gallery/' + entry.thumb) + '"' +

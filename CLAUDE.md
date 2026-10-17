@@ -164,6 +164,13 @@ into an admin panel would have to travel back into the repo anyway. The short
 road was taken instead, and it needs no database and no rules published:
 
 1. New photos go into `images/gallery/` and into `gallery.json` as usual.
+   Keep each photo at its **original resolution** (a phone photo is ~1200 px
+   wide; do not shrink it to ~700 — the gallery was once built from 676×1200
+   copies and looked soft; rebuilt from the originals on 17 Oct 2026). The
+   grid loads `thumb` (about 560 px wide for portraits, 1200 for wide ones);
+   the enlarged view loads `file`. Landscape photos get `"wide": true`; a
+   portrait photo must not. Order in the file is order on the page: Noy's own
+   photos first, the film frames last.
 2. Send Noy `nuika.co.il/gallery-captions.html`. It reads `gallery.json`, shows
    every photo with a box under it, saves her drafts to her own device as she
    types, and has a "show only what is missing" toggle so a second round only

@@ -137,8 +137,8 @@
          use. */
       '<p class="nu-orders" data-nuika-orders hidden></p>' +
       '<a class="nu-to-shop" href="./shop.html">' +
-        '<span lang-content="he">למאפייה של NUIKA</span>' +
-        '<span lang-content="en">To the NUIKA bakery</span>' +
+        '<span lang-content="he">תפריט והזמנות</span>' +
+        '<span lang-content="en">Menu &amp; orders</span>' +
       '</a>';
   }
 
