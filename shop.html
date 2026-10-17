@@ -2142,6 +2142,12 @@
     /* ── SHOP STATUS ────────────────────────────────────────────────────
        Open or closed, said before the menu instead of inside an alert box
        after a tap. */
+    .menu-loading-msg { grid-column: 1 / -1; text-align: center; margin: 0 0 6px; color: #5C564D; font-family: var(--font-text); font-size: 0.95rem; }
+    .menu-loading-msg.menu-failed { padding: 28px 12px; line-height: 1.9; }
+    .menu-retry { margin-top: 10px; font-family: var(--font-text); font-weight: 600; color: #FDFAF4; background: #6B2E1E; border: 0; border-radius: 999px; padding: 10px 22px; cursor: pointer; }
+    .product-skel { min-height: 250px; border-radius: 14px; background: linear-gradient(100deg, rgba(255,255,255,.35) 30%, rgba(255,255,255,.65) 50%, rgba(255,255,255,.35) 70%) #EFE1C7; background-size: 220% 100%; animation: skelSweep 1.4s ease-in-out infinite; }
+    @keyframes skelSweep { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+    @media (prefers-reduced-motion: reduce) { .product-skel { animation: none; } }
     .shop-status {
       max-width: 34rem;
       margin: 0 auto 1.75rem;
@@ -4452,8 +4458,34 @@ function menuProducts() {
   return PRODUCTS.filter(p => p.inMenu !== false);
 }
 
+// The PRODUCTS array in this file is the FIRST-RUN seed, not the menu. It is an
+// old list, and until 17 Oct 2026 it was painted on every page load, so for the
+// seconds Firebase took to answer a customer saw dishes and prices that were no
+// longer on offer, and could tap them. Nothing is drawn from it any more: until
+// the real menu has arrived the grid shows a loading state, and if it never
+// arrives it says so and offers a retry.
+function renderProductsLoading() {
+  const grid = document.getElementById('products-grid');
+  grid.setAttribute('aria-busy', 'true');
+  grid.innerHTML = '<p class="menu-loading-msg" role="status">' +
+      '<span lang-content="he">טוען את התפריט…</span><span lang-content="en">Loading the menu…</span></p>' +
+    new Array(10).join('<div class="product-skel" aria-hidden="true"></div>') + '<div class="product-skel" aria-hidden="true"></div>';
+}
+setTimeout(() => {
+  if (_productsLoaded) return;
+  const grid = document.getElementById('products-grid');
+  if (!grid) return;
+  grid.setAttribute('aria-busy', 'false');
+  grid.innerHTML = '<div class="menu-loading-msg menu-failed" role="alert">' +
+    '<span lang-content="he">לא הצלחנו לטעון את התפריט. בדקו את החיבור ונסו שוב.</span>' +
+    '<span lang-content="en">The menu could not be loaded. Check your connection and try again.</span><br>' +
+    '<button type="button" class="menu-retry" onclick="location.reload()"><span lang-content="he">לנסות שוב</span><span lang-content="en">Try again</span></button></div>';
+}, 12000);
+
 function renderProducts() {
   const grid = document.getElementById('products-grid');
+  if (!_productsLoaded) { renderProductsLoading(); return; }
+  grid.setAttribute('aria-busy', 'false');
   grid.innerHTML = menuProducts().map(p => {
     const remaining = getStockRemaining(p.id);
     const isAutoSoldOut = remaining !== null && remaining <= 0;
