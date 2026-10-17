@@ -148,6 +148,16 @@
     var foot = document.querySelector('[data-nuika-footer]');
     if (foot) foot.innerHTML = nuikaFooter();
 
+    /* A way past the menu, for keyboard and screen-reader users. Only on a
+       page that has a #main to jump to. */
+    if (document.getElementById('main') && !document.querySelector('.nu-skip')) {
+      var skip = document.createElement('a');
+      skip.className = 'nu-skip';
+      skip.href = '#main';
+      skip.innerHTML = '<span lang-content="he">דלגו לתוכן הראשי</span><span lang-content="en">Skip to main content</span>';
+      document.body.insertBefore(skip, document.body.firstChild);
+    }
+
     nuikaLang(readLang());
     releaseMotion();
 

@@ -3263,6 +3263,16 @@ if (want('pages')) {
       fail(`${SHOP}: ${what} does not link to ./${HOME} — the shop is a dead end again`);
   }
 
+  console.log('Launch files:');
+  for (const lf of ['robots.txt', 'sitemap.xml', '404.html', 'favicon.ico']) {
+    if (existsSync(join(ROOT, lf))) pass(`${lf} exists`);
+    else fail(`${lf} is missing — search engines, broken links or the browser tab would hit a bare error`);
+  }
+  const sm = existsSync(join(ROOT, 'sitemap.xml')) ? readFileSync(join(ROOT, 'sitemap.xml'), 'utf8') : '';
+  const missingFromMap = ['shop.html', 'story.html', 'gallery.html', 'events.html', 'contact.html'].filter(p => !sm.includes('/' + p));
+  if (missingFromMap.length) fail(`sitemap.xml leaves out ${missingFromMap.join(', ')}`);
+  else pass('sitemap.xml lists every public page');
+
   console.log('The story:');
   // The brief's literal Step 1 code calls readFileSync unguarded, which
   // throws ENOENT and crashes the whole process before story.html exists —

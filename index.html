@@ -44,6 +44,7 @@
   <meta property="og:image:width"  content="1200">
   <meta property="og:image:height" content="630">
   <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 
   <!-- Loaded here, not with @import, which would block rendering. Bellefair
@@ -51,7 +52,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bellefair&family=IBM+Plex+Sans+Hebrew:wght@200;300;400;500&display=swap">
-  <link rel="stylesheet" href="./site.css?v=7">
+  <link rel="stylesheet" href="./site.css?v=8">
 
   <style>
     /* The home page's own layout. Prefixed .hm- so nothing here can collide
@@ -165,6 +166,19 @@
        instead, at 16ch, both languages measure exactly 2 lines at 375, 768
        and 1280 — see task-3-report.md for the full measurement tables. */
     .hm-line { margin: 0; max-inline-size: 16ch; }
+    /* WCAG 2.2.2: a picture that moves by itself for more than five seconds has
+       to come with a way to stop it. */
+    /* .hm-screen > :not(.hm-film) makes every child of the screen position: relative
+       and a row of its grid; this one has to be taken out of both. */
+    .hm-screen > .hm-pause {
+      position: fixed; z-index: 6; inset-block-end: 16px; inset-inline-end: 16px;
+      min-block-size: 44px; padding: 8px 16px;
+      font: inherit; font-size: var(--t-small); color: var(--cream);
+      background: rgba(59, 42, 36, .62); border: 1px solid rgba(246, 240, 228, .6);
+      border-radius: 999px; cursor: pointer;
+    }
+    .hm-screen > .hm-pause[hidden] { display: none; }
+    .hm-pause:focus-visible { outline: 2px solid var(--cream); outline-offset: 3px; }
     .hm-acts { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 
     /* This is the one page whose whole promise is a single screen with
@@ -329,7 +343,7 @@
       })();
     </script>
     <header class="nu-header nu-header--on-film" data-nuika-header=""></header>
-    <main>
+    <main id="main" tabindex="-1">
       <div class="hm-mid rise">
         <p class="hm-line u-giant">
           <span lang-content="he">נואיקה מאפייה ארטיזנלית</span>
@@ -347,9 +361,13 @@
         </div>
       </div>
     </main>
+    <button type="button" class="hm-pause" id="hm-pause" hidden aria-pressed="false">
+      <span lang-content="he" id="hm-pause-he">השהיית הסרט</span>
+      <span lang-content="en" id="hm-pause-en">Pause the film</span>
+    </button>
     <footer class="nu-footer" data-nuika-footer></footer>
   </div>
-  <script src="./site.js?v=7"></script>
+  <script src="./site.js?v=8"></script>
   <script>
     /* The orders line in the footer: open or closed, and how long is left.
        The old splash gate this page replaced carried one, and it was the
@@ -477,15 +495,33 @@
         return;
       }
 
-      film.play().catch(function () {
+      var userPaused = false;
+      var btn = document.getElementById('hm-pause');
+      function paintBtn() {
+        document.getElementById('hm-pause-he').textContent = userPaused ? 'הפעלת הסרט' : 'השהיית הסרט';
+        document.getElementById('hm-pause-en').textContent = userPaused ? 'Play the film' : 'Pause the film';
+        btn.setAttribute('aria-pressed', userPaused ? 'true' : 'false');
+      }
+
+      film.play().then(function () {
+        // Only offered when the film is actually moving.
+        if (btn) btn.hidden = false;
+      }).catch(function () {
         // iOS in low power mode refuses autoplay outright. The poster is
         // already on screen and stays; there is nothing to recover from.
       });
 
+      if (btn) btn.addEventListener('click', function () {
+        userPaused = !userPaused;
+        if (userPaused) film.pause(); else film.play().catch(function () {});
+        paintBtn();
+      });
+
       // A film playing to nobody is somebody's data and somebody's battery.
+      // And a film somebody stopped stays stopped when they come back.
       document.addEventListener('visibilitychange', function () {
         if (document.hidden) film.pause();
-        else film.play().catch(function () {});
+        else if (!userPaused) film.play().catch(function () {});
       });
     })();
   </script>

@@ -21,6 +21,7 @@
   <meta name="apple-mobile-web-app-title" content="נואיקה" />
   <!-- Square icon: iOS squashes a non-square source into the home-screen tile -->
   <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="icon" href="favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
 
   <!-- OG / WhatsApp sharing -->
@@ -52,9 +53,9 @@
             earth:    '#6B2E1E',
             terracotta:'#B84830',
             sand:     '#D6A54A',
-            bark:     '#9C5A32',
+            bark:     '#7E4728',   /* was #9C5A32: 4.14:1 on parchment */
             ink:      '#3B2A24',
-            muted:    '#9B8B75',
+            muted:    '#6B655C',   /* was #9B8B75: 3.17:1 on the dialog ground; now the site's own muted */
             honey:    '#E0A83A',
           },
           fontFamily: {
@@ -2019,6 +2020,19 @@
     .nu-contacts { display: flex; gap: 10px; justify-content: center; align-items: center; }
     .nu-contacts a { color: inherit; text-decoration: none; border-block-end: 1px solid currentColor; }
     .nu-contacts a:hover { opacity: 1; }
+    .nu-back-home:focus-visible, .nu-contacts a:focus-visible { outline: 2px solid #F6F0E4; outline-offset: 3px; }
+    /* A keyboard user has to be able to see where they are. The shop had a ring
+       on its menu and nowhere else: product cards, the cart, the payment
+       options and every button fell back to the browser default or to nothing. */
+    a:focus-visible, button:focus-visible, [role="button"]:focus-visible,
+    [tabindex]:focus-visible, select:focus-visible, textarea:focus-visible,
+    input:focus-visible { outline: 2px solid #6B2E1E; outline-offset: 2px; }
+    input[type="radio"]:focus-visible + .payment-option { outline: 3px solid #6B2E1E; outline-offset: 2px; }
+    main:focus-visible, main[tabindex="-1"]:focus-visible { outline: none; }
+    /* First stop for a keyboard user: a way past the menu. */
+    .nu-skip { position: absolute; inset-inline-start: 12px; inset-block-start: -80px; z-index: 10000; background: #3B2A24; color: #F6F0E4; padding: 12px 18px; border-radius: 0 0 8px 8px; font-family: var(--font-text); font-size: 14px; text-decoration: none; }
+    .nu-skip:focus { inset-block-start: 0; outline: 2px solid #F6F0E4; outline-offset: -4px; }
+    main:focus { outline: none; }
     .nu-fine {
       margin: 0;
       font-family: var(--font-text);
@@ -2145,7 +2159,7 @@
       font-family: var(--font-text);
       font-size: 0.85rem;
       line-height: 1.7;
-      color: #6B655C;
+      color: #5C564D;   /* was #6B655C: 4.46:1 on the closed-notice tint */
     }
     .shop-status__note a {
       color: var(--terra-ink);
@@ -2327,6 +2341,8 @@
 
 <!-- The picture behind the menu. Decorative, so it carries no alt text and is
      hidden from assistive technology. -->
+<a class="nu-skip" href="#menu"><span lang-content="he">דלגו לתפריט</span><span lang-content="en">Skip to the menu</span></a>
+
 <div class="shop-bg" aria-hidden="true"></div>
 
 <!-- ============ HEADER ============ -->
@@ -2389,7 +2405,7 @@
      otherwise have no top-level heading at all. -->
 
 <!-- ============ PRODUCTS ============ -->
-<section id="menu" class="max-w-5xl mx-auto px-4 pb-44">
+<main id="menu" class="max-w-5xl mx-auto px-4 pb-44" tabindex="-1">
   <!-- Whether the shop is taking orders, said once and said here, before the
        menu rather than after a tap. Written by renderShopStatus(). -->
   <h1 class="u-sr">
@@ -2416,7 +2432,7 @@
   <div id="products-grid" class="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
     <!-- Cards injected by JS -->
   </div>
-</section>
+</main>
 
 <!-- ============ CART BAR ============ -->
 <div id="cart-bar">
@@ -2460,7 +2476,7 @@
   <div class="modal-box">
     <div class="flex items-center justify-between mb-6">
       <h2 id="modal-title" class="font-serif text-earth text-xl font-bold" lang-content="he">סיכום ופרטי הזמנה</h2>
-      <h2 id="modal-title" class="font-serif text-earth text-xl font-bold" lang-content="en">Order Summary</h2>
+      <h2 id="modal-title-en" class="font-serif text-earth text-xl font-bold" lang-content="en">Order Summary</h2>
       <button onclick="closeOrderModal()" class="text-muted hover:text-earth transition-colors cursor-pointer" aria-label="סגור">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
@@ -6658,6 +6674,9 @@ function toggleLang() {
   document.documentElement.setAttribute('lang', isEn ? 'en' : 'he');
   document.documentElement.setAttribute('dir', isEn ? 'ltr' : 'rtl');
   document.getElementById('lang-btn').textContent = isEn ? 'עב' : 'EN';
+  // The order dialog is named by whichever of its two headings is showing.
+  const _om = document.getElementById('order-modal');
+  if (_om) _om.setAttribute('aria-labelledby', isEn ? 'modal-title-en' : 'modal-title');
   applyTooltipLang();
   renderOrderSummary();
   updateProgressBar();

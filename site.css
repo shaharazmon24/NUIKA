@@ -506,3 +506,32 @@ html[lang="en"]       [lang-content="he"] { display: none; }
   .nu-nav { position: static; order: 3; width: 100%; gap: 16px; flex-wrap: wrap; }
   .nu-footer { padding: 28px 18px; gap: 12px; }
 }
+
+/* ---------- accessibility ---------- */
+/* The first thing a keyboard or screen-reader user reaches on every page: a way
+   past the menu. Invisible until it has focus. */
+.nu-skip {
+  position: absolute;
+  inset-inline-start: 12px;
+  inset-block-start: -80px;
+  z-index: 10000;
+  background: var(--ink);
+  color: var(--cream);
+  padding: 12px 18px;
+  border-radius: 0 0 8px 8px;
+  font-size: var(--t-small);
+  text-decoration: none;
+}
+.nu-skip:focus { inset-block-start: 0; outline: 2px solid var(--cream); outline-offset: -4px; }
+main:focus { outline: none; }
+
+/* The menu, the language button and the mark are links and buttons like any
+   other; a keyboard user has to be able to see which one they are on. */
+.nu-nav__item:focus-visible,
+.nu-lang:focus-visible,
+.nu-mark:focus-visible { outline: 2px solid var(--terra-deep); outline-offset: 4px; border-radius: 2px; }
+.nu-header--on-film .nu-nav__item:focus-visible,
+.nu-header--on-film .nu-lang:focus-visible,
+.nu-header--on-film .nu-mark:focus-visible { outline-color: var(--cream); }
+.nu-to-shop:focus-visible,
+.nu-soc:focus-visible { outline: 2px solid var(--cream); outline-offset: 3px; }

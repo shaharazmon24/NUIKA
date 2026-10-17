@@ -11,7 +11,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bellefair&family=IBM+Plex+Sans+Hebrew:wght@200;300;400;500&display=swap">
-  <link rel="stylesheet" href="./site.css?v=7">
+  <link rel="icon" href="./favicon.ico" sizes="any">
+  <link rel="stylesheet" href="./site.css?v=8">
 
   <style>
     /* The story page's own layout. Prefixed .st- so nothing here can collide
@@ -38,6 +39,12 @@
        phone `cover` crops it to a thin vertical slice. 61% across is where
        her face is; the default 50% would show the kitchen window instead. */
     .st-mv-img--noy { object-position: 61% 50%; }
+
+    .st-head { position: absolute; inset-block-start: 0; inset-inline: 0; z-index: 3; }
+    /* Room for the header that no longer sits in the flow: its measured height,
+       110px wide / 144px once the menu wraps under the mark. */
+    .st-move--top { padding-block-start: 110px; }
+    @media (max-width: 720px) { .st-move--top { padding-block-start: 144px; } }
 
     .st-mv-img {
       position: absolute;
@@ -137,10 +144,16 @@
   </style>
 </head>
 <body>
-  <section class="st-move st-move--photo">
+  <!-- The header used to sit inside the first photo section, which made it
+       neither a banner nor part of <main>: a screen reader saw a page with no
+       landmarks at all. It is a sibling above <main> now, laid over the photo
+       with CSS, and the first section leaves room for it. -->
+  <header class="nu-header nu-header--on-film st-head" data-nuika-header="story"></header>
+
+  <main id="main" tabindex="-1">
+  <section class="st-move st-move--photo st-move--top">
     <img class="st-mv-img st-mv-img--noy" src="./images/gallery/noy-pouring-kettle.jpg" alt="" loading="eager">
     <div class="st-mv-veil" aria-hidden="true"></div>
-    <header class="nu-header nu-header--on-film" data-nuika-header="story"></header>
     <div class="st-mv-frame">
       <h1 class="st-mv-lede rise">
         <span lang-content="he">כשאני חושבת מה ייכנס לתפריט השבוע, אני קודם כל מדמיינת מה בא לי לאכול הסופ״ש.</span>
@@ -175,8 +188,9 @@
       </a>
     </div>
   </section>
+  </main>
 
   <footer class="nu-footer" data-nuika-footer></footer>
-  <script src="./site.js?v=7"></script>
+  <script src="./site.js?v=8"></script>
 </body>
 </html>

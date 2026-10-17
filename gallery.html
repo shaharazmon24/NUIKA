@@ -11,7 +11,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bellefair&family=IBM+Plex+Sans+Hebrew:wght@200;300;400;500&display=swap">
-  <link rel="stylesheet" href="./site.css?v=7">
+  <link rel="icon" href="./favicon.ico" sizes="any">
+  <link rel="stylesheet" href="./site.css?v=8">
 
   <style>
     /* The gallery page's own layout. Prefixed .gl- so nothing here can
@@ -55,7 +56,7 @@
       border-radius: 999px;
       padding: 8px 22px;
       cursor: pointer;
-      opacity: .65;
+      opacity: .85;   /* was .65: 4.08:1 on the page ground, under the 4.5:1 floor */
       transition: background-color .18s ease, opacity .18s ease, border-color .18s ease;
     }
 
@@ -208,7 +209,7 @@
 <body>
   <header class="nu-header" data-nuika-header="gallery"></header>
 
-  <main class="gl-page">
+  <main class="gl-page" id="main" tabindex="-1">
     <div class="gl-head">
       <h1>
         <span lang-content="he">גלריה</span>
@@ -233,7 +234,7 @@
     <button type="button" class="gl-lb-close" id="glLbClose">×</button>
   </div>
 
-  <script src="./site.js?v=7"></script>
+  <script src="./site.js?v=8"></script>
   <script>
     // The gallery grid and its enlarged view. The manifest is fetched, not
     // hardcoded, so a new photo shoot only ever means editing gallery.json —
