@@ -2049,7 +2049,10 @@
     .nu-contacts { display: flex; gap: 10px; justify-content: center; align-items: center; }
     .nu-contacts a { color: inherit; text-decoration: none; border-block-end: 1px solid currentColor; }
     .nu-contacts a:hover { opacity: 1; }
-    .nu-back-home:focus-visible, .nu-contacts a:focus-visible { outline: 2px solid #F6F0E4; outline-offset: 3px; }
+    .nu-legal { display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: center; margin-top: 6px; }
+    .nu-legal a { color: inherit; font-family: var(--font-text); font-size: 12px; opacity: .8; text-decoration: underline; text-underline-offset: 3px; }
+    .nu-legal a:hover { opacity: 1; }
+    .nu-legal a:focus-visible, .nu-back-home:focus-visible, .nu-contacts a:focus-visible { outline: 2px solid #F6F0E4; outline-offset: 3px; }
     /* A keyboard user has to be able to see where they are. The shop had a ring
        on its menu and nowhere else: product cards, the cart, the payment
        options and every button fell back to the browser default or to nothing. */
@@ -2058,6 +2061,7 @@
     input:focus-visible { outline: 2px solid #6B2E1E; outline-offset: 2px; }
     input[type="radio"]:focus-visible + .payment-option { outline: 3px solid #6B2E1E; outline-offset: 2px; }
     main:focus-visible, main[tabindex="-1"]:focus-visible { outline: none; }
+    .order-legal a { color: #9E3C22; text-decoration: underline; }
     /* First stop for a keyboard user: a way past the menu. */
     .nu-skip { position: absolute; inset-inline-start: 12px; inset-block-start: -80px; z-index: 10000; background: #3B2A24; color: #F6F0E4; padding: 12px 18px; border-radius: 0 0 8px 8px; font-family: var(--font-text); font-size: 14px; text-decoration: none; }
     .nu-skip:focus { inset-block-start: 0; outline: 2px solid #F6F0E4; outline-offset: -4px; }
@@ -2610,6 +2614,9 @@
         <span lang-content="en">Send Order</span>
       </button>
     </div>
+
+    <p class="text-center text-muted text-xs mt-4 font-sans order-legal" lang-content="he">בשליחת ההזמנה אני מאשר/ת את <a href="./terms.html" target="_blank" rel="noopener">תנאי ההזמנה</a> ואת <a href="./privacy.html" target="_blank" rel="noopener">הודעת הפרטיות</a>.</p>
+    <p class="text-center text-muted text-xs mt-4 font-sans order-legal" lang-content="en">By sending the order I accept the <a href="./terms.html" target="_blank" rel="noopener">order terms</a> and the <a href="./privacy.html" target="_blank" rel="noopener">privacy notice</a> (Hebrew).</p>
 
     <p class="text-center text-muted text-xs mt-4 font-sans" lang-content="he">איסוף עצמי מ-ש. בן ציון 13, רחובות</p>
     <p class="text-center text-muted text-xs mt-4 font-sans" lang-content="en">Self pickup from S. Ben Zion 13, Rehovot</p>
@@ -3745,6 +3752,11 @@
       <span lang-content="he">ש. בן ציון 13, רחובות · איסוף בימי שישי</span>
       <span lang-content="en">S. Ben Zion 13, Rehovot · Friday pickup</span>
     </p>
+    <nav class="nu-legal" aria-label="מידע משפטי">
+      <a href="./terms.html"><span lang-content="he">תנאי הזמנה</span><span lang-content="en">Order terms</span></a>
+      <a href="./privacy.html"><span lang-content="he">הודעת פרטיות</span><span lang-content="en">Privacy notice</span></a>
+      <a href="./accessibility.html"><span lang-content="he">הצהרת נגישות</span><span lang-content="en">Accessibility statement</span></a>
+    </nav>
   </div>
 
   <a class="nu-back-home" href="./index.html">

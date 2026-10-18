@@ -536,3 +536,31 @@ main:focus { outline: none; }
 .nu-header--on-film .nu-mark:focus-visible { outline-color: var(--cream); }
 .nu-to-shop:focus-visible,
 .nu-soc:focus-visible { outline: 2px solid var(--cream); outline-offset: 3px; }
+
+/* ---------- legal pages ---------- */
+/* terms, privacy and the accessibility statement: long running text, so the
+   measure is capped and the headings are quiet. */
+.lg-main { max-inline-size: 760px; margin-inline: auto; padding: 64px 20px 72px; }
+.lg-title { text-align: center; margin: 0 0 6px; }
+.lg-updated { text-align: center; color: var(--muted); font-size: var(--t-small); margin: 0 0 40px; }
+.lg-body { font-size: 17px; line-height: 1.85; color: var(--ink); }
+.lg-body h2 { font-family: var(--font-display); font-weight: 400; font-size: 26px; line-height: 1.25; color: var(--terra-deep); margin: 38px 0 10px; }
+.lg-body p { margin: 0 0 14px; }
+.lg-body ul { margin: 0 0 14px; padding-inline-start: 22px; }
+.lg-body li { margin-block-end: 8px; }
+.lg-body a { color: var(--terra-deep); text-underline-offset: 3px; }
+.lg-body a:focus-visible { outline: 2px solid var(--terra-deep); outline-offset: 3px; }
+.lg-todo { background: #FFE98A; color: #3B2A24; padding: 0 4px; border-radius: 3px; }
+@media (max-width: 600px) { .lg-main { padding: 44px 16px 56px; } .lg-body { font-size: 16px; } }
+
+/* terms / privacy / accessibility, in the footer of every page */
+.nu-legal { display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: center; }
+.nu-legal a {
+  color: inherit;
+  font-size: var(--t-label);
+  opacity: .8;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.nu-legal a:hover { opacity: 1; }
+.nu-legal a:focus-visible { outline: 2px solid var(--cream); outline-offset: 3px; }

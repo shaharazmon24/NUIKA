@@ -222,7 +222,7 @@ const isInlineJs = attrs => {
 // missing file, in two separate phases, and the entry that should be checking
 // the real home page checks nothing at all. SHOP resolves to shop.html beside
 // it, so the two lists never overlap.
-const PAGES = [HOME, 'story.html', 'gallery.html', 'contact.html', 'events.html'];
+const PAGES = [HOME, 'story.html', 'gallery.html', 'contact.html', 'events.html', 'terms.html', 'privacy.html', 'accessibility.html'];
 
 // The token kinds a REGEX LITERAL can legally follow. This is the standard
 // rule every JavaScript tokeniser uses to tell `/` apart from division:
@@ -3263,6 +3263,22 @@ if (want('pages')) {
       fail(`${SHOP}: ${what} does not link to ./${HOME} — the shop is a dead end again`);
   }
 
+  console.log('Legal pages:');
+  // The three pages every footer links to; the order form points at two of them.
+  // A page that still has a visible "[יושלם: ...]" must not go live: it would put a
+  // blank where the owner's legal name, business number or email belongs.
+  for (const lp of ['terms.html', 'privacy.html', 'accessibility.html']) {
+    const lpPath = join(ROOT, lp);
+    if (!existsSync(lpPath)) { fail(`${lp} is missing — the footer of every page links to it`); continue; }
+    const lt = readFileSync(lpPath, 'utf8');
+    if (/יושלם/.test(lt)) fail(`${lp} still has an unfinished placeholder ("יושלם")`);
+    else pass(`${lp} has no unfinished placeholders`);
+  }
+  const siteJsText = existsSync(join(ROOT, 'site.js')) ? readFileSync(join(ROOT, 'site.js'), 'utf8') : '';
+  for (const lp of ['terms.html', 'privacy.html', 'accessibility.html']) {
+    if (siteJsText.includes('./' + lp)) pass(`the shared footer links to ${lp}`);
+    else fail(`site.js's footer does not link to ${lp}`);
+  }
   console.log('Launch files:');
   for (const lf of ['robots.txt', 'sitemap.xml', '404.html', 'favicon.ico']) {
     if (existsSync(join(ROOT, lf))) pass(`${lf} exists`);

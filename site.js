@@ -139,7 +139,15 @@
       '<a class="nu-to-shop" href="./shop.html">' +
         '<span lang-content="he">תפריט והזמנות</span>' +
         '<span lang-content="en">Menu &amp; orders</span>' +
-      '</a>';
+      '</a>' +
+      /* Terms, privacy and the accessibility statement are linked from every
+         page, because the order form that collects a name and a phone number
+         is reachable from every page. */
+      '<nav class="nu-legal" aria-label="מידע משפטי">' +
+        '<a href="./terms.html"><span lang-content="he">תנאי הזמנה</span><span lang-content="en">Order terms</span></a>' +
+        '<a href="./privacy.html"><span lang-content="he">הודעת פרטיות</span><span lang-content="en">Privacy notice</span></a>' +
+        '<a href="./accessibility.html"><span lang-content="he">הצהרת נגישות</span><span lang-content="en">Accessibility statement</span></a>' +
+      '</nav>';
   }
 
   function mount() {
