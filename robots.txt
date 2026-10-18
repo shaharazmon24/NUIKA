@@ -3,6 +3,5 @@ Allow: /
 Disallow: /admin.html
 Disallow: /gallery-captions.html
 Disallow: /kitchen-questions.html
-Disallow: /index.backup-v1.html
 
 Sitemap: https://nuika.co.il/sitemap.xml

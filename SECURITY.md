@@ -133,7 +133,7 @@ sign-in screen rather than editing anything in the console.
   address, not a credential. The rules are what protect the data. (The file was
   called `index.html` until the cutover of 21 Sep 2026; `index.html` is now the
   film front page and carries no Firebase config at all.)
-- **`index.backup-v1.html` is committed, so GitHub Pages serves it.** Measured
+- ~~**`index.backup-v1.html` is committed, so GitHub Pages serves it.**~~ **REMOVED 18 Oct 2026 with Shahar's approval (git rm, and its Disallow line in robots.txt); the old text follows for the record.** Measured
   22 Sep 2026: `https://nuika.co.il/index.backup-v1.html` returns HTTP 200,
   80,978 bytes, and contains the pre-Firebase source including
   `const ADMIN_PASSWORD = 'nuika2026';` in plain text. That mechanism no longer

@@ -60,7 +60,7 @@ const ADMIN_EMAIL     = 'noynaamad@gmail.com';      // prefills the sign-in fiel
 
 > **There is no `ADMIN_PASSWORD`, and this file used to print one.** Until 22 Sep 2026 this block listed `const ADMIN_PASSWORD = 'nuika2026';`. That mechanism was removed on 17 Aug 2026 and replaced by Firebase Auth against a real account, authorised by `nuika/admins/{uid}` with published database rules. **No password exists in the source.** Do not reintroduce one, and do not go looking for the old one.
 >
-> The string does still sit in `index.backup-v1.html`, which is committed and therefore **served publicly** — see *Known Gotchas* below.
+> The string used to sit in `index.backup-v1.html`, which was served publicly; that file was removed on 18 Oct 2026 (it remains only in git history, and is not a working credential).
 
 `DELIVERY_COST` and `MIN_ORDER` are also gone: ordering is pickup-only, and the minimum is a count of items, not a shekel total.
 
@@ -350,7 +350,7 @@ Products are persisted to `localStorage` key `nuika_products` when saved from ad
 
    > This item used to say stock "frees up accordingly" when Noy marks an order done or archives it, counted out of a `nuika_order_log` key in `localStorage`. Both halves are wrong: the log lives in Firebase, and freeing stock on status was a real bug — ticking a delivered order off handed its loaves back to the shop and oversold the week.
 
-6. **`index.backup-v1.html` is committed, and GitHub Pages serves it.** Measured 22 Sep 2026: `https://nuika.co.il/index.backup-v1.html` returns **HTTP 200**, 80,978 bytes, and contains the pre-Firebase source including `const ADMIN_PASSWORD = 'nuika2026';` in plain text.
+6. ~~**`index.backup-v1.html` is committed, and GitHub Pages serves it.**~~ **REMOVED 18 Oct 2026 with Shahar's approval (git rm, and its Disallow line in robots.txt); the old text follows for the record.** Measured 22 Sep 2026: `https://nuika.co.il/index.backup-v1.html` returns **HTTP 200**, 80,978 bytes, and contains the pre-Firebase source including `const ADMIN_PASSWORD = 'nuika2026';` in plain text.
 
    It is **not** a working credential for the admin panel — sign-in has been Firebase Auth against a real account since 17 Aug 2026, authorised by `nuika/admins/{uid}`, and the database rules are published. The risks are that the string may be reused somewhere else, and that a stale full copy of the shop sitting on the live site is the kind of thing someone restores from.
 

@@ -402,7 +402,7 @@ project has lost work before.
   If you are writing a check for this, the cheap first version is a list of
   filenames that must not appear in any `.md` — the whole class so far has been
   documents naming a file that has moved.
-- **`index.backup-v1.html` is committed and therefore served.** Measured 22 Sep
+- ~~**`index.backup-v1.html` is committed and therefore served.**~~ **REMOVED 18 Oct 2026 with Shahar's approval (git rm, and its Disallow line in robots.txt); the old text follows for the record.** Measured 22 Sep
   2026: HTTP 200 at `nuika.co.il/index.backup-v1.html`, 80,978 bytes, carrying
   the pre-Firebase source and `const ADMIN_PASSWORD = 'nuika2026';` in plain
   text. Not a working credential — sign-in has been Firebase Auth since 17 Aug
