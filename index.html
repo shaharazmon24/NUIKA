@@ -188,7 +188,14 @@
       background: rgba(59, 42, 36, .62); border: 1px solid rgba(246, 240, 228, .6);
       border-radius: 999px; cursor: pointer;
     }
+    .hm-screen > .hm-pause { display: inline-flex; align-items: center; gap: 8px; }
     .hm-screen > .hm-pause[hidden] { display: none; }
+    /* On a phone the words sat on top of the accessibility link in the footer row. The
+       round button needs no words (it has an accessible name) and fits the corner. */
+    @media (max-width: 720px) {
+      .hm-screen > .hm-pause { inline-size: 44px; padding: 0; justify-content: center; inset-block-end: 14px; inset-inline-end: 12px; }
+      .hm-pause__label { display: none !important; }
+    }
     .hm-pause:focus-visible { outline: 2px solid var(--cream); outline-offset: 3px; }
     .hm-acts { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 
@@ -372,9 +379,13 @@
         </div>
       </div>
     </main>
-    <button type="button" class="hm-pause" id="hm-pause" hidden aria-pressed="false">
-      <span lang-content="he" id="hm-pause-he">השהיית הסרט</span>
-      <span lang-content="en" id="hm-pause-en">Pause the film</span>
+    <button type="button" class="hm-pause" id="hm-pause" hidden aria-pressed="false" aria-label="השהיית הסרט / Pause the film">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+        <g id="hm-ic-pause"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></g>
+        <path id="hm-ic-play" d="M8 5.5v13a1 1 0 0 0 1.5.9l10.5-6.5a1 1 0 0 0 0-1.8L9.5 4.6A1 1 0 0 0 8 5.5Z" hidden/>
+      </svg>
+      <span class="hm-pause__label" lang-content="he" id="hm-pause-he">השהיית הסרט</span>
+      <span class="hm-pause__label" lang-content="en" id="hm-pause-en">Pause the film</span>
     </button>
     <footer class="nu-footer" data-nuika-footer></footer>
   </div>
@@ -509,6 +520,9 @@
       var userPaused = false;
       var btn = document.getElementById('hm-pause');
       function paintBtn() {
+        document.getElementById('hm-ic-pause').hidden = userPaused;
+        document.getElementById('hm-ic-play').hidden = !userPaused;
+        btn.setAttribute('aria-label', userPaused ? 'הפעלת הסרט / Play the film' : 'השהיית הסרט / Pause the film');
         document.getElementById('hm-pause-he').textContent = userPaused ? 'הפעלת הסרט' : 'השהיית הסרט';
         document.getElementById('hm-pause-en').textContent = userPaused ? 'Play the film' : 'Pause the film';
         btn.setAttribute('aria-pressed', userPaused ? 'true' : 'false');
