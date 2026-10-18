@@ -167,7 +167,21 @@
       max-block-size: 70svb;
       object-fit: contain;
       border-radius: 2px;
+      transition: opacity .3s ease;
     }
+    /* While the next photo downloads, the one on screen steps back and a ring turns, so a slow
+       connection reads as "loading" and not as "the gallery is stuck". */
+    .gl-lb-img.is-loading { opacity: .3; }
+    .gl-lb-spin {
+      position: absolute; inset-block-start: 50%; inset-inline-start: 50%;
+      inline-size: 38px; block-size: 38px; margin: -19px 0 0 -19px;
+      border: 3px solid rgba(246, 240, 228, .3); border-top-color: var(--cream); border-radius: 50%;
+      animation: glSpin .8s linear infinite; pointer-events: none;
+    }
+    [dir="rtl"] .gl-lb-spin { margin: -19px -19px 0 0; }
+    .gl-lb-spin[hidden] { display: none; }
+    @keyframes glSpin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .gl-lb-spin { animation: none; border-top-color: rgba(246, 240, 228, .3); } }
 
     .gl-lb-desc {
       margin: 0;
@@ -247,6 +261,7 @@
     </figure>
     <button type="button" class="gl-lb-arrow gl-lb-next" id="glLbNext">›</button>
     <button type="button" class="gl-lb-close" id="glLbClose">×</button>
+    <div class="gl-lb-spin" id="glLbSpin" role="status" aria-label="טוען תמונה" hidden></div>
   </div>
 
   <script src="./site.js?v=12"></script>
@@ -289,6 +304,8 @@
       var lbPrev    = document.getElementById('glLbPrev');
       var lbNext    = document.getElementById('glLbNext');
       var lbClose   = document.getElementById('glLbClose');
+      var lbSpin    = document.getElementById('glLbSpin');
+      var lbLoadToken = 0;   // so a slow photo that arrives late cannot clear the spinner of a newer one
 
       var entries     = [];   // the full manifest, in file order
       var visible     = [];   // indices into entries that pass the active filter
@@ -416,12 +433,40 @@
         lbClose.setAttribute('aria-label', ARIA.close[lang]);
       }
 
+      // Once the photo on screen has arrived, quietly fetch the one either side, so the arrow is
+      // instant. Not on a connection set to save data.
+      function preloadNeighbours() {
+        if (navigator.connection && navigator.connection.saveData) return;
+        [lbPos + 1, lbPos - 1].forEach(function (p) {
+          var i = visible[p];
+          if (i === undefined) return;
+          var e = entries[i];
+          var im = new Image();
+          im.src = './images/gallery/' + (e.view || e.file);
+        });
+      }
+
       function renderLightboxImage() {
         var entry = entries[visible[lbPos]];
         var alt = (entry.alt && entry.alt[currentLang()]) || '';
         // Property assignments, not innerHTML — the grid loads thumbnails,
         // but the enlarged view is the one place that loads the full image.
-        lbImg.src = './images/gallery/' + entry.file;
+        // The "view" copy (1400px on its long side), not the original: the original was a median
+        // 433KB and up to 1.1MB, which is 2-6 seconds of a blank screen on a phone connection.
+        var src = './images/gallery/' + (entry.view || entry.file);
+        var token = ++lbLoadToken;
+        function loaded() {
+          if (token !== lbLoadToken) return;
+          lbImg.classList.remove('is-loading');
+          lbSpin.hidden = true;
+          preloadNeighbours();
+        }
+        lbImg.classList.add('is-loading');
+        lbSpin.hidden = false;
+        lbImg.onload = loaded;
+        lbImg.onerror = loaded;
+        lbImg.src = src;
+        if (lbImg.complete && lbImg.naturalWidth) loaded();   // already in the browser's cache: no load event will come
         lbImg.alt = alt;
 
         /* Noy's own words, when she has written them, and nothing at all when
@@ -485,6 +530,8 @@
 
       function closeLightbox() {
         lb.hidden = true;
+        lbLoadToken++;
+        lbSpin.hidden = true;
         lbPos = -1;
         document.removeEventListener('keydown', onLbKeydown);
         document.documentElement.style.overflow = '';

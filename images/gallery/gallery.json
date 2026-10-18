@@ -2,6 +2,7 @@
   {
     "file": "fruit-danishes-sugared.jpg",
     "thumb": "fruit-danishes-sugared-thumb.jpg",
+    "view": "fruit-danishes-sugared-view.jpg",
     "tag": "sweet",
     "alt": {
       "he": "מאפי שמרים במילוי פירות, מפוזרים בסוכר אבקה",
@@ -11,6 +12,7 @@
   {
     "file": "chocolate-babka-knots.jpg",
     "thumb": "chocolate-babka-knots-thumb.jpg",
+    "view": "chocolate-babka-knots-view.jpg",
     "tag": "sweet",
     "alt": {
       "he": "קשרי בבקה שוקולד על נייר אפייה",
@@ -20,6 +22,7 @@
   {
     "file": "seeded-round-loaf.jpg",
     "thumb": "seeded-round-loaf-thumb.jpg",
+    "view": "seeded-round-loaf-view.jpg",
     "tag": "bread",
     "alt": {
       "he": "כיכר עגולה בציפוי זרעים וזעתר",
@@ -39,6 +42,7 @@
   {
     "file": "babka-slice-on-plate.jpg",
     "thumb": "babka-slice-on-plate-thumb.jpg",
+    "view": "babka-slice-on-plate-view.jpg",
     "tag": "sweet",
     "alt": {
       "he": "פרוסת בבקה שוקולד ואגוזים על צלחת, מדפי המטבח מאחור",
@@ -48,6 +52,7 @@
   {
     "file": "cream-filled-pastries.jpg",
     "thumb": "cream-filled-pastries-thumb.jpg",
+    "view": "cream-filled-pastries-view.jpg",
     "tag": "sweet",
     "alt": {
       "he": "מאפים במילוי קרם על מגש כהה",
@@ -57,6 +62,7 @@
   {
     "file": "seeded-challah-in-hand.jpg",
     "thumb": "seeded-challah-in-hand-thumb.jpg",
+    "view": "seeded-challah-in-hand-view.jpg",
     "tag": "bread",
     "alt": {
       "he": "חלה מכוסה זרעים, מוחזקת ביד",
@@ -66,6 +72,7 @@
   {
     "file": "pastry-dipped-in-labneh.jpg",
     "thumb": "pastry-dipped-in-labneh-thumb.jpg",
+    "view": "pastry-dipped-in-labneh-view.jpg",
     "tag": "kitchen",
     "alt": {
       "he": "יד טובלת מאפה במילוי עלים בלאבנה ובשמן ירוק",
@@ -75,6 +82,7 @@
   {
     "file": "sourdough-crumb-halved.jpg",
     "thumb": "sourdough-crumb-halved-thumb.jpg",
+    "view": "sourdough-crumb-halved-view.jpg",
     "tag": "bread",
     "alt": {
       "he": "כיכר מחמצת חצויה, הפתיל שלה גלוי",
@@ -84,6 +92,7 @@
   {
     "file": "scored-loaf-against-green.jpg",
     "thumb": "scored-loaf-against-green-thumb.jpg",
+    "view": "scored-loaf-against-green-view.jpg",
     "tag": "bread",
     "alt": {
       "he": "כיכר מחמצת משוריטת מורמת אל מול הגינה",
@@ -93,6 +102,7 @@
   {
     "file": "babka-knots-tray.jpg",
     "thumb": "babka-knots-tray-thumb.jpg",
+    "view": "babka-knots-tray-view.jpg",
     "tag": "sweet",
     "alt": {
       "he": "מגש קשרי בבקה זהובים",
@@ -102,6 +112,7 @@
   {
     "file": "dark-loaves-on-board.jpg",
     "thumb": "dark-loaves-on-board-thumb.jpg",
+    "view": "dark-loaves-on-board-view.jpg",
     "tag": "bread",
     "alt": {
       "he": "כיכרות כהות ומוארכות על קרש",
@@ -111,6 +122,7 @@
   {
     "file": "almond-babka-knots.jpg",
     "thumb": "almond-babka-knots-thumb.jpg",
+    "view": "almond-babka-knots-view.jpg",
     "tag": "sweet",
     "alt": {
       "he": "קשרי בבקה בציפוי שקדים פרוסים",
@@ -120,6 +132,7 @@
   {
     "file": "loaf-in-window-light.jpg",
     "thumb": "loaf-in-window-light-thumb.jpg",
+    "view": "loaf-in-window-light-view.jpg",
     "tag": "bread",
     "alt": {
       "he": "כיכר משוריטת באור חלון מפוספס",
@@ -129,6 +142,7 @@
   {
     "file": "chocolate-babka-loaves.jpg",
     "thumb": "chocolate-babka-loaves-thumb.jpg",
+    "view": "chocolate-babka-loaves-view.jpg",
     "tag": "sweet",
     "alt": {
       "he": "כיכרות בבקה שוקולד, גבעולים ירוקים לצידן",
@@ -138,6 +152,7 @@
   {
     "file": "herbs-drying.jpg",
     "thumb": "herbs-drying-thumb.jpg",
+    "view": "herbs-drying-view.jpg",
     "tag": "kitchen",
     "alt": {
       "he": "עלי תבלין פרושים לייבוש על בד ורוד",
@@ -147,6 +162,7 @@
   {
     "file": "savoury-galettes-tray.jpg",
     "thumb": "savoury-galettes-tray-thumb.jpg",
+    "view": "savoury-galettes-tray-view.jpg",
     "tag": "kitchen",
     "alt": {
       "he": "גלטים מלוחים במילוי גרגרים ועשבי תיבול על מגש",
@@ -156,6 +172,7 @@
   {
     "file": "sesame-loaf-in-box.jpg",
     "thumb": "sesame-loaf-in-box-thumb.jpg",
+    "view": "sesame-loaf-in-box-view.jpg",
     "tag": "bread",
     "alt": {
       "he": "יד מושטת אל כיכר שומשום בתוך קופסה",
@@ -165,6 +182,7 @@
   {
     "file": "plum-galette-in-hand.jpg",
     "thumb": "plum-galette-in-hand-thumb.jpg",
+    "view": "plum-galette-in-hand-view.jpg",
     "tag": "sweet",
     "alt": {
       "he": "גלט שזיפים בשקדים פרוסים, מוחזק מול עציצי תבלין",
@@ -174,6 +192,7 @@
   {
     "file": "babka-knots-on-wood.jpg",
     "thumb": "babka-knots-on-wood-thumb.jpg",
+    "view": "babka-knots-on-wood-view.jpg",
     "tag": "sweet",
     "alt": {
       "he": "קשרי בבקה על משטח עץ",
@@ -183,6 +202,7 @@
   {
     "file": "cherry-babka-knots.jpg",
     "thumb": "cherry-babka-knots-thumb.jpg",
+    "view": "cherry-babka-knots-view.jpg",
     "tag": "sweet",
     "alt": {
       "he": "קשרי בבקה בציפוי דובדבנים",
@@ -192,6 +212,7 @@
   {
     "file": "round-loaf-in-the-garden.jpg",
     "thumb": "round-loaf-in-the-garden-thumb.jpg",
+    "view": "round-loaf-in-the-garden-view.jpg",
     "tag": "bread",
     "alt": {
       "he": "כיכר עגולה מורמת מול צמחייה",
@@ -201,6 +222,7 @@
   {
     "file": "topped-loaf-in-hand.jpg",
     "thumb": "topped-loaf-in-hand-thumb.jpg",
+    "view": "topped-loaf-in-hand-view.jpg",
     "tag": "bread",
     "alt": {
       "he": "כיכר בציפוי עשיר, מוחזקת באור שמש",
@@ -210,6 +232,7 @@
   {
     "file": "diamond-scored-loaf.jpg",
     "thumb": "diamond-scored-loaf-thumb.jpg",
+    "view": "diamond-scored-loaf-view.jpg",
     "tag": "bread",
     "alt": {
       "he": "כיכר מחמצת בשריטת מעוינים, מוחזקת אל מול המרפסת",
@@ -219,6 +242,7 @@
   {
     "file": "pearl-sugar-knot.jpg",
     "thumb": "pearl-sugar-knot-thumb.jpg",
+    "view": "pearl-sugar-knot-view.jpg",
     "tag": "sweet",
     "alt": {
       "he": "קשר בצק גדול בסוכר פנינה, עלי ורד וגרעיני דלעת",
@@ -228,6 +252,7 @@
   {
     "file": "babka-loaves-side-by-side.jpg",
     "thumb": "babka-loaves-side-by-side-thumb.jpg",
+    "view": "babka-loaves-side-by-side-view.jpg",
     "tag": "sweet",
     "alt": {
       "he": "כיכרות בבקה שוקולד זו לצד זו",
@@ -237,6 +262,7 @@
   {
     "file": "almond-squares-dusted.jpg",
     "thumb": "almond-squares-dusted-thumb.jpg",
+    "view": "almond-squares-dusted-view.jpg",
     "tag": "sweet",
     "alt": {
       "he": "ריבועי שקדים מפוזרים בסוכר אבקה",
@@ -246,6 +272,7 @@
   {
     "file": "pastry-with-labneh.jpg",
     "thumb": "pastry-with-labneh-thumb.jpg",
+    "view": "pastry-with-labneh-view.jpg",
     "tag": "kitchen",
     "alt": {
       "he": "מאפה מלוח בגרגרים ועשבי תיבול לצד לאבנה ושמן זית",
@@ -255,6 +282,7 @@
   {
     "file": "apple-galette-on-lace.jpg",
     "thumb": "apple-galette-on-lace-thumb.jpg",
+    "view": "apple-galette-on-lace-view.jpg",
     "tag": "sweet",
     "alt": {
       "he": "גלט תפוחים בקרמל ועשבי תיבול על צלחת תחרה",
@@ -264,6 +292,7 @@
   {
     "file": "almond-crowned-knot.jpg",
     "thumb": "almond-crowned-knot-thumb.jpg",
+    "view": "almond-crowned-knot-view.jpg",
     "tag": "sweet",
     "alt": {
       "he": "קשר בצק מכוסה כולו בשקדים פרוסים",
@@ -273,6 +302,7 @@
   {
     "file": "babka-in-striped-light.jpg",
     "thumb": "babka-in-striped-light-thumb.jpg",
+    "view": "babka-in-striped-light-view.jpg",
     "tag": "sweet",
     "alt": {
       "he": "בבקה כהה על מדף, באור מפוספס",
@@ -282,6 +312,7 @@
   {
     "file": "hands-on-scored-loaf.jpg",
     "thumb": "hands-on-scored-loaf-thumb.jpg",
+    "view": "hands-on-scored-loaf-view.jpg",
     "tag": "bread",
     "alt": {
       "he": "ידיים על כיכר מחמצת משוריטת",
@@ -292,6 +323,7 @@
   {
     "file": "open-sandwiches-tomato.jpg",
     "thumb": "open-sandwiches-tomato-thumb.jpg",
+    "view": "open-sandwiches-tomato-view.jpg",
     "tag": "bread",
     "alt": {
       "he": "כריכים פתוחים על לחם מחמצת, עגבניות ושמיר",
@@ -302,6 +334,7 @@
   {
     "file": "round-sourdough-peel.jpg",
     "thumb": "round-sourdough-peel-thumb.jpg",
+    "view": "round-sourdough-peel-view.jpg",
     "tag": "bread",
     "alt": {
       "he": "כיכר מחמצת עגולה על מרדה עץ",
@@ -312,6 +345,7 @@
   {
     "file": "rustic-loaf-crust.jpg",
     "thumb": "rustic-loaf-crust-thumb.jpg",
+    "view": "rustic-loaf-crust-view.jpg",
     "tag": "bread",
     "alt": {
       "he": "קרום של כיכר כפרית מקרוב",
@@ -322,6 +356,7 @@
   {
     "file": "slicing-dark-loaf.jpg",
     "thumb": "slicing-dark-loaf-thumb.jpg",
+    "view": "slicing-dark-loaf-view.jpg",
     "tag": "bread",
     "alt": {
       "he": "פריסת כיכר כהה בסכין",
@@ -332,6 +367,7 @@
   {
     "file": "seeded-braid-hands.jpg",
     "thumb": "seeded-braid-hands-thumb.jpg",
+    "view": "seeded-braid-hands-view.jpg",
     "tag": "bread",
     "alt": {
       "he": "ידיים על צמה מכוסה גרעינים",
@@ -342,6 +378,7 @@
   {
     "file": "slicing-scored-loaf.jpg",
     "thumb": "slicing-scored-loaf-thumb.jpg",
+    "view": "slicing-scored-loaf-view.jpg",
     "tag": "bread",
     "alt": {
       "he": "פריסת כיכר משוריטת על קרש",
@@ -352,6 +389,7 @@
   {
     "file": "seeded-dough-balls.jpg",
     "thumb": "seeded-dough-balls-thumb.jpg",
+    "view": "seeded-dough-balls-view.jpg",
     "tag": "bread",
     "alt": {
       "he": "כדורי בצק עם גרעיני פרג, פרחים ורודים ברקע",
@@ -362,6 +400,7 @@
   {
     "file": "sugared-round-pastry.jpg",
     "thumb": "sugared-round-pastry-thumb.jpg",
+    "view": "sugared-round-pastry-view.jpg",
     "tag": "sweet",
     "alt": {
       "he": "מאפה עגול ואבקת סוכר נושרת",
@@ -372,6 +411,7 @@
   {
     "file": "brushing-poppy-twist.jpg",
     "thumb": "brushing-poppy-twist-thumb.jpg",
+    "view": "brushing-poppy-twist-view.jpg",
     "tag": "sweet",
     "alt": {
       "he": "מריחת ביצה על מאפה פרג במברשת",
@@ -382,6 +422,7 @@
   {
     "file": "powdered-sugar-pastry.jpg",
     "thumb": "powdered-sugar-pastry-thumb.jpg",
+    "view": "powdered-sugar-pastry-view.jpg",
     "tag": "sweet",
     "alt": {
       "he": "מאפה מקומח באבקת סוכר",
@@ -392,6 +433,7 @@
   {
     "file": "seeded-braid-oil.jpg",
     "thumb": "seeded-braid-oil-thumb.jpg",
+    "view": "seeded-braid-oil-view.jpg",
     "tag": "sweet",
     "alt": {
       "he": "צמה מכוסה גרעינים, שמן נמזג, ופרחים",
@@ -402,6 +444,7 @@
   {
     "file": "plum-tart-plate.jpg",
     "thumb": "plum-tart-plate-thumb.jpg",
+    "view": "plum-tart-plate-view.jpg",
     "tag": "sweet",
     "alt": {
       "he": "טארט שזיפים על צלחת",
@@ -412,6 +455,7 @@
   {
     "file": "raspberry-jam-disc.jpg",
     "thumb": "raspberry-jam-disc-thumb.jpg",
+    "view": "raspberry-jam-disc-view.jpg",
     "tag": "sweet",
     "alt": {
       "he": "פטל וריבה על בסיס מאפה",
@@ -422,6 +466,7 @@
   {
     "file": "plum-pastry-folded.jpg",
     "thumb": "plum-pastry-folded-thumb.jpg",
+    "view": "plum-pastry-folded-view.jpg",
     "tag": "sweet",
     "alt": {
       "he": "מאפה שזיפים מקופל, לצד מחבת שזיפים",
@@ -432,6 +477,7 @@
   {
     "file": "plums-glistening.jpg",
     "thumb": "plums-glistening-thumb.jpg",
+    "view": "plums-glistening-view.jpg",
     "tag": "sweet",
     "alt": {
       "he": "חצאי שזיפים מבריקים",
@@ -442,6 +488,7 @@
   {
     "file": "noy-by-the-window.jpg",
     "thumb": "noy-by-the-window-thumb.jpg",
+    "view": "noy-by-the-window-view.jpg",
     "tag": "kitchen",
     "alt": {
       "he": "נוי ליד החלון",
@@ -452,6 +499,7 @@
   {
     "file": "vanilla-pods.jpg",
     "thumb": "vanilla-pods-thumb.jpg",
+    "view": "vanilla-pods-view.jpg",
     "tag": "kitchen",
     "alt": {
       "he": "גרידת מקלות וניל על קרש",
@@ -462,6 +510,7 @@
   {
     "file": "kitchen-wide.jpg",
     "thumb": "kitchen-wide-thumb.jpg",
+    "view": "kitchen-wide-view.jpg",
     "tag": "kitchen",
     "alt": {
       "he": "המטבח של נוי, מבט רחב",
@@ -472,6 +521,7 @@
   {
     "file": "flour-dust-flowers.jpg",
     "thumb": "flour-dust-flowers-thumb.jpg",
+    "view": "flour-dust-flowers-view.jpg",
     "tag": "kitchen",
     "alt": {
       "he": "ענן קמח ופרחים ורודים",
@@ -482,6 +532,7 @@
   {
     "file": "banneton-flowers.jpg",
     "thumb": "banneton-flowers-thumb.jpg",
+    "view": "banneton-flowers-view.jpg",
     "tag": "kitchen",
     "alt": {
       "he": "סלסלת התפחה, פרחים וקמח נושר",
@@ -492,6 +543,7 @@
   {
     "file": "noy-pouring-kettle.jpg",
     "thumb": "noy-pouring-kettle-thumb.jpg",
+    "view": "noy-pouring-kettle-view.jpg",
     "tag": "kitchen",
     "alt": {
       "he": "נוי מוזגת מקומקום",
@@ -502,6 +554,7 @@
   {
     "file": "noy-shaping-dough.jpg",
     "thumb": "noy-shaping-dough-thumb.jpg",
+    "view": "noy-shaping-dough-view.jpg",
     "tag": "kitchen",
     "alt": {
       "he": "נוי מעצבת בצק על השיש",
@@ -512,6 +565,7 @@
   {
     "file": "noy-portrait-flowers.jpg",
     "thumb": "noy-portrait-flowers-thumb.jpg",
+    "view": "noy-portrait-flowers-view.jpg",
     "tag": "kitchen",
     "alt": {
       "he": "נוי, מבעד לפרחים",
