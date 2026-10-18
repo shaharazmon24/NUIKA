@@ -2640,13 +2640,32 @@
     <!-- Order summary box -->
     <div class="ty-summary bg-white/70 border border-parchment rounded-2xl p-5 mb-6 text-right" id="ty-order-box" style="backdrop-filter:blur(8px);"></div>
 
-    <!-- Bit payment QR -->
+    <!-- How to pay, for the way this customer chose to pay. The QR code used to be
+         shown to everyone, and a phone cannot scan its own screen: the Bit link Noy
+         saves in settings was never offered at all, so a customer on a phone had no
+         way to pay. -->
     <div class="ty-btn flex flex-col gap-3">
-      <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:16px;padding:16px;text-align:center;">
-        <p class="font-serif font-bold" style="color:#6B2E1E;font-size:0.92rem;margin-bottom:10px;" lang-content="he">סרקו לתשלום ב-Bit</p>
-        <p class="font-serif font-bold" style="color:#6B2E1E;font-size:0.92rem;margin-bottom:10px;" lang-content="en">Scan to pay via Bit</p>
-        <img src="images/bit-qr.jpg" alt="קוד QR לתשלום ב-Bit" style="width:180px;max-width:60%;margin:0 auto;border-radius:8px;display:block;" />
+      <p id="ty-amount" class="font-serif font-bold text-earth" style="font-size:1.05rem;text-align:center;margin:0;"></p>
+
+      <div id="ty-pay-cash" style="display:none;background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:16px;padding:16px;text-align:center;">
+        <p class="font-sans text-ink" style="font-size:0.92rem;margin:0;" lang-content="he">התשלום במזומן בעת האיסוף.</p>
+        <p class="font-sans text-ink" style="font-size:0.92rem;margin:0;" lang-content="en">Pay in cash when you pick up.</p>
       </div>
+
+      <div id="ty-pay-bit" style="display:none;" class="flex flex-col gap-3">
+        <a id="ty-bit-btn" href="#" target="_blank" rel="noopener"
+           class="block w-full text-center font-serif font-bold text-base py-3.5 rounded-full transition-colors cursor-pointer"
+           style="background:#B84830;color:#EFE6D6;display:none;">
+          <span lang-content="he">לתשלום ב-Bit →</span>
+          <span lang-content="en">Pay with Bit →</span>
+        </a>
+        <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:16px;padding:16px;text-align:center;">
+          <p class="font-sans text-muted" style="font-size:0.85rem;margin:0 0 10px;" lang-content="he">אפשר גם לסרוק ממכשיר אחר:</p>
+          <p class="font-sans text-muted" style="font-size:0.85rem;margin:0 0 10px;" lang-content="en">Or scan from another device:</p>
+          <img src="images/bit-qr.jpg" alt="קוד QR לתשלום ב-Bit" style="width:180px;max-width:60%;margin:0 auto;border-radius:8px;display:block;" />
+        </div>
+      </div>
+
       <a id="paybox-link" href="#" target="_blank" rel="noopener"
          class="block w-full text-center font-serif font-bold text-base py-3.5 rounded-full transition-colors cursor-pointer"
          style="background:#B84830;color:#EFE6D6;display:none;">
@@ -5030,9 +5049,19 @@ function showThankYou({ name, lines, grandTotal, phone }) {
     </div>
   `;
 
+  // Only the way this customer chose to pay is shown, with the amount in front of it.
+  const method = paymentMethod;
+  const safeLink = u => (typeof u === 'string' && /^https:\/\//.test(u)) ? u : '';
+  document.getElementById('ty-amount').textContent = (isHe ? 'הסכום לתשלום: ₪' : 'Amount to pay: ₪') + grandTotal;
+  document.getElementById('ty-pay-cash').style.display = method === 'cash' ? 'block' : 'none';
+  document.getElementById('ty-pay-bit').style.display  = method === 'bit'  ? 'flex'  : 'none';
+  const bitBtn = document.getElementById('ty-bit-btn');
+  const savedBit = safeLink(_settingsCache.bitLink);
+  if (savedBit) { bitBtn.href = savedBit; bitBtn.style.display = 'block'; } else { bitBtn.style.display = 'none'; }
+
   // PayBox link — from Firebase so it reaches every customer, not just this device
   const payboxLinkEl = document.getElementById('paybox-link');
-  const savedPaybox = _settingsCache.payboxLink || '';
+  const savedPaybox = method === 'paybox' ? safeLink(_settingsCache.payboxLink) : '';
   if (payboxLinkEl) {
     if (savedPaybox) {
       payboxLinkEl.href = savedPaybox;
@@ -5542,8 +5571,8 @@ function renderShopStatus(isOpen) {
     box.className = 'shop-status is-loading';
     box.innerHTML =
       '<p class="shop-status__note">' +
-        '<span lang-content="he">מינימום ' + MIN_ORDER_ITEMS + ' מוצרים להזמנה · איסוף עצמי מרחובות</span>' +
-        '<span lang-content="en">Minimum ' + MIN_ORDER_ITEMS + ' items · self pickup from Rehovot</span>' +
+        '<span lang-content="he">מינימום ' + MIN_ORDER_ITEMS + ' מוצרים להזמנה · איסוף עצמי מ-ש. בן ציון 13, רחובות</span>' +
+        '<span lang-content="en">Minimum ' + MIN_ORDER_ITEMS + ' items · self pickup from S. Ben Zion 13, Rehovot</span>' +
       '</p>';
     return;
   }
@@ -5558,8 +5587,8 @@ function renderShopStatus(isOpen) {
         '<span lang-content="en">Orders are open' + (en ? ' · closing ' + en : '') + '</span>' +
       '</p>' +
       '<p class="shop-status__note">' +
-        '<span lang-content="he">מינימום ' + MIN_ORDER_ITEMS + ' מוצרים להזמנה · איסוף עצמי מרחובות</span>' +
-        '<span lang-content="en">Minimum ' + MIN_ORDER_ITEMS + ' items · self pickup from Rehovot</span>' +
+        '<span lang-content="he">מינימום ' + MIN_ORDER_ITEMS + ' מוצרים להזמנה · איסוף עצמי מ-ש. בן ציון 13, רחובות</span>' +
+        '<span lang-content="en">Minimum ' + MIN_ORDER_ITEMS + ' items · self pickup from S. Ben Zion 13, Rehovot</span>' +
       '</p>';
   } else {
     box.className = 'shop-status is-closed';
