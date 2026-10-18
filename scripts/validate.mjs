@@ -3281,6 +3281,25 @@ if (want('pages')) {
     if (siteJsText.includes('./' + lp)) pass(`the shared footer links to ${lp}`);
     else fail(`site.js's footer does not link to ${lp}`);
   }
+  console.log('Shop CSS:');
+  // shop.html no longer loads Tailwind at run time: the utility classes it uses are generated CSS
+  // kept in <style id="tw-static">. A class used in the markup with no rule behind it would simply
+  // not be styled, silently. So: every static class that LOOKS like a Tailwind utility has to have
+  // a rule somewhere in the file's own styles.
+  {
+    const shopSrc = readFileSync(join(ROOT, SHOP), 'utf8');
+    if (/cdn\.tailwindcss\.com"/.test(shopSrc)) fail('shop.html loads the Tailwind CDN script again: it blocks the first paint and compiles in every visitor\'s browser');
+    else pass('shop.html does not load the Tailwind CDN script');
+    const styleText = [...shopSrc.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m => m[1]).join('\n');
+    const defined = new Set([...styleText.matchAll(/\.((?:\\.|[A-Za-z0-9_-])+)/g)].map(m => m[1].replace(/\\(.)/g, '$1')));
+    const UTIL = /^(?:(?:sm|md|lg|xl|hover|focus|active|disabled):)*(?:-?(?:bg|text|border|p[xytblr]?|m[xytblr]?|w|h|min-w|min-h|max-w|max-h|gap|space-x|space-y|rounded|font|leading|tracking|shadow|opacity|z|top|left|right|bottom|inset|overflow|cursor|transition|duration|col|row|order|self|object|aspect|whitespace|grid-cols|items|justify|flex|basis|grow|shrink)-[^\s]+|flex|grid|block|inline-block|inline-flex|hidden|absolute|relative|fixed|sticky|sr-only|uppercase|underline|truncate|italic|rounded|border|shadow)$/;
+    const used = new Set();
+    for (const m of shopSrc.matchAll(/class="([^"]*)"/g)) { if (m[1].includes('${')) continue; m[1].split(/\s+/).forEach(t => t && used.add(t)); }
+    const missing = [...used].filter(t => UTIL.test(t) && !defined.has(t));
+    if (missing.length) fail(`shop.html uses ${missing.length} Tailwind-style class(es) with no CSS behind them: ${missing.slice(0, 8).join(', ')} — regenerate the <style id="tw-static"> block (CLAUDE.md, "The shop's CSS")`);
+    else pass(`every Tailwind-style class used in shop.html's markup has a rule (${used.size} classes checked)`);
+  }
+
   console.log('Launch files:');
   for (const lf of ['robots.txt', 'sitemap.xml', '404.html', 'favicon.ico']) {
     if (existsSync(join(ROOT, lf))) pass(`${lf} exists`);

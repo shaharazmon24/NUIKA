@@ -1,0 +1,26 @@
+// The Tailwind theme shop.html's utility classes were generated with (18 Oct 2026).
+// shop.html no longer loads Tailwind at run time; this is kept ONLY so the CSS can be regenerated
+// (see CLAUDE.md, "The shop's CSS"). Paste it into a temporary copy of shop.html, after
+// <script src="https://cdn.tailwindcss.com"></script>, as:  <script>tailwind.config = <this object></script>
+{
+  theme: {
+    extend: {
+      colors: {
+        cream:    '#EFE6D6',
+        parchment:'#EFE1C7',
+        earth:    '#6B2E1E',
+        terracotta:'#B84830',
+        sand:     '#D6A54A',
+        bark:     '#7E4728',
+        ink:      '#3B2A24',
+        muted:    '#6B655C',
+        honey:    '#E0A83A',
+      },
+      fontFamily: {
+        serif:  ['Noto Serif Hebrew', 'serif'],
+        sans:   ['IBM Plex Sans Hebrew', 'Noto Sans Hebrew', 'sans-serif'],
+        display:['Bellefair', 'Noto Serif Hebrew', 'serif'],
+      },
+    }
+  }
+}

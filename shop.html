@@ -68,31 +68,6 @@
        Noto stays loaded: the admin panel styles its text inline with it, and
        nothing about Noy's panel is being redesigned here. -->
   <link href="https://fonts.googleapis.com/css2?family=Bellefair&family=IBM+Plex+Sans+Hebrew:wght@300;400;500;600;700&family=Noto+Serif+Hebrew:wght@200;300;400;500;600;700&family=Noto+Sans+Hebrew:wght@200;300;400;500;600;700&display=swap" rel="stylesheet" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            cream:    '#EFE6D6',
-            parchment:'#EFE1C7',
-            earth:    '#6B2E1E',
-            terracotta:'#B84830',
-            sand:     '#D6A54A',
-            bark:     '#7E4728',   /* was #9C5A32: 4.14:1 on parchment */
-            ink:      '#3B2A24',
-            muted:    '#6B655C',   /* was #9B8B75: 3.17:1 on the dialog ground; now the site's own muted */
-            honey:    '#E0A83A',
-          },
-          fontFamily: {
-            serif:  ['Noto Serif Hebrew', 'serif'],
-            sans:   ['IBM Plex Sans Hebrew', 'Noto Sans Hebrew', 'sans-serif'],
-            display:['Bellefair', 'Noto Serif Hebrew', 'serif'],
-          },
-        }
-      }
-    }
-  </script>
   <style>
     /* Only ever visible inside @media print; without this the generated
        sheet stays rendered on the live page after the dialog closes. */
@@ -2189,6 +2164,11 @@
         to   { opacity: 1; transform: none; filter: blur(0); }
       }
     }
+    .shop-loadbar { position: fixed; inset-block-start: 0; inset-inline: 0; block-size: 3px; z-index: 10001; overflow: hidden; pointer-events: none; transition: opacity .45s ease; }
+    .shop-loadbar::before { content: ""; position: absolute; inset-block: 0; inline-size: 38%; background: #B84830; animation: shopLoad 1.1s ease-in-out infinite; }
+    @keyframes shopLoad { from { inset-inline-start: -40%; } to { inset-inline-start: 100%; } }
+    .shop-loadbar.is-done { opacity: 0; }
+    @media (prefers-reduced-motion: reduce) { .shop-loadbar::before { animation: none; inline-size: 100%; opacity: .55; } }
     .menu-loading-msg { grid-column: 1 / -1; text-align: center; margin: 0 0 6px; color: #5C564D; font-family: var(--font-text); font-size: 0.95rem; }
     .menu-loading-msg.menu-failed { padding: 28px 12px; line-height: 1.9; }
     .menu-retry { margin-top: 10px; font-family: var(--font-text); font-weight: 600; color: #FDFAF4; background: #6B2E1E; border: 0; border-radius: 999px; padding: 10px 22px; cursor: pointer; }
@@ -2385,15 +2365,18 @@
     .product-card.in-cart .add-icon { display: none; }
 
   </style>
-  <!-- Firebase Realtime Database (compat SDK) -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <!-- The Tailwind utility classes this page uses, generated once and kept here. They used to be
+       compiled in every visitor's browser from a 100KB script (cdn.tailwindcss.com) that blocked the
+       first paint. Placed last in the head on purpose: Tailwind's runtime <style> also landed last, and
+       the cascade between these rules and the page's own depends on that order. If a new Tailwind class
+       is added to this file, it must be added here too (see CLAUDE.md, "The shop's CSS"). -->
+  <style id="tw-static">*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:IBM Plex Sans Hebrew, Noto Sans Hebrew, sans-serif;font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.\!container{width:100% !important}.container{width:100%}@media (min-width: 640px){.\!container{max-width:640px !important}.container{max-width:640px}}@media (min-width: 768px){.\!container{max-width:768px !important}.container{max-width:768px}}@media (min-width: 1024px){.\!container{max-width:1024px !important}.container{max-width:1024px}}@media (min-width: 1280px){.\!container{max-width:1280px !important}.container{max-width:1280px}}@media (min-width: 1536px){.\!container{max-width:1536px !important}.container{max-width:1536px}}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0, 0, 0, 0);white-space:nowrap;border-width:0}.visible{visibility:visible}.invisible{visibility:hidden}.collapse{visibility:collapse}.static{position:static}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.sticky{position:sticky}.-right-1\.5{right:-0.375rem}.-top-1\.5{top:-0.375rem}.top-0{top:0px}.isolate{isolation:isolate}.z-40{z-index:40}.mx-auto{margin-left:auto;margin-right:auto}.mb-2{margin-bottom:0.5rem}.mb-3{margin-bottom:0.75rem}.mb-5{margin-bottom:1.25rem}.mb-6{margin-bottom:1.5rem}.mt-4{margin-top:1rem}.mt-1{margin-top:0.25rem}.block{display:block}.inline-block{display:inline-block}.inline{display:inline}.flex{display:flex}.inline-flex{display:inline-flex}.table{display:table}.grid{display:grid}.\!grid{display:grid !important}.hidden{display:none}.h-4{height:1rem}.w-4{width:1rem}.w-full{width:100%}.max-w-5xl{max-width:64rem}.flex-1{flex:1 1 0%}.shrink{flex-shrink:1}.transform{transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.cursor-pointer{cursor:pointer}.resize-none{resize:none}.resize{resize:both}.grid-cols-2{grid-template-columns:repeat(2, minmax(0, 1fr))}.flex-col{flex-direction:column}.items-center{align-items:center}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-2{gap:0.5rem}.gap-3{gap:0.75rem}.gap-4{gap:1rem}.space-y-2 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.5rem * var(--tw-space-y-reverse))}.rounded-2xl{border-radius:1rem}.rounded-full{border-radius:9999px}.rounded-xl{border-radius:0.75rem}.rounded{border-radius:0.25rem}.border{border-width:1px}.border-2{border-width:2px}.border-t{border-top-width:1px}.border-b{border-bottom-width:1px}.border-earth{--tw-border-opacity:1;border-color:rgb(107 46 30 / var(--tw-border-opacity, 1))}.border-parchment{--tw-border-opacity:1;border-color:rgb(239 225 199 / var(--tw-border-opacity, 1))}.bg-earth{--tw-bg-opacity:1;background-color:rgb(107 46 30 / var(--tw-bg-opacity, 1))}.bg-parchment{--tw-bg-opacity:1;background-color:rgb(239 225 199 / var(--tw-bg-opacity, 1))}.bg-white\/70{background-color:rgb(255 255 255 / 0.7)}.p-2\.5{padding:0.625rem}.p-3{padding:0.75rem}.p-5{padding:1.25rem}.px-4{padding-left:1rem;padding-right:1rem}.py-3{padding-top:0.75rem;padding-bottom:0.75rem}.py-3\.5{padding-top:0.875rem;padding-bottom:0.875rem}.px-3{padding-left:0.75rem;padding-right:0.75rem}.py-2\.5{padding-top:0.625rem;padding-bottom:0.625rem}.py-1{padding-top:0.25rem;padding-bottom:0.25rem}.pb-44{padding-bottom:11rem}.pt-3{padding-top:0.75rem}.text-center{text-align:center}.text-right{text-align:right}.font-sans{font-family:IBM Plex Sans Hebrew, Noto Sans Hebrew, sans-serif}.font-serif{font-family:Noto Serif Hebrew, serif}.text-base{font-size:1rem;line-height:1.5rem}.text-sm{font-size:0.875rem;line-height:1.25rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.text-xs{font-size:0.75rem;line-height:1rem}.text-lg{font-size:1.125rem;line-height:1.75rem}.font-bold{font-weight:700}.font-semibold{font-weight:600}.font-medium{font-weight:500}.uppercase{text-transform:uppercase}.text-bark{--tw-text-opacity:1;color:rgb(126 71 40 / var(--tw-text-opacity, 1))}.text-cream{--tw-text-opacity:1;color:rgb(239 230 214 / var(--tw-text-opacity, 1))}.text-earth{--tw-text-opacity:1;color:rgb(107 46 30 / var(--tw-text-opacity, 1))}.text-ink{--tw-text-opacity:1;color:rgb(59 42 36 / var(--tw-text-opacity, 1))}.text-muted{--tw-text-opacity:1;color:rgb(107 101 92 / var(--tw-text-opacity, 1))}.underline{-webkit-text-decoration-line:underline;text-decoration-line:underline}.ring{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(3px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000)}.blur{--tw-blur:blur(8px);filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.grayscale{--tw-grayscale:grayscale(100%);filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.filter{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-colors{transition-property:color, background-color, border-color, fill, stroke, -webkit-text-decoration-color;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, -webkit-text-decoration-color;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition{transition-property:color, background-color, border-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-text-decoration-color, -webkit-backdrop-filter;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-text-decoration-color, -webkit-backdrop-filter;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.ease-in-out{transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1)}.hover\:border-earth:hover{--tw-border-opacity:1;border-color:rgb(107 46 30 / var(--tw-border-opacity, 1))}.hover\:border-terracotta:hover{--tw-border-opacity:1;border-color:rgb(184 72 48 / var(--tw-border-opacity, 1))}.hover\:bg-earth\/90:hover{background-color:rgb(107 46 30 / 0.9)}.hover\:bg-parchment:hover{--tw-bg-opacity:1;background-color:rgb(239 225 199 / var(--tw-bg-opacity, 1))}.hover\:text-earth:hover{--tw-text-opacity:1;color:rgb(107 46 30 / var(--tw-text-opacity, 1))}@media (min-width: 640px){.sm\:gap-4{gap:1rem}}@media (min-width: 768px){.md\:grid-cols-3{grid-template-columns:repeat(3, minmax(0, 1fr))}}</style>
 </head>
 <body class="font-sans text-ink">
 
 <!-- The picture behind the menu. Decorative, so it carries no alt text and is
      hidden from assistive technology. -->
+<div id="shop-loadbar" class="shop-loadbar" aria-hidden="true"></div>
 <a class="nu-skip" href="#menu"><span lang-content="he">דלגו לתפריט</span><span lang-content="en">Skip to the menu</span></a>
 
 <div class="shop-bg" aria-hidden="true"></div>
@@ -2482,8 +2465,12 @@
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B7260" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="9 18 15 12 9 6"/></svg>
   </div>
 
-  <div id="products-grid" class="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-    <!-- Cards injected by JS -->
+  <!-- Painted with the HTML itself, before a single script has run: a slow connection sees the page
+         saying "loading" at once instead of an empty space. The script replaces it with the dishes. -->
+  <div id="products-grid" class="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4" aria-busy="true">
+    <p class="menu-loading-msg" role="status"><span lang-content="he">טוען את התפריט…</span><span lang-content="en">Loading the menu…</span></p>
+    <div class="product-skel" aria-hidden="true"></div><div class="product-skel" aria-hidden="true"></div><div class="product-skel" aria-hidden="true"></div><div class="product-skel" aria-hidden="true"></div><div class="product-skel" aria-hidden="true"></div>
+    <div class="product-skel" aria-hidden="true"></div><div class="product-skel" aria-hidden="true"></div><div class="product-skel" aria-hidden="true"></div><div class="product-skel" aria-hidden="true"></div><div class="product-skel" aria-hidden="true"></div>
   </div>
 </main>
 
@@ -3778,6 +3765,12 @@
   </a>
 </footer>
 
+<!-- Firebase Realtime Database (compat SDK). At the end of the body, not in the head: it blocks
+     parsing while it downloads, and nothing before the application script uses it. -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+
 <!-- ============ SCRIPT ============ -->
 <script>
 // ─── FORCE HTTPS ────────────────────────────────────
@@ -4036,6 +4029,7 @@ db.ref(`${ROOT}/products`).on('value', snap => applyProductsData(snap.val()));
 // call is harmless because renderProducts() skips a redraw that would be identical.
 function applyProductsData(data) {
   _productsLoaded = true;
+  const _lb = document.getElementById('shop-loadbar'); if (_lb) { _lb.classList.add('is-done'); setTimeout(() => _lb.remove(), 600); }
   PRODUCTS.length = 0;
   // Coerce the id once, here. A string id sorts as NaN and then fails every
   // `p.id === id` lookup downstream, which shows up as an Edit button that
@@ -7140,6 +7134,8 @@ window.addEventListener('scroll', () => {
 renderProducts();
 applyPrefetchedMenu();
 window.addEventListener('load', () => setTimeout(() => { const b = document.querySelector('.shop-bg'); if (b) b.classList.add('is-ready'); }, 400));
+// the bar must never stay on screen: if the menu has not arrived after 15s the message below takes over
+setTimeout(() => { const lb = document.getElementById('shop-loadbar'); if (lb) { lb.classList.add('is-done'); setTimeout(() => lb.remove(), 600); } }, 15000);
 
 // The menu, settings and this week's stock, all public, read before the Firebase
 // connection exists. Painted once, together, so the grid never shows dishes first

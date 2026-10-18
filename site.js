@@ -150,7 +150,26 @@
       '</nav>';
   }
 
+  /* A visible sign that the page is still loading. Shown from the first moment these scripts run
+     until the browser's own load event, with a ceiling so it can never get stuck on screen. */
+  function showLoadBar() {
+    if (document.readyState === 'complete') return;
+    var bar = document.createElement('div');
+    bar.className = 'nu-loadbar';
+    bar.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(bar);
+    var gone = false;
+    function hide() {
+      if (gone) return; gone = true;
+      bar.classList.add('is-done');
+      setTimeout(function () { if (bar.parentNode) bar.parentNode.removeChild(bar); }, 600);
+    }
+    window.addEventListener('load', hide);
+    setTimeout(hide, 20000);
+  }
+
   function mount() {
+    showLoadBar();
     var head = document.querySelector('[data-nuika-header]');
     if (head) head.innerHTML = nuikaHeader(head.getAttribute('data-nuika-header'));
     var foot = document.querySelector('[data-nuika-footer]');

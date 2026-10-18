@@ -231,6 +231,29 @@ they say why each node is locked.
 
 ## Things that will bite you
 
+**The shop's CSS: Tailwind is precompiled. Do not put the CDN script back.** Until 18 Oct 2026
+`shop.html` loaded `cdn.tailwindcss.com` (a ~100KB script that blocks the first paint and
+compiles the page's classes in every visitor's browser, measured at 4 s to first paint on a
+slow phone). The classes it generated now live in `<style id="tw-static">`, placed LAST in the
+head because Tailwind's own runtime style also landed last, and the cascade against the page's
+own styles depends on that order. The Firebase SDK moved from the head to the end of the body
+for the same reason: nothing above the application script uses it, and it no longer blocks
+painting. `validate.mjs` ("Shop CSS") fails if the CDN script returns, or if any static class
+that looks like a Tailwind utility has no rule behind it.
+**Adding a Tailwind class to shop.html's markup means regenerating that block.** Method used
+(no install needed): in a temporary copy of `shop.html` add back `<script
+src="https://cdn.tailwindcss.com"></script>` plus `tailwind.config = …` from
+`scripts/tailwind-config.txt`, load it in a browser, append a hidden `<div>` whose class list is
+every token in the file, wait a few seconds, and copy the `<style>` Tailwind injected (the one
+containing `--tw-border-spacing-x`) over `#tw-static`. Then compare the computed style of every
+element, and of every modal, overlay and admin tab with it opened, between the old and the new
+page: on 18 Oct 2026 that was 2,100 elements x 85 properties with 0 differences, and with the
+CSS removed 2,086 of them differed, so the comparison does detect a change.
+
+**Every site page shows a thin loading bar** (`.nu-loadbar`, from `site.js`; the shop has its
+own `#shop-loadbar` and paints its skeleton in the HTML before any script runs). On a slow
+connection a page that is still loading must not look stuck.
+
 **The menu has to load fast, and it does so in three ways. Do not undo any of them.**
 (1) `shop.html` starts reading `products`, `settings` and this week's `stockUsed` with
 plain `fetch()` from the very top of `<head>`, before Tailwind and the Firebase SDK

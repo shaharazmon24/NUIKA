@@ -564,3 +564,12 @@ main:focus { outline: none; }
 }
 .nu-legal a:hover { opacity: 1; }
 .nu-legal a:focus-visible { outline: 2px solid var(--cream); outline-offset: 3px; }
+
+/* ---------- loading ---------- */
+/* A thin bar that sweeps along the top edge from the moment the page's scripts start until the
+   page has finished loading, so a slow connection reads as "loading", not "stuck". */
+.nu-loadbar { position: fixed; inset-block-start: 0; inset-inline: 0; block-size: 3px; z-index: 10001; overflow: hidden; pointer-events: none; transition: opacity .45s ease; }
+.nu-loadbar::before { content: ""; position: absolute; inset-block: 0; inline-size: 38%; background: var(--terra); animation: nuLoad 1.1s ease-in-out infinite; }
+@keyframes nuLoad { from { inset-inline-start: -40%; } to { inset-inline-start: 100%; } }
+.nu-loadbar.is-done { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .nu-loadbar::before { animation: none; inline-size: 100%; opacity: .55; } }
