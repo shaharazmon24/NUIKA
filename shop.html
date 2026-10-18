@@ -2660,12 +2660,18 @@
       </div>
 
       <div id="ty-pay-bit" style="display:none;" class="flex flex-col gap-3">
-        <a id="ty-bit-btn" href="#" target="_blank" rel="noopener"
-           class="block w-full text-center font-serif font-bold text-base py-3.5 rounded-full transition-colors cursor-pointer"
-           style="background:#B84830;color:#EFE6D6;display:none;">
-          <span lang-content="he">לתשלום ב-Bit →</span>
-          <span lang-content="en">Pay with Bit →</span>
-        </a>
+        <!-- Bit has no "payment link" a shop can offer, and a phone cannot scan its own
+             screen. Every Bit user can send money to a phone number, so that is the way
+             shown here, with a one-tap copy. The QR code stays for a second device. -->
+        <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:16px;padding:16px;text-align:center;">
+          <p class="font-sans text-ink" style="font-size:0.92rem;margin:0;" lang-content="he">ב-Bit, שלחו את הסכום למספר:</p>
+          <p class="font-sans text-ink" style="font-size:0.92rem;margin:0;" lang-content="en">In Bit, send the amount to:</p>
+          <p id="ty-bit-number" dir="ltr" class="font-serif font-bold text-earth" style="font-size:1.7rem;letter-spacing:.04em;margin:6px 0 12px;"></p>
+          <button type="button" onclick="copyBitNumber()" class="font-serif font-bold" style="background:#B84830;color:#EFE6D6;border:0;border-radius:999px;padding:11px 26px;cursor:pointer;font-size:0.95rem;">
+            <span lang-content="he">העתקת המספר</span><span lang-content="en">Copy the number</span>
+          </button>
+          <p id="ty-copy-ok" role="status" class="font-sans text-muted" style="font-size:0.8rem;margin:8px 0 0;min-height:1.2em;"></p>
+        </div>
         <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:16px;padding:16px;text-align:center;">
           <p class="font-sans text-muted" style="font-size:0.85rem;margin:0 0 10px;" lang-content="he">אפשר גם לסרוק ממכשיר אחר:</p>
           <p class="font-sans text-muted" style="font-size:0.85rem;margin:0 0 10px;" lang-content="en">Or scan from another device:</p>
@@ -5044,6 +5050,22 @@ function submitOrder() {
   }).then(() => { _submitting = false; });
 }
 
+function copyBitNumber() {
+  const digits = '0' + String(OWNER_WHATSAPP).replace(/^972/, '');
+  const ok = document.getElementById('ty-copy-ok');
+  const isHe = !document.body.classList.contains('lang-en');
+  const done = () => { ok.textContent = isHe ? 'המספר הועתק' : 'Number copied'; };
+  const fallback = () => {
+    // Older browsers and some in-app views refuse the clipboard: select the number so it can be copied by hand.
+    const el = document.getElementById('ty-bit-number');
+    const r = document.createRange(); r.selectNodeContents(el);
+    const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    ok.textContent = isHe ? 'לחצו והעתיקו את המספר' : 'Press and copy the number';
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(digits).then(done, fallback);
+  else fallback();
+}
+
 function showThankYou({ name, lines, grandTotal, phone }) {
   const overlay = document.getElementById('thankyou-overlay');
   const box     = document.getElementById('ty-order-box');
@@ -5067,9 +5089,9 @@ function showThankYou({ name, lines, grandTotal, phone }) {
   document.getElementById('ty-amount').textContent = (isHe ? 'הסכום לתשלום: ₪' : 'Amount to pay: ₪') + grandTotal;
   document.getElementById('ty-pay-cash').style.display = method === 'cash' ? 'block' : 'none';
   document.getElementById('ty-pay-bit').style.display  = method === 'bit'  ? 'flex'  : 'none';
-  const bitBtn = document.getElementById('ty-bit-btn');
-  const savedBit = safeLink(_settingsCache.bitLink);
-  if (savedBit) { bitBtn.href = savedBit; bitBtn.style.display = 'block'; } else { bitBtn.style.display = 'none'; }
+  const bitDigits = '0' + String(OWNER_WHATSAPP).replace(/^972/, '');            // 0547382282
+  document.getElementById('ty-bit-number').textContent = bitDigits.slice(0, 3) + '-' + bitDigits.slice(3);
+  document.getElementById('ty-copy-ok').textContent = '';
 
   // PayBox link — from Firebase so it reaches every customer, not just this device
   const payboxLinkEl = document.getElementById('paybox-link');
