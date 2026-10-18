@@ -2231,7 +2231,9 @@ if (want('assets')) {
 if (want('design')) {
   console.log('Design system assets:');
 
-  // Noy's own handwritten logo, cut out of her paper on 17 Oct 2026: 928x536,
+  // Noy's own handwritten logo, cut out of her paper on 17 Oct 2026 (928x536, then
+  // halved to 464x268 on 18 Oct: it is only ever a mask at 128-190px, and the full
+  // size was 92KB downloaded by every visit),
   // transparent, cropped to the ink. A browser measures the file, not the
   // drawing, so margins left in the file make the logo render tiny. (The old
   // wordmark was 1915x703 for the same reason.)
@@ -2246,8 +2248,8 @@ if (want('design')) {
   const logo = png('images/logo.png');
   if (!logo) fail('images/logo.png is missing — the cropped wordmark the site ships');
   else if (logo === 'not-png') fail('images/logo.png is not a PNG');
-  else if (logo.w === 928 && logo.h === 536) pass('images/logo.png is the cropped 928x536 logo, Noy\'s own handwriting');
-  else fail(`images/logo.png is ${logo.w}x${logo.h} — expected 928x536 (margins not cropped, or the old logo is back?)`);
+  else if (logo.w === 464 && logo.h === 268) pass('images/logo.png is the cropped 464x268 logo, Noy\'s own handwriting');
+  else fail(`images/logo.png is ${logo.w}x${logo.h} — expected 464x268 (margins not cropped, or the old logo is back?)`);
 
   const umbel = png('images/umbel.png');
   if (!umbel) fail('images/umbel.png is missing — the mark used below 130px');

@@ -1,5 +1,5 @@
 // Bump this version on every deploy that must reach existing users.
-const CACHE = 'nuika-v23';
+const CACHE = 'nuika-v24';
 
 // Relative paths, so the same worker is correct whether the site is served
 // from the domain root (nuika.co.il) or a subdirectory.
@@ -153,12 +153,29 @@ self.addEventListener('fetch', e => {
     // (This paragraph used to end "…resolves '?admin' to './shop.html', a
     // file that does not exist until the cutover." It exists now, and it is
     // in ASSETS above.)
-    e.respondWith(
-      fetch(e.request)
-        .then(res => { store(e.request, res); return res; })
-        .catch(() => caches.match(e.request, { ignoreSearch: true })
-          .then(r => r || caches.match(isShopUrl ? SHOP_FALLBACK : './index.html')))
-    );
+    //
+    // But not at any price. This used to wait for the network without limit, and
+    // fall back to the saved copy only when the request FAILED. On a slow or
+    // flaky phone connection a request does not fail, it crawls: the installed
+    // app sat on a blank screen for ten seconds and more while 141KB of HTML
+    // trickled in, with a perfectly good copy saved on the phone. Now the network
+    // gets 1.5 seconds. If it has not answered by then the saved copy is shown at
+    // once, and the download carries on in the background and refreshes the saved
+    // copy for the next open. With nothing saved yet, the page just waits.
+    e.respondWith((async () => {
+      const saved = () => caches.match(e.request, { ignoreSearch: true })
+        .then(r => r || caches.match(isShopUrl ? SHOP_FALLBACK : './index.html'));
+      const net = fetch(e.request).then(res => { store(e.request, res); return res; });
+      e.waitUntil(net.catch(() => {}));
+      const first = await Promise.race([
+        net.catch(() => null),
+        new Promise(resolve => setTimeout(() => resolve('slow'), 1500))
+      ]);
+      if (first && first !== 'slow') return first;       // answered in time: the fresh page
+      const copy = await saved();
+      if (copy) return copy;                              // slow or offline: the saved page
+      return first === 'slow' ? net.catch(() => Response.error()) : Response.error();
+    })());
     return;
   }
 

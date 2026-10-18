@@ -116,11 +116,17 @@
       inset: 0;
       z-index: -1;
       pointer-events: none;
-      background: url(./images/hero-open-sandwich.jpg) center / cover no-repeat;
+      background: center / cover no-repeat;
+      /* The picture is a mood behind an 87% veil. It used to be fetched first, in
+         competition with the dishes and their photos; now it arrives after the page
+         has loaded and fades in (.is-ready, set by the script). */
+      opacity: 0;
+      transition: opacity 1.2s ease;
       /* The source frames carry a 6px black letterbox top and bottom; scaling
          up a hair pushes it off the edge on a tall phone screen. */
       transform: scale(1.04);
     }
+    .shop-bg.is-ready { background-image: url(./images/hero-open-sandwich.jpg); opacity: 1; }
     .shop-bg::after {
       content: "";
       position: absolute;
@@ -7133,6 +7139,7 @@ window.addEventListener('scroll', () => {
 // ─── INIT ──────────────────────────────────────────
 renderProducts();
 applyPrefetchedMenu();
+window.addEventListener('load', () => setTimeout(() => { const b = document.querySelector('.shop-bg'); if (b) b.classList.add('is-ready'); }, 400));
 
 // The menu, settings and this week's stock, all public, read before the Firebase
 // connection exists. Painted once, together, so the grid never shows dishes first
