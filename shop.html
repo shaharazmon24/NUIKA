@@ -2664,15 +2664,15 @@
              screen. Every Bit user can send money to a phone number, so that is the way
              shown here, with a one-tap copy. The QR code stays for a second device. -->
         <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:16px;padding:16px;text-align:center;">
-          <p class="font-sans text-ink" style="font-size:0.92rem;margin:0;" lang-content="he">ב-Bit, שלחו את הסכום למספר:</p>
-          <p class="font-sans text-ink" style="font-size:0.92rem;margin:0;" lang-content="en">In Bit, send the amount to:</p>
+          <p id="ty-app-he" class="font-sans text-ink" style="font-size:0.92rem;margin:0;" lang-content="he">ב-Bit, שלחו את הסכום למספר:</p>
+          <p id="ty-app-en" class="font-sans text-ink" style="font-size:0.92rem;margin:0;" lang-content="en">In Bit, send the amount to:</p>
           <p id="ty-bit-number" dir="ltr" class="font-serif font-bold text-earth" style="font-size:1.7rem;letter-spacing:.04em;margin:6px 0 12px;"></p>
           <button type="button" onclick="copyBitNumber()" class="font-serif font-bold" style="background:#B84830;color:#EFE6D6;border:0;border-radius:999px;padding:11px 26px;cursor:pointer;font-size:0.95rem;">
             <span lang-content="he">העתקת המספר</span><span lang-content="en">Copy the number</span>
           </button>
           <p id="ty-copy-ok" role="status" class="font-sans text-muted" style="font-size:0.8rem;margin:8px 0 0;min-height:1.2em;"></p>
         </div>
-        <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:16px;padding:16px;text-align:center;">
+        <div id="ty-qr-box" style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:16px;padding:16px;text-align:center;">
           <p class="font-sans text-muted" style="font-size:0.85rem;margin:0 0 10px;" lang-content="he">אפשר גם לסרוק ממכשיר אחר:</p>
           <p class="font-sans text-muted" style="font-size:0.85rem;margin:0 0 10px;" lang-content="en">Or scan from another device:</p>
           <img src="images/bit-qr.jpg" alt="קוד QR לתשלום ב-Bit" style="width:180px;max-width:60%;margin:0 auto;border-radius:8px;display:block;" />
@@ -5088,14 +5088,20 @@ function showThankYou({ name, lines, grandTotal, phone }) {
   const safeLink = u => (typeof u === 'string' && /^https:\/\//.test(u)) ? u : '';
   document.getElementById('ty-amount').textContent = (isHe ? 'הסכום לתשלום: ₪' : 'Amount to pay: ₪') + grandTotal;
   document.getElementById('ty-pay-cash').style.display = method === 'cash' ? 'block' : 'none';
-  document.getElementById('ty-pay-bit').style.display  = method === 'bit'  ? 'flex'  : 'none';
+  // Neither Bit nor PayBox can give a shop a payment link, so both are paid the same way:
+  // to Noy's phone number. The QR code is Bit's, so only Bit gets it.
+  const app = method === 'paybox' ? 'PayBox' : 'Bit';
+  document.getElementById('ty-pay-bit').style.display  = (method === 'bit' || method === 'paybox') ? 'flex' : 'none';
+  document.getElementById('ty-qr-box').style.display   = method === 'bit' ? 'block' : 'none';
+  document.getElementById('ty-app-he').textContent = 'ב-' + app + ', שלחו את הסכום למספר:';
+  document.getElementById('ty-app-en').textContent = 'In ' + app + ', send the amount to:';
   const bitDigits = '0' + String(OWNER_WHATSAPP).replace(/^972/, '');            // 0547382282
   document.getElementById('ty-bit-number').textContent = bitDigits.slice(0, 3) + '-' + bitDigits.slice(3);
   document.getElementById('ty-copy-ok').textContent = '';
 
   // PayBox link — from Firebase so it reaches every customer, not just this device
   const payboxLinkEl = document.getElementById('paybox-link');
-  const savedPaybox = method === 'paybox' ? safeLink(_settingsCache.payboxLink) : '';
+  const savedPaybox = '';   // no PayBox link button any more: the number above is the way to pay
   if (payboxLinkEl) {
     if (savedPaybox) {
       payboxLinkEl.href = savedPaybox;
