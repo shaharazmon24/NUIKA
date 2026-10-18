@@ -2641,8 +2641,8 @@
     <h2 class="ty-title font-serif text-earth mb-2" style="font-size:clamp(1.8rem,5vw,2.4rem);font-weight:700;" lang-content="he">ההזמנה נשלחה!</h2>
     <h2 class="ty-title font-serif text-earth mb-2" style="font-size:clamp(1.8rem,5vw,2.4rem);font-weight:700;" lang-content="en">Order Sent!</h2>
 
-    <p class="ty-body font-sans text-muted mb-6" style="font-size:0.95rem;line-height:1.65;" lang-content="he">תודה רבה! ההזמנה שלך התקבלה.<br>כעת ישלח אישור לוואצאפ שלך.</p>
-    <p class="ty-body font-sans text-muted mb-6" style="font-size:0.95rem;line-height:1.65;" lang-content="en">Thank you! Your order was received.<br>A confirmation has been sent to your WhatsApp.</p>
+    <p id="ty-body-he" class="ty-body font-sans text-muted mb-6" style="font-size:0.95rem;line-height:1.65;" lang-content="he">תודה רבה! ההזמנה שלך התקבלה.</p>
+    <p id="ty-body-en" class="ty-body font-sans text-muted mb-6" style="font-size:0.95rem;line-height:1.65;" lang-content="en">Thank you! Your order was received.</p>
 
     <!-- Order summary box -->
     <div class="ty-summary bg-white/70 border border-parchment rounded-2xl p-5 mb-6 text-right" id="ty-order-box" style="backdrop-filter:blur(8px);"></div>
@@ -2667,10 +2667,10 @@
           <p id="ty-app-he" class="font-sans text-ink" style="font-size:0.92rem;margin:0;" lang-content="he">ב-Bit, שלחו את הסכום למספר:</p>
           <p id="ty-app-en" class="font-sans text-ink" style="font-size:0.92rem;margin:0;" lang-content="en">In Bit, send the amount to:</p>
           <p id="ty-bit-number" dir="ltr" class="font-serif font-bold text-earth" style="font-size:1.7rem;letter-spacing:.04em;margin:6px 0 12px;"></p>
-          <button type="button" onclick="copyBitNumber()" class="font-serif font-bold" style="background:#B84830;color:#EFE6D6;border:0;border-radius:999px;padding:11px 26px;cursor:pointer;font-size:0.95rem;">
-            <span lang-content="he">העתקת המספר</span><span lang-content="en">Copy the number</span>
+          <button type="button" id="ty-copy-btn" onclick="copyBitNumber()" class="font-serif font-bold" style="background:#B84830;color:#EFE6D6;border:0;border-radius:999px;padding:11px 26px;cursor:pointer;font-size:0.95rem;min-width:190px;transition:background-color .25s ease;">
+            <span id="ty-copy-he" lang-content="he">העתקת המספר</span><span id="ty-copy-en" lang-content="en">Copy the number</span>
           </button>
-          <p id="ty-copy-ok" role="status" class="font-sans text-muted" style="font-size:0.8rem;margin:8px 0 0;min-height:1.2em;"></p>
+          <p id="ty-copy-ok" role="status" class="u-sr"></p>
         </div>
         <div id="ty-qr-box" style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:16px;padding:16px;text-align:center;">
           <p class="font-sans text-muted" style="font-size:0.85rem;margin:0 0 10px;" lang-content="he">אפשר גם לסרוק ממכשיר אחר:</p>
@@ -2902,6 +2902,7 @@
     <!-- Filter tabs -->
     <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;">
       <button onclick="filterOrders('all')"       id="filter-all"       class="btn-status active">הכל</button>
+      <button onclick="filterOrders('unpaid')"    id="filter-unpaid"    class="btn-status">⏳ ממתינות לתשלום</button>
       <button onclick="filterOrders('new')"       id="filter-new"       class="btn-status">🆕 חדשות</button>
       <button onclick="filterOrders('confirmed')" id="filter-confirmed" class="btn-status">✅ אושרו</button>
       <button onclick="filterOrders('ready')"     id="filter-ready"     class="btn-status">🍞 מוכנות</button>
@@ -5052,17 +5053,30 @@ function submitOrder() {
 
 function copyBitNumber() {
   const digits = '0' + String(OWNER_WHATSAPP).replace(/^972/, '');
-  const ok = document.getElementById('ty-copy-ok');
-  const isHe = !document.body.classList.contains('lang-en');
-  const done = () => { ok.textContent = isHe ? 'המספר הועתק' : 'Number copied'; };
+  const btn = document.getElementById('ty-copy-btn');
+  const he = document.getElementById('ty-copy-he');
+  const en = document.getElementById('ty-copy-en');
+  const live = document.getElementById('ty-copy-ok');
+  // The answer appears ON the button: it turns green and says so for a couple of seconds.
+  const confirmCopied = () => {
+    he.textContent = '✓ המספר הועתק'; en.textContent = '✓ Number copied';
+    btn.style.backgroundColor = '#2A7A2A';
+    live.textContent = document.body.classList.contains('lang-en') ? 'Number copied' : 'המספר הועתק';
+    clearTimeout(copyBitNumber._t);
+    copyBitNumber._t = setTimeout(() => {
+      he.textContent = 'העתקת המספר'; en.textContent = 'Copy the number';
+      btn.style.backgroundColor = '#B84830';
+      live.textContent = '';
+    }, 2400);
+  };
   const fallback = () => {
-    // Older browsers and some in-app views refuse the clipboard: select the number so it can be copied by hand.
+    // Some in-app browsers refuse the clipboard: select the number so it can be copied by hand.
     const el = document.getElementById('ty-bit-number');
     const r = document.createRange(); r.selectNodeContents(el);
     const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
-    ok.textContent = isHe ? 'לחצו והעתיקו את המספר' : 'Press and copy the number';
+    he.textContent = 'המספר מסומן, העתיקו'; en.textContent = 'Selected, now copy it';
   };
-  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(digits).then(done, fallback);
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(digits).then(confirmCopied, fallback);
   else fallback();
 }
 
@@ -5095,9 +5109,20 @@ function showThankYou({ name, lines, grandTotal, phone }) {
   document.getElementById('ty-qr-box').style.display   = method === 'bit' ? 'block' : 'none';
   document.getElementById('ty-app-he').textContent = 'ב-' + app + ', שלחו את הסכום למספר:';
   document.getElementById('ty-app-en').textContent = 'In ' + app + ', send the amount to:';
+  // What happens next, in the words that are true for this payment method: Noy confirms
+  // on WhatsApp, after the money arrives, or straight away for cash.
+  document.getElementById('ty-body-he').innerHTML = method === 'cash'
+    ? 'תודה רבה! ההזמנה שלך התקבלה.<br>נוי תאשר אותה בוואטסאפ, והיא תחכה לך באיסוף. התשלום במזומן בעת האיסוף.'
+    : 'תודה רבה! ההזמנה שלך התקבלה.<br>אחרי שתשלחו את התשלום, נוי תאשר בוואטסאפ שהתשלום התקבל וההזמנה אושרה.';
+  document.getElementById('ty-body-en').innerHTML = method === 'cash'
+    ? 'Thank you! Your order was received.<br>Noy will confirm it on WhatsApp and it will wait for you at pickup. Pay in cash when you collect.'
+    : 'Thank you! Your order was received.<br>Once you have paid, Noy will confirm on WhatsApp that the payment arrived and the order is approved.';
   const bitDigits = '0' + String(OWNER_WHATSAPP).replace(/^972/, '');            // 0547382282
   document.getElementById('ty-bit-number').textContent = bitDigits.slice(0, 3) + '-' + bitDigits.slice(3);
   document.getElementById('ty-copy-ok').textContent = '';
+  document.getElementById('ty-copy-he').textContent = 'העתקת המספר';
+  document.getElementById('ty-copy-en').textContent = 'Copy the number';
+  document.getElementById('ty-copy-btn').style.backgroundColor = '#B84830';
 
   // PayBox link — from Firebase so it reaches every customer, not just this device
   const payboxLinkEl = document.getElementById('paybox-link');
@@ -6037,6 +6062,42 @@ function getOrders() {
   return ORDER_LOG;
 }
 
+// Paying by Bit or PayBox is a transfer to Noy's phone, so the site cannot see it arrive:
+// she sees it in her own app. "Confirmed" is the moment she has seen it. An order paid
+// by Bit or PayBox that is still 'new' is therefore one that is waiting for money.
+// (A new field would have needed the database rules republished; the existing
+// status already says exactly this.)
+const PREPAID_METHODS = ['bit', 'paybox'];
+function awaitingPayment(o) { return o && o.status === 'new' && PREPAID_METHODS.includes(o.paymentMethod); }
+function isPaid(o) {
+  if (!o) return false;
+  if (PREPAID_METHODS.includes(o.paymentMethod)) return o.status !== 'new';
+  return o.status === 'done';     // cash is paid when the bread is handed over
+}
+function customerWhatsAppUrl(o, text) {
+  return 'https://wa.me/' + String(o.phone || '').replace(/\D/g, '').replace(/^0/, '972') + '?text=' + encodeURIComponent(text);
+}
+// One tap: the order is approved AND the customer is told so. Opened inside the click
+// (a timer would be blocked as a pop-up on iOS); Noy still presses send herself.
+function approveOrder(id) {
+  const o = ORDER_LOG.find(x => x.id === id);
+  if (!o) return;
+  const paidByTransfer = PREPAID_METHODS.includes(o.paymentMethod);
+  const text = paidByTransfer
+    ? 'היי ' + o.name + ' 🙂\nקיבלתי את התשלום (₪' + o.total + ') וההזמנה שלך אושרה ✅\nאיסוף ביום שישי מ-' + PICKUP_ADDRESS + '.\nתודה רבה! 🥖\nנוי, NUIKA'
+    : 'היי ' + o.name + ' 🙂\nההזמנה שלך אושרה ✅ (₪' + o.total + ', התשלום במזומן בעת האיסוף)\nאיסוף ביום שישי מ-' + PICKUP_ADDRESS + '.\nתודה רבה! 🥖\nנוי, NUIKA';
+  window.open(customerWhatsAppUrl(o, text), '_blank');
+  updateOrderStatus(id, 'confirmed');
+}
+function remindPayment(id) {
+  const o = ORDER_LOG.find(x => x.id === id);
+  if (!o) return;
+  const app = PAYMENT_LABELS_HE[o.paymentMethod] || 'Bit';
+  const num = '0' + String(OWNER_WHATSAPP).replace(/^972/, '');
+  const text = 'היי ' + o.name + ' 🙂\nראיתי את ההזמנה שלך (₪' + o.total + '), ועוד לא קיבלתי את התשלום.\nאפשר להעביר ב-' + app + ' למספר ' + num.slice(0, 3) + '-' + num.slice(3) + '.\nתודה! 🙏';
+  window.open(customerWhatsAppUrl(o, text), '_blank');
+}
+
 function updateOrderStatus(id, status) {
   const update = { status };
   if (status === 'done') update.doneAt = Date.now();
@@ -6073,15 +6134,15 @@ function renderOrderStats() {
   const orders = getOrders().filter(o => !o.archived);
   const total   = orders.length;
   const revenue = orders.reduce((s, o) => s + (o.total || 0), 0);
-  const delivery= orders.filter(o => o.delivery === 'delivery').length;
-  const pickup  = orders.filter(o => o.delivery === 'pickup').length;
+  const paid    = orders.filter(isPaid).reduce((s, o) => s + (o.total || 0), 0);
+  const owed    = orders.filter(o => !isPaid(o)).reduce((s, o) => s + (o.total || 0), 0);
   const el = document.getElementById('order-stats');
   if (!el) return;
   el.innerHTML = [
     { label:'הזמנות', value: total,        icon:'📋', color:'#1A6DB5' },
-    { label:'הכנסה',  value:'₪'+revenue,   icon:'💰', color:'#2A7A2A' },
-    { label:'משלוח',  value: delivery,      icon:'📦', color:'#A06000' },
-    { label:'איסוף',  value: pickup,        icon:'🏠', color:'#6B2E1E' },
+    { label:'שולם',   value:'₪'+paid,      icon:'💰', color:'#2A7A2A' },
+    { label:'עוד לא שולם', value:'₪'+owed,  icon:'⏳', color:'#A06000' },
+    { label:'סה״כ הזמנות', value:'₪'+revenue, icon:'🧾', color:'#6B2E1E' },
   ].map(s => `
     <div class="order-stat-card">
       <div style="font-size:1.3rem;margin-bottom:4px;">${s.icon}</div>
@@ -6122,6 +6183,7 @@ function renderOrderList() {
   let orders = all;
   if (currentFilter === 'delivery') orders = all.filter(o => o.delivery === 'delivery');
   else if (currentFilter === 'pickup') orders = all.filter(o => o.delivery === 'pickup');
+  else if (currentFilter === 'unpaid') orders = all.filter(o => !isPaid(o));
   else if (['new','confirmed','ready','done'].includes(currentFilter)) orders = all.filter(o => o.status === currentFilter);
 
   const el = document.getElementById('order-management-list');
@@ -6145,7 +6207,8 @@ function renderOrderList() {
           <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#9B8B75;">${esc(o.date)}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span class="status-badge ${statusClasses[o.status]||'status-new'}">${statusLabels[o.status]||'חדשה'}</span>
+          <span class="status-badge ${awaitingPayment(o) ? 'status-ready' : (statusClasses[o.status]||'status-new')}">${awaitingPayment(o) ? '⏳ ממתינה לתשלום' : (statusLabels[o.status]||'חדשה')}</span>
+          ${isPaid(o) ? '<span class="status-badge status-confirmed">💰 שולם</span>' : ''}
           <span style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#6B2E1E;font-size:1rem;">₪${o.total}</span>
         </div>
       </div>
@@ -6164,10 +6227,14 @@ function renderOrderList() {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.096.547 4.142 1.588 5.945L0 24l6.305-1.654A11.882 11.882 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.013-1.375l-.36-.213-3.732.979.997-3.636-.235-.373A9.818 9.818 0 1112 21.818z"/></svg>
           ${esc(o.phone)}
         </a>
-        ${nextStatus[o.status] ? `
+        ${o.status === 'new' ? `
+        <button onclick="approveOrder(${+o.id || 0})" class="btn-status" style="background:#2A7A2A;color:#fff;border-color:#2A7A2A;">
+          ${awaitingPayment(o) ? '💰 התקבל תשלום, אשרי ←' : '✅ אשרי ושלחי הודעה ←'}
+        </button>
+        ${awaitingPayment(o) ? `<button onclick="remindPayment(${+o.id || 0})" class="btn-status">⏰ תזכורת תשלום</button>` : ''}` : (nextStatus[o.status] ? `
         <button onclick="updateOrderStatus(${+o.id || 0},'${nextStatus[o.status]}')" class="btn-status">
           ${nextLabel[o.status]} ←
-        </button>` : ''}
+        </button>` : '')}
         <button onclick="openEditOrderModal(${+o.id || 0})" class="btn-status" aria-label="עריכת הזמנה">
           ✏️ עריכה
         </button>
