@@ -50,10 +50,11 @@
       overflow: clip;
     }
 
-    /* The kettle photo is 2.66:1 and this section is full-viewport, so on a
-       phone `cover` crops it to a thin vertical slice. 61% across is where
-       her face is; the default 50% would show the kitchen window instead. */
-    .st-mv-img--noy { object-position: 61% 50%; }
+    /* The opening frame (the seeded braid, oil being poured) is 2.66:1 and this
+       section is full-viewport, so on a phone `cover` crops it to a thin
+       vertical slice. 62% across is where the braid is; the default 50% would
+       show mostly the flowers on the left. */
+    .st-mv-img--noy { object-position: 62% 50%; }
 
     .st-head { position: absolute; inset-block-start: 0; inset-inline: 0; z-index: 3; }
     /* Room for the header that no longer sits in the flow: its measured height,
@@ -167,7 +168,7 @@
 
   <main id="main" tabindex="-1">
   <section class="st-move st-move--photo st-move--top">
-    <img class="st-mv-img st-mv-img--noy" src="./images/gallery/noy-pouring-kettle.jpg" alt="" loading="eager">
+    <img class="st-mv-img st-mv-img--noy" src="./images/gallery/seeded-braid-oil.jpg" alt="" loading="eager">
     <div class="st-mv-veil" aria-hidden="true"></div>
     <div class="st-mv-frame">
       <h1 class="st-mv-lede rise">
@@ -179,7 +180,7 @@
 
   <section class="st-move st-move--split">
     <div class="st-mv-media">
-      <img class="st-mv-img" src="./images/gallery/plums-glistening.jpg" alt="" loading="lazy">
+      <img class="st-mv-img" src="./images/gallery/noy-shaping-dough.jpg" alt="" loading="lazy">
     </div>
     <div class="st-mv-text">
       <p class="st-mv-para fade">
@@ -190,7 +191,7 @@
   </section>
 
   <section class="st-move st-move--photo st-move--dark">
-    <img class="st-mv-img" src="./images/gallery/seeded-dough-balls.jpg" alt="" loading="lazy">
+    <img class="st-mv-img" style="object-position:58% 50%" src="./images/gallery/kitchen-wide.jpg" alt="" loading="lazy">
     <div class="st-mv-veil" aria-hidden="true"></div>
     <div class="st-mv-frame">
       <p class="st-mv-para rise">
