@@ -2883,7 +2883,7 @@ if (want('pages')) {
       // from the same cache, so leaving one out of this comparison is how it
       // silently falls a version behind and renders against a stylesheet the
       // others have moved past.
-      for (const page of [...PAGES, 'gallery-captions.html', 'kitchen-questions.html']) {
+      for (const page of [...PAGES, 'gallery-captions.html', 'kitchen-questions.html', 'story-pick.html']) {
         const p = join(ROOT, page);
         if (!existsSync(p)) continue;   // already failed above, on its own line
         const m = readFileSync(p, 'utf8').match(re);
@@ -3692,6 +3692,38 @@ if (want('pages')) {
       pass('kitchen-questions.html is not precached — it costs a visitor to the bakery nothing');
     else
       fail('sw.js precaches kitchen-questions.html — every visitor to the bakery would download a form written for Noy');
+  }
+
+  console.log("Noy's photo picker:");
+  {
+    // Another tool handed to Noy, held to the same promises as her two forms.
+    // Temporary: delete the page, this block and its robots.txt line once the
+    // story page has its photos.
+    const FORM = 'story-pick.html';
+    const at = join(ROOT, FORM);
+    if (!existsSync(at)) {
+      pass(`${FORM} is gone — nothing to guard`);
+    } else {
+      const ct = readFileSync(at, 'utf8');
+      if (/<meta[^>]+name=["']robots["'][^>]+noindex/.test(ct)) pass(`${FORM} stays out of search results`);
+      else fail(`${FORM} has lost its noindex`);
+      if (!/firebase|db\.ref\(|firebaseio/.test(ct)) pass(`${FORM} touches no database`);
+      else fail(`${FORM} has gained a database connection — it is public and should write nowhere`);
+      const wa = ct.match(/wa\.me\/([^'"?]*)/);
+      if (wa && wa[1] === '') pass(`${FORM} publishes no phone number`);
+      else fail(`${FORM} must open WhatsApp with no number (wa.me/?text=)`);
+      if (/\.innerHTML\s*=/.test(ct)) fail(`${FORM} assigns innerHTML — it builds its DOM with createElement/textContent`);
+      else pass(`${FORM} writes no innerHTML`);
+      const sw = readFileSync(join(ROOT, 'sw.js'), 'utf8');
+      if (!/story-pick/.test(sw)) pass(`${FORM} is not precached`);
+      else fail(`sw.js precaches ${FORM}`);
+      const gal = JSON.parse(readFileSync(join(ROOT, 'images/gallery/gallery.json'), 'utf8'));
+      const known = new Set(gal.map(e => e.file));
+      const listed = (ct.match(/'[a-z0-9-]+\.jpg'/g) || []).map(x => x.slice(1, -1));
+      const missing = listed.filter(f => !known.has(f));
+      if (missing.length) fail(`${FORM} offers photos that are not in gallery.json: ${missing.join(', ')}`);
+      else pass(`every photo ${FORM} offers exists in gallery.json`);
+    }
   }
 
   console.log('Moving between pages:');
