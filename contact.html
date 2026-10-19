@@ -164,6 +164,8 @@
       transition: transform .2s cubic-bezier(.34, 1.3, .64, 1);
     }
     .ct-plat > .ltr { border-block-end: 1px solid currentColor; }
+    /* Under the number, level with its text and not with its icon (icon 19px + gap 9px). */
+    .ct-hours { display: block; margin-block-start: 4px; padding-inline-start: 28px; }
     .ct-plat:hover .ct-plat__icon,
     .ct-plat:focus-visible .ct-plat__icon { transform: scale(1.12); }
   </style>
@@ -303,6 +305,10 @@
               <svg class="ct-plat__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20.5 11.6a8.4 8.4 0 0 1-12.4 7.4L3.5 20.5l1.6-4.5a8.4 8.4 0 1 1 15.4-4.4Z"/><path d="M9.2 8.4c.2-.5.4-.5.7-.5h.5c.2 0 .4 0 .6.5l.8 1.9c.1.2 0 .4-.1.5l-.5.6c-.1.2-.2.3-.1.5a6 6 0 0 0 3 2.9c.2.1.4 0 .5-.1l.5-.6c.2-.2.3-.2.5-.1l1.8.9c.2.1.4.2.4.4a1.9 1.9 0 0 1-1.3 1.6 3.4 3.4 0 0 1-2.5-.3 10 10 0 0 1-4.7-4.4 3.7 3.7 0 0 1-.8-2.1c0-.7.3-1.3.7-1.6Z"/></svg>
               <span class="ltr">054-7382282</span>
             </a>
+            <span class="ct-hours u-small">
+              <span lang-content="he">שעות מענה: <span class="ltr">8:30–16:00</span></span>
+              <span lang-content="en">Reply hours: <span class="ltr">8:30–16:00</span></span>
+            </span>
           </li>
           <li>
             <a class="link ct-plat" href="https://www.instagram.com/nuika_bread/" target="_blank" rel="noopener"
