@@ -50,11 +50,11 @@
       overflow: clip;
     }
 
-    /* The opening frame (the seeded braid, oil being poured) is 2.66:1 and this
-       section is full-viewport, so on a phone `cover` crops it to a thin
-       vertical slice. 62% across is where the braid is; the default 50% would
-       show mostly the flowers on the left. */
-    .st-mv-img--noy { object-position: 62% 50%; }
+    /* The opening frame (flour falling over the proving basket, pink flowers) is
+       2.66:1 and this section is full-viewport, so on a phone `cover` crops it
+       to a thin vertical slice. 38% across keeps the basket and the flowers
+       together; the default 50% would lose the flowers on the left. */
+    .st-mv-img--noy { object-position: 38% 50%; }
 
     .st-head { position: absolute; inset-block-start: 0; inset-inline: 0; z-index: 3; }
     /* Room for the header that no longer sits in the flow: its measured height,
@@ -168,7 +168,7 @@
 
   <main id="main" tabindex="-1">
   <section class="st-move st-move--photo st-move--top">
-    <img class="st-mv-img st-mv-img--noy" src="./images/gallery/seeded-braid-oil.jpg" alt="" loading="eager">
+    <img class="st-mv-img st-mv-img--noy" src="./images/gallery/banneton-flowers.jpg" alt="" loading="eager">
     <div class="st-mv-veil" aria-hidden="true"></div>
     <div class="st-mv-frame">
       <h1 class="st-mv-lede rise">
