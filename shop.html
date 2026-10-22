@@ -6093,6 +6093,23 @@ function approveOrder(id) {
   window.open(customerWhatsAppUrl(o, text), '_blank');
   updateOrderStatus(id, 'confirmed');
 }
+// Same one-tap pattern for "ready": the status changes AND the customer's WhatsApp opens with
+// the message already written, so Noy does not compose anything. A browser cannot send a
+// WhatsApp message by itself, so she still presses send once per customer.
+function markReady(id) {
+  const o = ORDER_LOG.find(x => x.id === id);
+  if (!o) return;
+  let text;
+  if (o.delivery === 'delivery') {
+    text = 'היי ' + o.name + ' 🙂\nההזמנה שלך מוכנה ויוצאת אליך 🥖\nנוי, NUIKA';
+  } else {
+    const cash = !PREPAID_METHODS.includes(o.paymentMethod)
+      ? '\nהתשלום במזומן בעת האיסוף (₪' + o.total + ').' : '';
+    text = 'היי ' + o.name + ' 🙂\nההזמנה שלך מוכנה לאיסוף 🥖\nאפשר לבוא לאסוף מ-' + PICKUP_ADDRESS + '.' + cash + '\nנוי, NUIKA';
+  }
+  if (String(o.phone || '').replace(/\D/g, '')) window.open(customerWhatsAppUrl(o, text), '_blank');
+  updateOrderStatus(id, 'ready');
+}
 function remindPayment(id) {
   const o = ORDER_LOG.find(x => x.id === id);
   if (!o) return;
@@ -6235,7 +6252,10 @@ function renderOrderList() {
         <button onclick="approveOrder(${+o.id || 0})" class="btn-status" style="background:#2A7A2A;color:#fff;border-color:#2A7A2A;">
           ${awaitingPayment(o) ? '💰 התקבל תשלום, אשרי ←' : '✅ אשרי ושלחי הודעה ←'}
         </button>
-        ${awaitingPayment(o) ? `<button onclick="remindPayment(${+o.id || 0})" class="btn-status">⏰ תזכורת תשלום</button>` : ''}` : (nextStatus[o.status] ? `
+        ${awaitingPayment(o) ? `<button onclick="remindPayment(${+o.id || 0})" class="btn-status">⏰ תזכורת תשלום</button>` : ''}` : (o.status === 'confirmed' ? `
+        <button onclick="markReady(${+o.id || 0})" class="btn-status" style="background:#2A7A2A;color:#fff;border-color:#2A7A2A;">
+          🍞 מוכנה, שלחי הודעה ←
+        </button>` : nextStatus[o.status] ? `
         <button onclick="updateOrderStatus(${+o.id || 0},'${nextStatus[o.status]}')" class="btn-status">
           ${nextLabel[o.status]} ←
         </button>` : '')}
