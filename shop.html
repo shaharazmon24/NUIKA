@@ -6191,12 +6191,41 @@ function renderBakingSummary() {
     el.innerHTML = `<div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.82rem;text-align:center;padding:16px;">אין הזמנות פעילות</div>`;
     return;
   }
-  el.innerHTML = entries.sort((a,b) => b[1]-a[1]).map(([name, qty]) => `
-    <div class="baking-row">
-      <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.88rem;color:#3B2A24;font-weight:600;">${esc(name)}</div>
+  entries.sort((a,b) => b[1]-a[1]);
+  BAKE_KEYS = entries.map(e => e[0]);
+  if (bakeOpen !== null && !BAKE_KEYS.includes(bakeOpen)) bakeOpen = null;
+  const stLabel = { new:'חדשה', confirmed:'אושרה', ready:'מוכנה', done:'נמסרה' };
+  el.innerHTML = entries.map(([name, qty], idx) => {
+    const open = bakeOpen === name;
+    // Who ordered this item: the same orders the total above was added up from.
+    const who = !open ? '' : orders.filter(o => (o.itemsArr || []).some(it => it.name === name)).map(o => {
+      const q = o.itemsArr.filter(it => it.name === name).reduce((s, it) => s + (+it.qty || 0), 0);
+      const state = awaitingPayment(o) ? 'ממתינה לתשלום' : (stLabel[o.status] || '');
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:7px 2px;border-top:1px solid #EFE4D0;">
+          <div style="min-width:0;">
+            <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.85rem;color:#3B2A24;font-weight:600;">${esc(o.name)}</div>
+            <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.7rem;color:#9B8B75;">${o.delivery === 'delivery' ? 'משלוח' : 'איסוף'}${state ? ' · ' + esc(state) : ''}</div>
+          </div>
+          <div style="font-family:'Noto Serif Hebrew',serif;font-size:1rem;font-weight:700;color:#6B2E1E;white-space:nowrap;">${q} יח'</div>
+        </div>`;
+    }).join('');
+    return `
+    <div class="baking-row" role="button" tabindex="0" aria-expanded="${open}" style="cursor:pointer;"
+         onclick="toggleBakeItem(${idx})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleBakeItem(${idx});}">
+      <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.88rem;color:#3B2A24;font-weight:600;">${esc(name)} <span aria-hidden="true" style="color:#9B8B75;font-size:0.7rem;">${open ? '▴' : '▾'}</span></div>
       <div style="font-family:'Noto Serif Hebrew',serif;font-size:1.1rem;font-weight:700;color:#6B2E1E;">${+qty || 0} <span style="font-size:0.75rem;font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-weight:400;">יח'</span></div>
     </div>
-  `).join('');
+    ${open ? `<div style="background:#FDFAF4;border:1px solid #E5D9C5;border-radius:10px;padding:2px 12px 4px;margin:-2px 0 8px;">${who}</div>` : ''}`;
+  }).join('');
+}
+// Tapping an item in the baking list opens the orders that contain it.
+let bakeOpen = null, BAKE_KEYS = [];
+function toggleBakeItem(i) {
+  const key = BAKE_KEYS[i];
+  if (key === undefined) return;
+  bakeOpen = bakeOpen === key ? null : key;
+  renderBakingSummary();
 }
 
 function renderOrderList() {
