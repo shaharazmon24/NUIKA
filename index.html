@@ -63,7 +63,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bellefair&family=IBM+Plex+Sans+Hebrew:wght@200;300;400;500&display=swap">
-  <link rel="stylesheet" href="./site.css?v=12">
+  <link rel="stylesheet" href="./site.css?v=13">
 
   <style>
     /* The home page's own layout. Prefixed .hm- so nothing here can collide
@@ -143,6 +143,25 @@
        .72 measures 3.13:1. The lit half is unchanged, so the sweep on hover
        still reads. */
     .hm-screen .nu-mark--foot { --mark-rest: rgba(246, 240, 228, .72); }
+
+    /* Baobab Web Studio's credit, the last line of the footer. Everywhere else
+       it is an ordinary row. Here it is not, because this page promises one
+       screen with nothing to scroll to and the credit as a sixth row broke
+       that: measured 8 Nov 2026, at 360x640, which fit before, it ran 10px
+       over (and 1024x600, already 5px over, went to 36px over). So it sits in
+       the footer's own bottom padding — space that was already empty — and
+       adds no height. The short-screen block below squeezes that padding to
+       6px, so there it goes back into the flow. */
+    .hm-screen > .nu-footer .baobab-credit {
+      position: absolute;
+      inset-inline: 0;
+      inset-block-end: 6px;
+      margin-inline: auto;
+      inline-size: max-content;
+    }
+    @media (min-width: 721px) {
+      .hm-screen > .nu-footer .baobab-credit { inset-block-end: 10px; }
+    }
 
     /* <main> is the 1fr row of .hm-screen. It needs to be a grid itself for
        the block below to anchor to the bottom of it — `align-self: end` on a
@@ -246,6 +265,9 @@
          when the footer's four items wrap to a second row on a narrow
          width — it is what shrinks the space between those rows. */
       .hm-screen > .nu-footer { padding-block: 6px; gap: 6px; }
+      /* The 6px padding above leaves no room to seat the credit in, so it
+         rejoins the flow as the footer's last row. */
+      .hm-screen > .nu-footer .baobab-credit { position: static; inline-size: auto; margin-inline: 0; }
       .hm-screen .nu-mark--foot { width: 108px; height: 40px; }
       .hm-screen .nu-soc-row,
       .hm-screen .nu-fine,
@@ -389,7 +411,7 @@
     </button>
     <footer class="nu-footer" data-nuika-footer></footer>
   </div>
-  <script src="./site.js?v=12"></script>
+  <script src="./site.js?v=13"></script>
   <script>
     /* The orders line in the footer: open or closed, and how long is left.
        The old splash gate this page replaced carried one, and it was the

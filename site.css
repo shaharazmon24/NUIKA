@@ -565,6 +565,13 @@ main:focus { outline: none; }
 .nu-legal a:hover { opacity: 1; }
 .nu-legal a:focus-visible { outline: 2px solid var(--cream); outline-offset: 3px; }
 
+/* Baobab Web Studio's credit: the last line of every footer (built in site.js,
+   written out by hand in shop.html). 12px, the footer's own colour, no link yet.
+   Opacity .8 is the same step as the legal links above it, so the credit reads
+   as part of that quiet row and never as louder than it. */
+.baobab-credit { display: inline-flex; align-items: center; gap: .45em; margin: 0; font-size: .75rem; line-height: 1.4; color: inherit; opacity: .8; }
+.baobab-credit-mark { height: 1.25em; width: auto; flex: none; }
+
 /* ---------- loading ---------- */
 /* A thin bar that sweeps along the top edge from the moment the page's scripts start until the
    page has finished loading, so a slow connection reads as "loading", not "stuck". */
