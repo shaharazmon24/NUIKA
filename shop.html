@@ -2879,7 +2879,7 @@
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
       <div>
         <h2 style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.2rem;font-weight:700;margin:0 0 2px;">ניהול הזמנות</h2>
-        <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.75rem;margin:0;">שבוע שנסגר ונמסר עובר לארכיון לבד</p>
+        <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.75rem;margin:0;">בכל יום שישי ההזמנות עוברות לארכיון והרשימה מתחילה מחדש</p>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button onclick="openManualOrderModal()" style="display:flex;align-items:center;gap:5px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.76rem;font-weight:600;background:#6B2E1E;border:1.5px solid #6B2E1E;color:#EFE6D6;padding:7px 12px;border-radius:100px;cursor:pointer;">
@@ -3777,8 +3777,8 @@
       <span lang-content="en">WhatsApp reply hours: <span style="direction:ltr;unicode-bidi:isolate;">8:30–16:00</span></span>
     </p>
     <p class="nu-fine">
-      <span lang-content="he">ש. בן ציון 13, רחובות · איסוף בימי שישי</span>
-      <span lang-content="en">S. Ben Zion 13, Rehovot · Friday pickup</span>
+      <span lang-content="he">ש. בן ציון 13, רחובות · איסוף בימי חמישי</span>
+      <span lang-content="en">S. Ben Zion 13, Rehovot · Thursday pickup</span>
     </p>
     <nav class="nu-legal" aria-label="מידע משפטי">
       <a href="./terms.html"><span lang-content="he">תנאי הזמנה</span><span lang-content="en">Order terms</span></a>
@@ -4404,35 +4404,34 @@ function pruneCart() {
   });
 }
 
-// Start of the current ordering cycle, used to key the public stock counter
-// so it resets by itself every week.
-// The public stock counter is stored under a key derived from this window, so
-// the window must not move when Noy nudges the deadline.
+// The ordering week runs from one Friday to the next. Every Friday the orders of the week that
+// ended move to the archive and the list starts again (Noy, 9 Nov 2026), and the public stock
+// counter resets with it: it is stored under the week's start, so a new week is a new, empty
+// counter.
 //
-// It used to be derived straight from the deadline: moving closing time from
-// Tuesday to Wednesday shifted `start` by a day, the counter was read from a
-// key that did not exist yet, every capped dish showed full stock to every
-// customer, and the orders already placed fell outside the new window — so
-// they were never counted again. Nudging the deadline mid-week oversold it.
+// The boundary is Friday by the calendar in Israel, written as that date at 00:00 UTC. It is the
+// same number on every device whatever its own time zone, which the counter needs: a customer
+// abroad must read and write the same counter as one in Rehovot. (It sits 2-3 hours after
+// Israeli midnight, so an order placed in those small hours still counts toward the old week.)
 //
-// Anchoring on the ISO week instead means the bucket only changes when the
-// week does. The anchor is a fixed Tuesday 00:00 Israel time; `end` still
-// follows the real deadline, because that is the moment ordersAreOpen()
-// closes the shop on. (It used to say "because that is what the countdown
-// shows" — the countdown was the splash screen's, and the cutover removed
-// the splash screen. The rule it described did not change, only the thing
-// that made it visible.)
+// This replaces a window anchored on the Tuesday deadline whose start lay AHEAD of every order
+// placed on a Wednesday to Monday. reconcileStock() counted only orders inside the window, found
+// none, and wrote zero over the public tally every time Noy opened the panel, which would have
+// handed every capped dish back to the shop.
+function ilParts(ms) {
+  const p = {};
+  new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: 'numeric', day: 'numeric', weekday: 'short' })
+    .formatToParts(new Date(ms)).forEach(x => { p[x.type] = x.value; });
+  return { y: +p.year, m: +p.month, d: +p.day, dow: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(p.weekday) };
+}
+function orderWeekStart(ts) {
+  const t = ilParts(+ts || Date.now());
+  return Date.UTC(t.y, t.m - 1, t.d - ((t.dow - 5 + 7) % 7));
+}
 function currentCycle() {
   const WEEK = 7 * 24 * 60 * 60 * 1000;
-  // Declared inside the function on purpose. As a module-level `const` it sat
-  // in the temporal dead zone while watchStock() — which runs at load and calls
-  // this — was still initialising, and threw.
-  const EPOCH = Date.UTC(2026, 0, 6, 0, 0, 0);   // Tue 6 Jan 2026, a Tuesday
-  let end = (getNextTuesdayDeadline() || new Date()).getTime();
-  while (end < Date.now()) end += WEEK;
-  // Bucket the deadline into its week rather than using it directly.
-  const start = EPOCH + Math.floor((end - EPOCH) / WEEK) * WEEK;
-  return { start, end: start + WEEK, deadline: end };
+  const start = orderWeekStart(Date.now());
+  return { start, end: start + WEEK, deadline: (getNextTuesdayDeadline() || new Date(start + WEEK)).getTime() };
 }
 
 // Public per-product tally for the current cycle. Customers read this instead
@@ -4484,10 +4483,9 @@ function getStockRemaining(productId) {
   // One source for the window. This used to recompute it from the deadline
   // independently of currentCycle(), so Noy's view and the customers' view
   // could disagree about which orders were in this week.
-  const { start: cycleStart, end: cycleEnd } = currentCycle();
+  const cycleStart = currentCycle().start;
   ORDER_LOG.filter(o => !o.archived
-    && (o.timestamp || 0) >= cycleStart
-    && (o.timestamp || 0) < cycleEnd).forEach(o => {
+    && orderWeekStart(o.timestamp || o.id) === cycleStart).forEach(o => {
     (o.itemsArr || []).forEach(item => {
       if (!item) return;
       // id first, name only as a fallback for orders written before items
@@ -6045,7 +6043,7 @@ function saveManualOrder() {
 // recompute from them whenever she opens the panel.
 function reconcileStock() {
   if (!IS_ADMIN) return;
-  const { start, end } = currentCycle();
+  const { start } = currentCycle();
   // "Not loaded yet" and "genuinely empty" are different things, and the old
   // length check conflated them. Guarding on length meant that after Noy
   // deleted the last order the tally was never zeroed: her panel showed full
@@ -6054,7 +6052,7 @@ function reconcileStock() {
   if (!_ordersLoaded) return;
 
   const counts = {};
-  ORDER_LOG.filter(o => !o.archived && (o.timestamp || 0) >= start && (o.timestamp || 0) < end)
+  ORDER_LOG.filter(o => !o.archived && orderWeekStart(o.timestamp || o.id) === start)
     .forEach(o => (o.itemsArr || []).forEach(i => {
       if (!i) return;
       // Older orders carry no id, so fall back to the name the way the
@@ -6079,43 +6077,22 @@ function reconcileStock() {
   }).catch(() => {});
 }
 
-// An order belongs to the ordering week that closes on the Tuesday deadline after it was
-// placed. Same bucketing as currentCycle(), so "this week" means the same thing everywhere.
-function orderWeekStart(ts) {
-  const WEEK = 7 * 24 * 60 * 60 * 1000;
-  const EPOCH = Date.UTC(2026, 0, 6, 0, 0, 0);   // a Tuesday, as in currentCycle()
-  const t = +ts || Date.now();
-  const d = new Date(t);
-  const dl = new Date(d);
-  dl.setDate(d.getDate() + (2 - d.getDay() + 7) % 7);
-  dl.setHours(17, 0, 0, 0);
-  if (dl.getTime() < t) dl.setDate(dl.getDate() + 7);
-  return EPOCH + Math.floor((dl.getTime() - EPOCH) / WEEK) * WEEK;
-}
-// The day the week closed, as 27.10.2026. Digits and dots only, so safe inside innerHTML.
+// The week as a date range, Friday to Thursday: 6.11-12.11.2026. Digits and dots only, so safe
+// inside innerHTML.
 function weekLabel(start) {
-  const d = new Date(start);
-  return d.getUTCDate() + '.' + (d.getUTCMonth() + 1) + '.' + d.getUTCFullYear();
+  const a = new Date(start), b = new Date(start + 6 * 24 * 60 * 60 * 1000);
+  return a.getUTCDate() + '.' + (a.getUTCMonth() + 1) + '–' + b.getUTCDate() + '.' + (b.getUTCMonth() + 1) + '.' + b.getUTCFullYear();
 }
 
 function getOrders() {
+  // Every Friday the list starts again: whatever was placed in an earlier week moves to the
+  // archive, delivered or not. (The archive shows which ones were never marked delivered.)
   const cur = currentCycle().start;
-  // A week that has closed moves to the archive as one piece, and only once every one of its
-  // orders has been handed over. A week with an order still open stays where Noy can see it,
-  // so nothing undelivered can disappear from her list.
-  const weeks = {};
   ORDER_LOG.forEach(o => {
     if (o.archived) return;
-    const k = orderWeekStart(o.timestamp || o.id);
-    (weeks[k] = weeks[k] || []).push(o);
-  });
-  Object.keys(weeks).forEach(k => {
-    if (+k >= cur) return;
-    if (!weeks[k].every(o => o.status === 'done')) return;
-    weeks[k].forEach(o => {
-      o.archived = true;
-      db.ref(`${ROOT}/orders/${o.id}/archived`).set(true).catch(fbError);
-    });
+    if (orderWeekStart(o.timestamp || o.id) >= cur) return;
+    o.archived = true;
+    db.ref(`${ROOT}/orders/${o.id}/archived`).set(true).catch(fbError);
   });
   return ORDER_LOG;
 }
@@ -6154,8 +6131,8 @@ function openCustomerMessage(o, text) {
 }
 function approvedText(o) {
   return PREPAID_METHODS.includes(o.paymentMethod)
-    ? 'היי ' + o.name + ' 🙂\nקיבלתי את התשלום (₪' + o.total + ') וההזמנה שלך אושרה ✅\nאיסוף ביום שישי מ-' + PICKUP_ADDRESS + '.\nתודה רבה! 🥖\nנוי, NUIKA'
-    : 'היי ' + o.name + ' 🙂\nההזמנה שלך אושרה ✅ (₪' + o.total + ', התשלום במזומן בעת האיסוף)\nאיסוף ביום שישי מ-' + PICKUP_ADDRESS + '.\nתודה רבה! 🥖\nנוי, NUIKA';
+    ? 'היי ' + o.name + ' 🙂\nקיבלתי את התשלום (₪' + o.total + ') וההזמנה שלך אושרה ✅\nאיסוף ביום חמישי משעה 15:00 מ-' + PICKUP_ADDRESS + '.\nתודה רבה! 🥖\nנוי, NUIKA'
+    : 'היי ' + o.name + ' 🙂\nההזמנה שלך אושרה ✅ (₪' + o.total + ', התשלום במזומן בעת האיסוף)\nאיסוף ביום חמישי משעה 15:00 מ-' + PICKUP_ADDRESS + '.\nתודה רבה! 🥖\nנוי, NUIKA';
 }
 function readyText(o) {
   if (o.delivery === 'delivery') return 'היי ' + o.name + ' 🙂\nההזמנה שלך מוכנה ויוצאת אליך 🥖\nנוי, NUIKA';
@@ -6390,17 +6367,7 @@ function renderOrderList() {
     </div>
   `;
 
-  // Orders of an earlier week that is still being handed over are kept apart from this week's
-  // new orders, with a heading, so the two never read as one list.
-  const cur = currentCycle().start;
-  const weekOf = o => orderWeekStart(o.timestamp || o.id);
-  const starts = [...new Set(orders.map(weekOf))].sort((a, b) => b - a);
-  const grouped = starts.length > 1;
-  el.innerHTML = starts.map(w => {
-    const inWeek = orders.filter(o => weekOf(o) === w);
-    const head = !grouped ? '' : `<div style="display:flex;justify-content:space-between;align-items:baseline;margin:${w === starts[0] ? '0' : '18px'} 0 8px;padding:0 2px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;font-weight:700;color:#6B2E1E;"><span>${w >= cur ? 'הזמנות השבוע' : 'שבוע קודם · נסגר ב-' + weekLabel(w)}</span><span style="font-weight:400;color:#9B8B75;">${inWeek.length} הזמנות</span></div>`;
-    return head + inWeek.map(orderCard).join('');
-  }).join('');
+  el.innerHTML = orders.map(orderCard).join('');
 }
 
 // Past weeks live on their own page, one row per week with its count and total, opened on tap.
@@ -6420,7 +6387,7 @@ function showOrdersView(v) {
 }
 
 function renderArchive() {
-  const n = getOrders().filter(o => o.archived).length;
+  const n =getOrders().filter(o => o.archived).length;
   const c = document.getElementById('ordview-archive-count');
   if (c) c.textContent = n;
   const v = document.getElementById('orders-archive-view');
@@ -6437,9 +6404,10 @@ function renderArchiveView() {
   if (!el) return;
   const archived = getOrders().filter(o => o.archived);
   if (!archived.length) {
-    el.innerHTML = `<div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.85rem;text-align:center;padding:24px 0;">הארכיון ריק. שבוע שנסגר וכל ההזמנות שלו נמסרו עובר לכאן לבד.</div>`;
+    el.innerHTML = `<div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.85rem;text-align:center;padding:24px 0;">הארכיון ריק. בכל יום שישי ההזמנות של השבוע שעבר עוברות לכאן לבד.</div>`;
     return;
   }
+  const stLabel = { new:'חדשה', confirmed:'אושרה', ready:'מוכנה', done:'נמסרה' };
   const weeks = {};
   archived.forEach(o => {
     const k = orderWeekStart(o.timestamp || o.id);
@@ -6448,6 +6416,7 @@ function renderArchiveView() {
   el.innerHTML = Object.keys(weeks).map(Number).sort((a, b) => b - a).map(w => {
     const list = weeks[w];
     const sum = list.reduce((s, o) => s + (+o.total || 0), 0);
+    const left = list.filter(o => o.status !== 'done').length;
     const open = archiveOpenWeek === w;
     const rows = !open ? '' : list.map(o => `
       <div style="border-top:1px solid #EFE4D0;padding:9px 2px;">
@@ -6455,14 +6424,14 @@ function renderArchiveView() {
           <span style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#3B2A24;font-size:0.88rem;">${esc(o.name)}</span>
           <span style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:0.88rem;">₪${+o.total || 0}</span>
         </div>
-        <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#9B8B75;">${esc(o.date)} · ${o.delivery === 'delivery' ? 'משלוח' : 'איסוף'}${o.phone ? ' · ' + esc(o.phone) : ''}</div>
+        <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#9B8B75;">${esc(o.date)} · ${o.delivery === 'delivery' ? 'משלוח' : 'איסוף'}${o.phone ? ' · ' + esc(o.phone) : ''}${o.status !== 'done' ? ' · <span style="color:#A06000;">' + esc(stLabel[o.status] || 'לא נמסרה') + ', לא סומנה כנמסרה</span>' : ''}</div>
         <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.78rem;color:#8B7260;margin-top:3px;">${esc(o.items || '').replace(/\|/g, '<br>')}</div>
       </div>`).join('');
     return `
     <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:12px;padding:0 14px;margin-bottom:10px;">
-      <button onclick="toggleArchiveWeek(${w})" aria-expanded="${open}" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;background:transparent;border:0;padding:13px 0;cursor:pointer;font-family:'Noto Sans Hebrew',sans-serif;color:#3B2A24;">
-        <span style="font-weight:600;font-size:0.88rem;">שבוע שנסגר ב-${weekLabel(w)} <span aria-hidden="true" style="color:#9B8B75;font-size:0.7rem;">${open ? '▴' : '▾'}</span></span>
-        <span style="font-size:0.8rem;color:#6B2E1E;">${list.length} הזמנות · ₪${sum}</span>
+      <button onclick="toggleArchiveWeek(${w})" aria-expanded="${open}" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;background:transparent;border:0;padding:13px 0;cursor:pointer;font-family:'Noto Sans Hebrew',sans-serif;color:#3B2A24;text-align:start;">
+        <span style="font-weight:600;font-size:0.88rem;">שבוע <bdi dir="ltr">${weekLabel(w)}</bdi> <span aria-hidden="true" style="color:#9B8B75;font-size:0.7rem;">${open ? '▴' : '▾'}</span></span>
+        <span style="font-size:0.8rem;color:#6B2E1E;text-align:end;">${list.length} הזמנות · ₪${sum}${left ? '<br><span style="color:#A06000;">' + left + ' לא סומנו כנמסרו</span>' : ''}</span>
       </button>${rows}
     </div>`;
   }).join('');

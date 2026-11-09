@@ -54,8 +54,8 @@
   /* Street address and pickup day, in one place. It used to say only
      "רחובות", which is a town, not somewhere a customer can drive to. */
   var PLACE = {
-    he: 'ש. בן ציון 13, רחובות · איסוף בימי שישי',
-    en: 'S. Ben Zion 13, Rehovot · Friday pickup'
+    he: 'ש. בן ציון 13, רחובות · איסוף בימי חמישי',
+    en: 'S. Ben Zion 13, Rehovot · Thursday pickup'
   };
 
   /* Baobab Web Studio's credit, the last line of every footer. The mark is
