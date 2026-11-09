@@ -2179,6 +2179,14 @@
     .product-skel { min-height: 250px; border-radius: 14px; background: linear-gradient(100deg, rgba(255,255,255,.35) 30%, rgba(255,255,255,.65) 50%, rgba(255,255,255,.35) 70%) #EFE1C7; background-size: 220% 100%; animation: skelSweep 1.4s ease-in-out infinite; }
     @keyframes skelSweep { from { background-position: 120% 0; } to { background-position: -120% 0; } }
     @media (prefers-reduced-motion: reduce) { .product-skel { animation: none; } }
+    .shop-pickup {
+      margin: 0 auto 1.1rem;
+      text-align: center;
+      font-family: var(--font-text);
+      font-size: 0.92rem;
+      line-height: 1.6;
+      color: #5C564D;
+    }
     .shop-status {
       max-width: 34rem;
       margin: 0 auto 1.75rem;
@@ -2453,6 +2461,11 @@
     <span lang-content="en">NUIKA — menu and orders</span>
   </h1>
 
+  <p class="shop-pickup">
+    <span lang-content="he">איסוף עצמי מ-ש. בן ציון 13, רחובות · ימי חמישי משעה 15:00</span>
+    <span lang-content="en">Self pickup from S. Ben Zion 13, Rehovot · Thursdays from 3:00 pm</span>
+  </p>
+
   <div id="shop-status" class="shop-status"></div>
 
   <!-- Repeat last order banner (shown if previous order exists) -->
@@ -2615,8 +2628,8 @@
     <p class="text-center text-muted text-xs mt-4 font-sans order-legal" lang-content="he">בשליחת ההזמנה אני מאשר/ת את <a href="./terms.html" target="_blank" rel="noopener">תנאי ההזמנה</a> ואת <a href="./privacy.html" target="_blank" rel="noopener">הודעת הפרטיות</a>.</p>
     <p class="text-center text-muted text-xs mt-4 font-sans order-legal" lang-content="en">By sending the order I accept the <a href="./terms.html" target="_blank" rel="noopener">order terms</a> and the <a href="./privacy.html" target="_blank" rel="noopener">privacy notice</a> (Hebrew).</p>
 
-    <p class="text-center text-muted text-xs mt-4 font-sans" lang-content="he">איסוף עצמי מ-ש. בן ציון 13, רחובות</p>
-    <p class="text-center text-muted text-xs mt-4 font-sans" lang-content="en">Self pickup from S. Ben Zion 13, Rehovot</p>
+    <p class="text-center text-muted text-xs mt-4 font-sans" lang-content="he">איסוף עצמי מ-ש. בן ציון 13, רחובות · ימי חמישי משעה 15:00</p>
+    <p class="text-center text-muted text-xs mt-4 font-sans" lang-content="en">Self pickup from S. Ben Zion 13, Rehovot · Thursdays from 3:00 pm</p>
   </div>
 </div>
 
@@ -2866,7 +2879,7 @@
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
       <div>
         <h2 style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.2rem;font-weight:700;margin:0 0 2px;">ניהול הזמנות</h2>
-        <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.75rem;margin:0;">ארכיון אוטומטי לאחר 7 ימים</p>
+        <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.75rem;margin:0;">שבוע שנסגר ונמסר עובר לארכיון לבד</p>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button onclick="openManualOrderModal()" style="display:flex;align-items:center;gap:5px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.76rem;font-weight:600;background:#6B2E1E;border:1.5px solid #6B2E1E;color:#EFE6D6;padding:7px 12px;border-radius:100px;cursor:pointer;">
@@ -2884,6 +2897,13 @@
       </div>
     </div>
 
+    <!-- This week and the past live on separate pages -->
+    <div style="display:flex;gap:6px;margin-bottom:14px;">
+      <button onclick="showOrdersView('active')"  id="ordview-active"  class="btn-status active">📋 הזמנות פעילות</button>
+      <button onclick="showOrdersView('archive')" id="ordview-archive" class="btn-status">🗂️ ארכיון <span id="ordview-archive-count" style="background:#EFE1C7;border-radius:100px;padding:1px 8px;font-size:0.72rem;margin-inline-start:4px;"></span></button>
+    </div>
+
+    <div id="orders-active-view">
     <!-- Baking summary -->
     <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:14px;margin-bottom:16px;overflow:hidden;">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #EFE1C7;">
@@ -2908,17 +2928,17 @@
       <button onclick="filterOrders('pickup')"    id="filter-pickup"    class="btn-status">🏠 איסוף</button>
     </div>
 
+    <label style="display:flex;align-items:center;gap:8px;margin:0 0 12px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#6B655C;cursor:pointer;">
+      <input type="checkbox" id="notify-toggle" onchange="setNotify(this.checked)">
+      <span>לפתוח וואטסאפ עם הודעה מוכנה ללקוח כשאני מעדכנת סטטוס (כבוי כברירת מחדל)</span>
+    </label>
+
     <!-- Orders list -->
     <div id="order-management-list"></div>
 
-    <!-- Archive -->
-    <div style="margin-top:16px;">
-      <button onclick="toggleArchive()" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:transparent;border:1.5px solid #D5C9B5;border-radius:12px;padding:11px 16px;cursor:pointer;font-family:'Noto Sans Hebrew',sans-serif;color:#8B7260;font-size:0.82rem;" id="archive-toggle-btn">
-        <span>🗂️ ארכיון הזמנות ישנות</span>
-        <span id="archive-count" style="background:#EFE1C7;border-radius:100px;padding:2px 8px;font-size:0.72rem;"></span>
-      </button>
-      <div id="archive-list" style="display:none;margin-top:10px;opacity:0.7;"></div>
-    </div>
+    </div><!-- /orders-active-view -->
+
+    <div id="orders-archive-view" style="display:none;"></div>
   </div>
 
   <!-- ══════════════════════════════════════════ -->
@@ -5647,8 +5667,8 @@ function renderShopStatus(isOpen) {
     box.className = 'shop-status is-loading';
     box.innerHTML =
       '<p class="shop-status__note">' +
-        '<span lang-content="he">מינימום ' + MIN_ORDER_ITEMS + ' מוצרים להזמנה · איסוף עצמי מ-ש. בן ציון 13, רחובות</span>' +
-        '<span lang-content="en">Minimum ' + MIN_ORDER_ITEMS + ' items · self pickup from S. Ben Zion 13, Rehovot</span>' +
+        '<span lang-content="he">מינימום ' + MIN_ORDER_ITEMS + ' מוצרים להזמנה</span>' +
+        '<span lang-content="en">Minimum ' + MIN_ORDER_ITEMS + ' items</span>' +
       '</p>';
     return;
   }
@@ -5663,8 +5683,8 @@ function renderShopStatus(isOpen) {
         '<span lang-content="en">Orders are open' + (en ? ' · closing ' + en : '') + '</span>' +
       '</p>' +
       '<p class="shop-status__note">' +
-        '<span lang-content="he">מינימום ' + MIN_ORDER_ITEMS + ' מוצרים להזמנה · איסוף עצמי מ-ש. בן ציון 13, רחובות</span>' +
-        '<span lang-content="en">Minimum ' + MIN_ORDER_ITEMS + ' items · self pickup from S. Ben Zion 13, Rehovot</span>' +
+        '<span lang-content="he">מינימום ' + MIN_ORDER_ITEMS + ' מוצרים להזמנה</span>' +
+        '<span lang-content="en">Minimum ' + MIN_ORDER_ITEMS + ' items</span>' +
       '</p>';
   } else {
     box.className = 'shop-status is-closed';
@@ -6059,16 +6079,43 @@ function reconcileStock() {
   }).catch(() => {});
 }
 
+// An order belongs to the ordering week that closes on the Tuesday deadline after it was
+// placed. Same bucketing as currentCycle(), so "this week" means the same thing everywhere.
+function orderWeekStart(ts) {
+  const WEEK = 7 * 24 * 60 * 60 * 1000;
+  const EPOCH = Date.UTC(2026, 0, 6, 0, 0, 0);   // a Tuesday, as in currentCycle()
+  const t = +ts || Date.now();
+  const d = new Date(t);
+  const dl = new Date(d);
+  dl.setDate(d.getDate() + (2 - d.getDay() + 7) % 7);
+  dl.setHours(17, 0, 0, 0);
+  if (dl.getTime() < t) dl.setDate(dl.getDate() + 7);
+  return EPOCH + Math.floor((dl.getTime() - EPOCH) / WEEK) * WEEK;
+}
+// The day the week closed, as 27.10.2026. Digits and dots only, so safe inside innerHTML.
+function weekLabel(start) {
+  const d = new Date(start);
+  return d.getUTCDate() + '.' + (d.getUTCMonth() + 1) + '.' + d.getUTCFullYear();
+}
+
 function getOrders() {
-  const now = Date.now();
-  const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+  const cur = currentCycle().start;
+  // A week that has closed moves to the archive as one piece, and only once every one of its
+  // orders has been handed over. A week with an order still open stays where Noy can see it,
+  // so nothing undelivered can disappear from her list.
+  const weeks = {};
   ORDER_LOG.forEach(o => {
-    // Keyed on o.timestamp, an old order vanished the instant it was ticked
-    // off as delivered — taking its revenue off the dashboard with it.
-    if (!o.archived && o.status === 'done' && (now - (o.doneAt || o.timestamp)) > SEVEN_DAYS) {
+    if (o.archived) return;
+    const k = orderWeekStart(o.timestamp || o.id);
+    (weeks[k] = weeks[k] || []).push(o);
+  });
+  Object.keys(weeks).forEach(k => {
+    if (+k >= cur) return;
+    if (!weeks[k].every(o => o.status === 'done')) return;
+    weeks[k].forEach(o => {
       o.archived = true;
       db.ref(`${ROOT}/orders/${o.id}/archived`).set(true).catch(fbError);
-    }
+    });
   });
   return ORDER_LOG;
 }
@@ -6088,34 +6135,52 @@ function isPaid(o) {
 function customerWhatsAppUrl(o, text) {
   return 'https://wa.me/' + String(o.phone || '').replace(/\D/g, '').replace(/^0/, '972') + '?text=' + encodeURIComponent(text);
 }
-// One tap: the order is approved AND the customer is told so. Opened inside the click
-// (a timer would be blocked as a pop-up on iOS); Noy still presses send herself.
+// Messages to the customer are OPTIONAL. Changing an order's status never has to go through
+// WhatsApp: Noy often has already told the customer herself. Two ways to send one when she
+// wants to: a switch above the orders list (off by default) that opens the prefilled message
+// as part of "approve" / "ready", and a 💬 button on each order that sends the message for the
+// stage it is at. A browser cannot send WhatsApp by itself, so she still presses send once.
+var NOTIFY_KEY = 'nuika-notify-customers';
+function notifyOn() {
+  try { return localStorage.getItem(NOTIFY_KEY) === '1'; } catch (e) { return false; }
+}
+function setNotify(on) {
+  try { localStorage.setItem(NOTIFY_KEY, on ? '1' : '0'); } catch (e) { /* kept for this visit only */ }
+  renderOrderList();
+}
+// Opened inside the click (a timer would be blocked as a pop-up on iOS).
+function openCustomerMessage(o, text) {
+  if (String(o.phone || '').replace(/\D/g, '')) window.open(customerWhatsAppUrl(o, text), '_blank');
+}
+function approvedText(o) {
+  return PREPAID_METHODS.includes(o.paymentMethod)
+    ? 'היי ' + o.name + ' 🙂\nקיבלתי את התשלום (₪' + o.total + ') וההזמנה שלך אושרה ✅\nאיסוף ביום שישי מ-' + PICKUP_ADDRESS + '.\nתודה רבה! 🥖\nנוי, NUIKA'
+    : 'היי ' + o.name + ' 🙂\nההזמנה שלך אושרה ✅ (₪' + o.total + ', התשלום במזומן בעת האיסוף)\nאיסוף ביום שישי מ-' + PICKUP_ADDRESS + '.\nתודה רבה! 🥖\nנוי, NUIKA';
+}
+function readyText(o) {
+  if (o.delivery === 'delivery') return 'היי ' + o.name + ' 🙂\nההזמנה שלך מוכנה ויוצאת אליך 🥖\nנוי, NUIKA';
+  const cash = !PREPAID_METHODS.includes(o.paymentMethod)
+    ? '\nהתשלום במזומן בעת האיסוף (₪' + o.total + ').' : '';
+  return 'היי ' + o.name + ' 🙂\nההזמנה שלך מוכנה לאיסוף 🥖\nאפשר לבוא לאסוף מ-' + PICKUP_ADDRESS + '.' + cash + '\nנוי, NUIKA';
+}
 function approveOrder(id) {
   const o = ORDER_LOG.find(x => x.id === id);
   if (!o) return;
-  const paidByTransfer = PREPAID_METHODS.includes(o.paymentMethod);
-  const text = paidByTransfer
-    ? 'היי ' + o.name + ' 🙂\nקיבלתי את התשלום (₪' + o.total + ') וההזמנה שלך אושרה ✅\nאיסוף ביום שישי מ-' + PICKUP_ADDRESS + '.\nתודה רבה! 🥖\nנוי, NUIKA'
-    : 'היי ' + o.name + ' 🙂\nההזמנה שלך אושרה ✅ (₪' + o.total + ', התשלום במזומן בעת האיסוף)\nאיסוף ביום שישי מ-' + PICKUP_ADDRESS + '.\nתודה רבה! 🥖\nנוי, NUIKA';
-  window.open(customerWhatsAppUrl(o, text), '_blank');
+  if (notifyOn()) openCustomerMessage(o, approvedText(o));
   updateOrderStatus(id, 'confirmed');
 }
-// Same one-tap pattern for "ready": the status changes AND the customer's WhatsApp opens with
-// the message already written, so Noy does not compose anything. A browser cannot send a
-// WhatsApp message by itself, so she still presses send once per customer.
 function markReady(id) {
   const o = ORDER_LOG.find(x => x.id === id);
   if (!o) return;
-  let text;
-  if (o.delivery === 'delivery') {
-    text = 'היי ' + o.name + ' 🙂\nההזמנה שלך מוכנה ויוצאת אליך 🥖\nנוי, NUIKA';
-  } else {
-    const cash = !PREPAID_METHODS.includes(o.paymentMethod)
-      ? '\nהתשלום במזומן בעת האיסוף (₪' + o.total + ').' : '';
-    text = 'היי ' + o.name + ' 🙂\nההזמנה שלך מוכנה לאיסוף 🥖\nאפשר לבוא לאסוף מ-' + PICKUP_ADDRESS + '.' + cash + '\nנוי, NUIKA';
-  }
-  if (String(o.phone || '').replace(/\D/g, '')) window.open(customerWhatsAppUrl(o, text), '_blank');
+  if (notifyOn()) openCustomerMessage(o, readyText(o));
   updateOrderStatus(id, 'ready');
+}
+// The 💬 button: tell the customer where their order stands now, without changing anything.
+function sendOrderMessage(id) {
+  const o = ORDER_LOG.find(x => x.id === id);
+  if (!o) return;
+  const text = o.status === 'confirmed' ? approvedText(o) : o.status === 'ready' ? readyText(o) : '';
+  if (text) openCustomerMessage(o, text);
 }
 function remindPayment(id) {
   const o = ORDER_LOG.find(x => x.id === id);
@@ -6235,6 +6300,33 @@ function toggleBakeItem(i) {
   renderBakingSummary();
 }
 
+// The buttons on one order. Every status change is silent unless the switch above the list is on.
+// "נמסרה" is there from the moment an order exists: an order handed over on the spot needs no
+// approve / ready steps first.
+function actionButtons(o) {
+  const id = +o.id || 0;
+  const note = notifyOn() ? ' + הודעה' : '';
+  const green = 'style="background:#2A7A2A;color:#fff;border-color:#2A7A2A;"';
+  let html = '';
+  if (o.status === 'new') {
+    html += `<button onclick="approveOrder(${id})" class="btn-status" ${green}>${awaitingPayment(o) ? '💰 התקבל תשלום, אשרי' : '✅ אשרי'}${note} ←</button>`;
+  } else if (o.status === 'confirmed') {
+    html += `<button onclick="markReady(${id})" class="btn-status" ${green}>🍞 מוכנה${note} ←</button>`;
+  } else if (o.status === 'ready') {
+    html += `<button onclick="updateOrderStatus(${id},'done')" class="btn-status" ${green}>✔️ נמסרה ←</button>`;
+  }
+  if (o.status === 'new' || o.status === 'confirmed') {
+    html += `<button onclick="updateOrderStatus(${id},'done')" class="btn-status">✔️ נמסרה</button>`;
+  }
+  if (o.status === 'confirmed' || o.status === 'ready') {
+    html += `<button onclick="sendOrderMessage(${id})" class="btn-status" aria-label="שליחת הודעה ללקוח">💬 הודעה</button>`;
+  }
+  if (awaitingPayment(o)) {
+    html += `<button onclick="remindPayment(${id})" class="btn-status">⏰ תזכורת תשלום</button>`;
+  }
+  return html;
+}
+
 function renderOrderList() {
   const all = getOrders().filter(o => !o.archived);
   let orders = all;
@@ -6242,6 +6334,9 @@ function renderOrderList() {
   else if (currentFilter === 'pickup') orders = all.filter(o => o.delivery === 'pickup');
   else if (currentFilter === 'unpaid') orders = all.filter(o => !isPaid(o));
   else if (['new','confirmed','ready','done'].includes(currentFilter)) orders = all.filter(o => o.status === currentFilter);
+
+  const tg = document.getElementById('notify-toggle');
+  if (tg) tg.checked = notifyOn();
 
   const el = document.getElementById('order-management-list');
   if (!el) return;
@@ -6256,7 +6351,7 @@ function renderOrderList() {
   const nextStatus = { new:'confirmed', confirmed:'ready', ready:'done' };
   const nextLabel  = { new:'אשרי', confirmed:'מוכנה', ready:'נמסרה' };
 
-  el.innerHTML = orders.map(o => `
+  const orderCard = o => `
     <div class="order-card" id="ocard-${+o.id || 0}">
       <div class="order-card-header">
         <div>
@@ -6284,17 +6379,7 @@ function renderOrderList() {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.096.547 4.142 1.588 5.945L0 24l6.305-1.654A11.882 11.882 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.013-1.375l-.36-.213-3.732.979.997-3.636-.235-.373A9.818 9.818 0 1112 21.818z"/></svg>
           ${esc(o.phone)}
         </a>
-        ${o.status === 'new' ? `
-        <button onclick="approveOrder(${+o.id || 0})" class="btn-status" style="background:#2A7A2A;color:#fff;border-color:#2A7A2A;">
-          ${awaitingPayment(o) ? '💰 התקבל תשלום, אשרי ←' : '✅ אשרי ושלחי הודעה ←'}
-        </button>
-        ${awaitingPayment(o) ? `<button onclick="remindPayment(${+o.id || 0})" class="btn-status">⏰ תזכורת תשלום</button>` : ''}` : (o.status === 'confirmed' ? `
-        <button onclick="markReady(${+o.id || 0})" class="btn-status" style="background:#2A7A2A;color:#fff;border-color:#2A7A2A;">
-          🍞 מוכנה, שלחי הודעה ←
-        </button>` : nextStatus[o.status] ? `
-        <button onclick="updateOrderStatus(${+o.id || 0},'${nextStatus[o.status]}')" class="btn-status">
-          ${nextLabel[o.status]} ←
-        </button>` : '')}
+        ${actionButtons(o)}
         <button onclick="openEditOrderModal(${+o.id || 0})" class="btn-status" aria-label="עריכת הזמנה">
           ✏️ עריכה
         </button>
@@ -6303,33 +6388,84 @@ function renderOrderList() {
         </button>
       </div>
     </div>
-  `).join('');
+  `;
+
+  // Orders of an earlier week that is still being handed over are kept apart from this week's
+  // new orders, with a heading, so the two never read as one list.
+  const cur = currentCycle().start;
+  const weekOf = o => orderWeekStart(o.timestamp || o.id);
+  const starts = [...new Set(orders.map(weekOf))].sort((a, b) => b - a);
+  const grouped = starts.length > 1;
+  el.innerHTML = starts.map(w => {
+    const inWeek = orders.filter(o => weekOf(o) === w);
+    const head = !grouped ? '' : `<div style="display:flex;justify-content:space-between;align-items:baseline;margin:${w === starts[0] ? '0' : '18px'} 0 8px;padding:0 2px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;font-weight:700;color:#6B2E1E;"><span>${w >= cur ? 'הזמנות השבוע' : 'שבוע קודם · נסגר ב-' + weekLabel(w)}</span><span style="font-weight:400;color:#9B8B75;">${inWeek.length} הזמנות</span></div>`;
+    return head + inWeek.map(orderCard).join('');
+  }).join('');
+}
+
+// Past weeks live on their own page, one row per week with its count and total, opened on tap.
+var archiveOpenWeek = null;
+
+function showOrdersView(v) {
+  const active = v !== 'archive';
+  const a = document.getElementById('orders-active-view');
+  const b = document.getElementById('orders-archive-view');
+  if (a) a.style.display = active ? '' : 'none';
+  if (b) b.style.display = active ? 'none' : '';
+  const ba = document.getElementById('ordview-active');
+  const bb = document.getElementById('ordview-archive');
+  if (ba) ba.classList.toggle('active', active);
+  if (bb) bb.classList.toggle('active', !active);
+  if (!active) renderArchiveView();
 }
 
 function renderArchive() {
-  const archived = getOrders().filter(o => o.archived);
-  const btn = document.getElementById('archive-count');
-  if (btn) btn.textContent = archived.length ? archived.length + ' הזמנות' : 'ריק';
+  const n = getOrders().filter(o => o.archived).length;
+  const c = document.getElementById('ordview-archive-count');
+  if (c) c.textContent = n;
+  const v = document.getElementById('orders-archive-view');
+  if (v && v.style.display !== 'none') renderArchiveView();
 }
 
-function toggleArchive() {
-  const el = document.getElementById('archive-list');
-  if (el.style.display === 'none') {
-    const archived = getOrders().filter(o => o.archived);
-    el.innerHTML = archived.length === 0
-      ? `<div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.82rem;text-align:center;padding:12px;">הארכיון ריק</div>`
-      : archived.map(o => `
-          <div style="background:#FDFAF4;border:1px solid #E5D9C5;border-radius:10px;padding:10px 12px;margin-bottom:8px;">
-            <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
-              <span style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#8B7260;font-size:0.88rem;">${esc(o.name)}</span>
-              <span style="font-family:'Noto Serif Hebrew',serif;color:#8B7260;font-size:0.88rem;">₪${o.total}</span>
-            </div>
-            <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#9B8B75;">${esc(o.date)} · ${o.delivery==='delivery'?'משלוח':'איסוף'}</div>
-          </div>`).join('');
-    el.style.display = 'block';
-  } else {
-    el.style.display = 'none';
+function toggleArchiveWeek(w) {
+  archiveOpenWeek = archiveOpenWeek === w ? null : w;
+  renderArchiveView();
+}
+
+function renderArchiveView() {
+  const el = document.getElementById('orders-archive-view');
+  if (!el) return;
+  const archived = getOrders().filter(o => o.archived);
+  if (!archived.length) {
+    el.innerHTML = `<div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.85rem;text-align:center;padding:24px 0;">הארכיון ריק. שבוע שנסגר וכל ההזמנות שלו נמסרו עובר לכאן לבד.</div>`;
+    return;
   }
+  const weeks = {};
+  archived.forEach(o => {
+    const k = orderWeekStart(o.timestamp || o.id);
+    (weeks[k] = weeks[k] || []).push(o);
+  });
+  el.innerHTML = Object.keys(weeks).map(Number).sort((a, b) => b - a).map(w => {
+    const list = weeks[w];
+    const sum = list.reduce((s, o) => s + (+o.total || 0), 0);
+    const open = archiveOpenWeek === w;
+    const rows = !open ? '' : list.map(o => `
+      <div style="border-top:1px solid #EFE4D0;padding:9px 2px;">
+        <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:2px;">
+          <span style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#3B2A24;font-size:0.88rem;">${esc(o.name)}</span>
+          <span style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:0.88rem;">₪${+o.total || 0}</span>
+        </div>
+        <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#9B8B75;">${esc(o.date)} · ${o.delivery === 'delivery' ? 'משלוח' : 'איסוף'}${o.phone ? ' · ' + esc(o.phone) : ''}</div>
+        <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.78rem;color:#8B7260;margin-top:3px;">${esc(o.items || '').replace(/\|/g, '<br>')}</div>
+      </div>`).join('');
+    return `
+    <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:12px;padding:0 14px;margin-bottom:10px;">
+      <button onclick="toggleArchiveWeek(${w})" aria-expanded="${open}" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;background:transparent;border:0;padding:13px 0;cursor:pointer;font-family:'Noto Sans Hebrew',sans-serif;color:#3B2A24;">
+        <span style="font-weight:600;font-size:0.88rem;">שבוע שנסגר ב-${weekLabel(w)} <span aria-hidden="true" style="color:#9B8B75;font-size:0.7rem;">${open ? '▴' : '▾'}</span></span>
+        <span style="font-size:0.8rem;color:#6B2E1E;">${list.length} הזמנות · ₪${sum}</span>
+      </button>${rows}
+    </div>`;
+  }).join('');
 }
 
 function printBakingList() {
