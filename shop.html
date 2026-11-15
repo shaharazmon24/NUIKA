@@ -6301,6 +6301,28 @@ function readyText(o) {
     ? '\nהתשלום במזומן בעת האיסוף (₪' + o.total + ').' : '';
   return 'היי ' + o.name + ' 🙂\nההזמנה שלך מוכנה לאיסוף 🥖\nאפשר לבוא לאסוף מ-' + PICKUP_ADDRESS + '.' + cash + '\nנוי, NUIKA';
 }
+// "Bread refresh": care instructions for the loaves. Fixed text, no customer data inside it,
+// so there is nothing to escape; encodeURIComponent in customerWhatsAppUrl carries it intact.
+function refreshText() {
+  return [
+    'איזה כיף, קיבלתם את הלחמים שלכם לסופ"ש! 🥖',
+    'מצרפת לכם כאן הוראות הפעלה, תודו לי אחר כך :)',
+    '',
+    '🍞 נשאר לכם לחם לאמצע השבוע, או שהקרום קצת התרכך? ככה מחזירים אותו לחיים:',
+    'מחממים תנור ל־220 מעלות, מרטיבים קלות את הלחם (ביד או בבקבוק ריסוס) ומכניסים ל־12–20 דקות. בודקים אחרי 12 דקות.',
+    'יש מדחום? כשמרכז הלחם מגיע ל־80 מעלות, הוא מושלם. אין מדחום? מוציאים כשהקרום פריך כמו שאתם אוהבים.',
+    'יוצא כאילו נאפה הרגע, ואפילו טעים יותר!',
+    '',
+    '🥐 מאפים מתוקים: תנור 160 מעלות, כמה דקות בלבד עד שחמימים מבחוץ. רק אם בא לכם, הם מעולים גם ככה.',
+    '',
+    'נוי | nuika'
+  ].join('\n');
+}
+// The 🍞 button: any customer, any time, without touching the order's status.
+function sendRefreshMessage(id) {
+  const o = ORDER_LOG.find(x => x.id === id);
+  if (o) openCustomerMessage(o, refreshText());
+}
 function approveOrder(id) {
   const o = ORDER_LOG.find(x => x.id === id);
   if (!o) return;
@@ -6461,6 +6483,9 @@ function actionButtons(o) {
   }
   if (awaitingPayment(o)) {
     html += `<button onclick="remindPayment(${id})" class="btn-status">⏰ תזכורת תשלום</button>`;
+  }
+  if (o.status !== 'new') {
+    html += `<button onclick="sendRefreshMessage(${id})" class="btn-status" aria-label="שליחת הוראות חידוש לחם ללקוח">🍞 חידוש לחם</button>`;
   }
   return html;
 }
