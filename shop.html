@@ -3004,6 +3004,28 @@
       <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;margin-top:6px;">אם משאירים ריק, כפתור PayBox לא יופיע ללקוח בדף התודה.</p>
     </div>
 
+    <!-- Opening: right now, or by itself at a chosen time -->
+    <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:14px;padding:18px;margin-bottom:14px;">
+      <label style="display:block;font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-weight:700;font-size:0.95rem;margin-bottom:10px;">
+        🗓️ פתיחת הזמנות
+      </label>
+      <button onclick="openOrdersNow()" style="width:100%;background:#2A7A2A;border:none;color:#fff;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.9rem;font-weight:600;padding:11px;border-radius:10px;cursor:pointer;margin-bottom:14px;">🟢 פתחי הזמנות עכשיו</button>
+      <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#9B8B75;margin-bottom:8px;">או קבעי מועד, וההזמנות ייפתחו לבד:</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div>
+          <label for="admin-opens-date" style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#9B8B75;display:block;margin-bottom:4px;">תאריך</label>
+          <input id="admin-opens-date" type="date" class="field" style="font-size:0.88rem;" dir="ltr" />
+        </div>
+        <div>
+          <label for="admin-opens-time" style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#9B8B75;display:block;margin-bottom:4px;">שעה</label>
+          <input id="admin-opens-time" type="time" class="field" style="font-size:0.88rem;" dir="ltr" value="09:00" />
+        </div>
+      </div>
+      <button onclick="scheduleOpening()" style="width:100%;background:#6B2E1E;border:none;color:#EFE6D6;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.88rem;font-weight:600;padding:10px;border-radius:10px;cursor:pointer;">קבעי פתיחה</button>
+      <button id="admin-opens-cancel" onclick="cancelScheduledOpening()" style="display:none;width:100%;margin-top:8px;background:transparent;border:1.5px solid #D5C9B5;color:#8B7260;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;padding:8px;border-radius:8px;cursor:pointer;">בטלי את התזמון (ההזמנות יישארו סגורות)</button>
+      <p id="admin-opens-status" style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;margin:10px 0 0;"></p>
+    </div>
+
     <!-- Deadline -->
     <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:14px;padding:18px;margin-bottom:14px;">
       <label style="display:block;font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-weight:700;font-size:0.95rem;margin-bottom:10px;">
@@ -4103,6 +4125,7 @@ db.ref(`${ROOT}/settings`).on('value', snap => {
   // Re-check the subscription whenever the deadline can have moved.
   watchStock();
   updateOrdersOpenBanner();
+  try { paintOrdersState(); paintOpeningCard(); syncOrdersToggle(); } catch (e) { /* admin panel parts are optional for customers */ }
   const bitLinkEl = document.getElementById('bit-link');
   if (bitLinkEl && _settingsCache.bitLink) bitLinkEl.href = _settingsCache.bitLink;
 });
@@ -4949,6 +4972,7 @@ function togglePayment(radio) {
 // cart bar and the repeat-order banner both walked straight past a closed shop.
 function ordersAreOpen() {
   if (_settingsCache.ordersOpen === false) return false;
+  if (openingIsPending()) return false;   // scheduled: closed until that moment
   const dl = getNextTuesdayDeadline();
   return !dl || dl.getTime() > Date.now();
 }
@@ -5360,7 +5384,7 @@ function openAdminPanel() {
   if (tog) {
     // The toggle itself stays bound to the flag — the flag is what it sets.
     // Only the line under it describes what a customer actually gets.
-    tog.checked = isOpen;
+    syncOrdersToggle();
     paintOrdersState();
   }
 
@@ -5370,7 +5394,7 @@ function openAdminPanel() {
   document.getElementById('admin-panel').classList.add('open');
   document.body.style.overflow = 'hidden';
   switchAdminTab('dash');
-  setTimeout(() => { loadDeadlineIntoAdmin(); updateOrdersTabBadge(); }, 0);
+  setTimeout(() => { loadDeadlineIntoAdmin(); paintOpeningCard(); updateOrdersTabBadge(); }, 0);
 }
 
 function renderAdminProducts() {
@@ -5559,6 +5583,9 @@ function describeOrdersState() {
   if (_settingsCache.ordersOpen === false)
     return { text: 'סגורה — לקוחות לא יוכלו להזמין', color: '#B45032' };
 
+  if (openingIsPending())
+    return { text: 'מתוזמנת — ההזמנות ייפתחו ' + openingLabel('he') + '. עד אז סגורות.', color: '#A06000' };
+
   const dl = getNextTuesdayDeadline();
   if (dl && dl.getTime() <= Date.now())
     return {
@@ -5577,12 +5604,136 @@ function paintOrdersState() {
   statusText.style.color  = state.color;
 }
 
+// The toggle means "open now" / "closed". Either one also cancels a scheduled opening: a
+// schedule left behind a manual close would open the shop again on its own.
 function toggleOrdersStatus(checkbox) {
-  const isOpen = checkbox.checked;
-  db.ref(`${ROOT}/settings/ordersOpen`).set(isOpen).catch(fbError);
-  _settingsCache.ordersOpen = isOpen;   // banner reads the cache synchronously
+  if (checkbox.checked) {
+    if (!openOrdersNow()) checkbox.checked = false;   // she declined the question about the deadline
+    return;
+  }
+  db.ref(`${ROOT}/settings`).update({ ordersOpen: false, opensAt: null }).catch(fbError);
+  _settingsCache.ordersOpen = false;
+  delete _settingsCache.opensAt;
+  refreshOrdersUI();
+}
+
+// ─── SCHEDULED OPENING ─────────────────────────────
+// `opensAt` is a local date-time written like the deadline ("2026-11-15T09:00:00"). Until that
+// moment the shop is closed whatever the flag says; from it on the flag and the deadline decide,
+// as before. Scheduling also sets the flag, so the shop really does open by itself.
+var _openTimer = null;
+
+function getScheduledOpening() {
+  const v = _settingsCache.opensAt;
+  if (!v) return null;
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? null : d;
+}
+function openingIsPending() {
+  const d = getScheduledOpening();
+  return !!d && d.getTime() > Date.now();
+}
+// "יום ראשון 15.11 בשעה 09:00". Built from digits and fixed words, never from input.
+function openingLabel(lang) {
+  const d = getScheduledOpening();
+  if (!d) return '';
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  if (lang === 'en') {
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return days[d.getDay()] + ' ' + d.getDate() + ' ' + months[d.getMonth()] + ' at ' + hh + ':' + mm;
+  }
+  const days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+  return 'יום ' + days[d.getDay()] + ' ' + d.getDate() + '.' + (d.getMonth() + 1) + ' בשעה ' + hh + ':' + mm;
+}
+
+function syncOrdersToggle() {
+  const tog = document.getElementById('orders-toggle');
+  if (tog) tog.checked = _settingsCache.ordersOpen !== false && !openingIsPending();
+}
+function paintOpeningCard() {
+  const st = document.getElementById('admin-opens-status');
+  if (!st) return;
+  const cancel = document.getElementById('admin-opens-cancel');
+  const dateEl = document.getElementById('admin-opens-date');
+  if (dateEl) {
+    const t = new Date();
+    dateEl.min = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+  }
+  if (openingIsPending()) {
+    st.textContent = '⏳ מתוזמן: ההזמנות ייפתחו ' + openingLabel('he') + '. עד אז לקוחות לא יכולים להזמין.';
+    st.style.color = '#A06000';
+    if (cancel) cancel.style.display = '';
+  } else {
+    st.textContent = ordersAreOpen() ? 'ההזמנות פתוחות עכשיו.' : 'ההזמנות סגורות עכשיו.';
+    st.style.color = ordersAreOpen() ? '#2A7A2A' : '#9B8B75';
+    if (cancel) cancel.style.display = 'none';
+  }
+}
+function refreshOrdersUI() {
+  syncOrdersToggle();
   paintOrdersState();
+  paintOpeningCard();
   updateOrdersOpenBanner();
+}
+
+function fmtWhen(d) {
+  return d.getDate() + '.' + (d.getMonth() + 1) + '.' + d.getFullYear() + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+
+// Open right now. Returns false if Noy changed her mind.
+function openOrdersNow() {
+  const upd = { ordersOpen: true, opensAt: null };
+  const dl = getCustomDeadline();
+  // A closing time that has already passed would shut the shop again the same second.
+  if (dl && dl.getTime() <= Date.now()) {
+    if (!confirm('מועד הסגירה שקבעת (' + fmtWhen(dl) + ') כבר עבר, אז ההזמנות היו נסגרות שוב מיד. לפתוח עם מועד הסגירה האוטומטי (יום שלישי הקרוב ב-17:00)?')) return false;
+    upd.deadline = null;
+  }
+  db.ref(`${ROOT}/settings`).update(upd).catch(fbError);
+  _settingsCache.ordersOpen = true;
+  delete _settingsCache.opensAt;
+  if (upd.deadline === null) {
+    delete _settingsCache.deadline;
+    const dateEl = document.getElementById('admin-deadline-date');
+    const timeEl = document.getElementById('admin-deadline-time');
+    if (dateEl) dateEl.value = '';
+    if (timeEl) timeEl.value = '17:00';
+    updateDeadlinePreview();
+  }
+  refreshOrdersUI();
+  return true;
+}
+
+function scheduleOpening() {
+  const dateEl = document.getElementById('admin-opens-date');
+  const timeEl = document.getElementById('admin-opens-time');
+  if (!dateEl || !dateEl.value) { alert('בחרי תאריך פתיחה.'); return; }
+  const when = new Date(dateEl.value + 'T' + (timeEl.value || '09:00') + ':00');
+  if (isNaN(when.getTime()) || when.getTime() <= Date.now()) {
+    alert('מועד הפתיחה צריך להיות בעתיד. כדי לפתוח עכשיו לחצי על "פתחי הזמנות עכשיו".');
+    return;
+  }
+  const dl = getCustomDeadline();
+  if (dl && dl.getTime() <= when.getTime()) {
+    alert('מועד הסגירה שקבעת (' + fmtWhen(dl) + ') הוא לפני מועד הפתיחה. קבעי קודם מועד סגירה מאוחר יותר, בכרטיס "מועד סגירת הזמנות" למטה.');
+    return;
+  }
+  if (ordersAreOpen() && !confirm('ההזמנות פתוחות כרגע. אם תקבעי פתיחה עתידית הן ייסגרו עד ' + fmtWhen(when) + '. להמשיך?')) return;
+  const iso = dateEl.value + 'T' + (timeEl.value || '09:00') + ':00';
+  db.ref(`${ROOT}/settings`).update({ opensAt: iso, ordersOpen: true }).catch(fbError);
+  _settingsCache.opensAt = iso;
+  _settingsCache.ordersOpen = true;
+  refreshOrdersUI();
+}
+
+// Taking the schedule away leaves the shop closed. Opening it instead would be a surprise.
+function cancelScheduledOpening() {
+  db.ref(`${ROOT}/settings`).update({ opensAt: null, ordersOpen: false }).catch(fbError);
+  delete _settingsCache.opensAt;
+  _settingsCache.ordersOpen = false;
+  refreshOrdersUI();
 }
 
 // Two gates decided whether the shop was open, and they disagreed.
@@ -5616,6 +5767,15 @@ function updateOrdersOpenBanner() {
   // stylesheet can override, so it has to be asked again every time the
   // answer changes. See the comment on the function itself.
   checkRepeatOrder();
+
+  // Open at the chosen minute: a tick every 60s would be late by up to a minute, and a
+  // phone that is awake just before the moment should not have to wait for it.
+  if (_openTimer) { clearTimeout(_openTimer); _openTimer = null; }
+  const pend = getScheduledOpening();
+  if (pend) {
+    const ms = pend.getTime() - Date.now();
+    if (ms > 0 && ms < 2000000000) _openTimer = setTimeout(() => { try { updateOrdersOpenBanner(); } catch (e) {} }, ms + 500);
+  }
 }
 
 // Firebase events are the only thing that used to move the shop from open to
@@ -5655,7 +5815,7 @@ function renderShopStatus(isOpen) {
   // takes focus off a keyboard user's link once a minute, and can swap the
   // element out between a finger going down and coming up.
   const state = !_settingsLoaded ? 'loading'
-              : (isOpen ? 'open:' + deadlineLabel('he') : 'closed');
+              : (isOpen ? 'open:' + deadlineLabel('he') : 'closed:' + openingLabel('he'));
   if (state === _statusShown) return;
   _statusShown = state;
 
@@ -5686,10 +5846,11 @@ function renderShopStatus(isOpen) {
       '</p>';
   } else {
     box.className = 'shop-status is-closed';
+    const pendHe = openingLabel('he'), pendEn = openingLabel('en');
     box.innerHTML =
       '<p class="shop-status__line">' +
-        '<span lang-content="he">ההזמנות סגורות כרגע</span>' +
-        '<span lang-content="en">Orders are closed right now</span>' +
+        '<span lang-content="he">' + (pendHe ? 'ההזמנות ייפתחו ' + pendHe : 'ההזמנות סגורות כרגע') + '</span>' +
+        '<span lang-content="en">' + (pendEn ? 'Orders open ' + pendEn : 'Orders are closed right now') + '</span>' +
       '</p>' +
       '<p class="shop-status__note">' +
         '<span lang-content="he">התפריט כאן כדי להציץ. אני פותחת סבב חדש כל שבוע — ' +
