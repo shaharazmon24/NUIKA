@@ -3010,6 +3010,13 @@
       <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;margin-top:6px;">אם משאירים ריק, כפתור PayBox לא יופיע ללקוח בדף התודה.</p>
     </div>
 
+    <!-- The texts Noy sends to customers -->
+    <details ontoggle="if (this.open) paintMessagesEditor()" style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:14px;padding:0 18px;margin-bottom:14px;">
+      <summary style="cursor:pointer;padding:16px 0;font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-weight:700;font-size:0.95rem;">✉️ ההודעות ללקוחות (לערוך את הנוסח)</summary>
+      <p style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#6B655C;margin:0 0 6px;">כאן אפשר לשנות כל הודעה שנשלחת ללקוחות בוואטסאפ. המילים בסוגריים מסולסלים, כמו {שם} ו-{סכום}, מתחלפות בפרטי ההזמנה של הלקוח. אפשר להוסיף אותן בלחיצה על הכפתורים מעל כל הודעה. "שמרי" שומר, ו-"חזרי לנוסח המקורי" מחזיר את מה שהיה.</p>
+      <div id="admin-messages-editor"></div>
+    </details>
+
     <!-- Opening: right now, or by itself at a chosen time -->
     <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:14px;padding:18px;margin-bottom:14px;">
       <label style="display:block;font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-weight:700;font-size:0.95rem;margin-bottom:10px;">
@@ -4131,7 +4138,7 @@ db.ref(`${ROOT}/settings`).on('value', snap => {
   // Re-check the subscription whenever the deadline can have moved.
   watchStock();
   updateOrdersOpenBanner();
-  try { paintOrdersState(); paintOpeningCard(); syncOrdersToggle(); } catch (e) { /* admin panel parts are optional for customers */ }
+  try { paintOrdersState(); paintOpeningCard(); syncOrdersToggle(); paintMessagesEditor(); } catch (e) { /* admin panel parts are optional for customers */ }
   const bitLinkEl = document.getElementById('bit-link');
   if (bitLinkEl && _settingsCache.bitLink) bitLinkEl.href = _settingsCache.bitLink;
 });
@@ -5400,7 +5407,7 @@ function openAdminPanel() {
   document.getElementById('admin-panel').classList.add('open');
   document.body.style.overflow = 'hidden';
   switchAdminTab('dash');
-  setTimeout(() => { loadDeadlineIntoAdmin(); paintOpeningCard(); updateOrdersTabBadge(); }, 0);
+  setTimeout(() => { loadDeadlineIntoAdmin(); paintOpeningCard(); paintMessagesEditor(); updateOrdersTabBadge(); }, 0);
 }
 
 function renderAdminProducts() {
@@ -6296,42 +6303,170 @@ function setNotify(on) {
 function openCustomerMessage(o, text) {
   if (String(o.phone || '').replace(/\D/g, '')) window.open(customerWhatsAppUrl(o, text), '_blank');
 }
+// ─── THE MESSAGES NOY SENDS TO CUSTOMERS ────────────
+// Every WhatsApp text that goes out to a customer is a template that Noy can rewrite in the
+// settings tab. What she saves is kept in nuika/settings/messages/<key> (one key per message,
+// written alone, never the whole node); a message she has not touched, or has reset, has no
+// entry and uses the default below. Placeholders look like {שם}: they are filled from the order
+// when the message is built, and a placeholder nobody knows is left as typed so the mistake is
+// visible in the preview instead of silently vanishing.
+// These texts end up inside a wa.me link (encodeURIComponent) and, in the editor, in a textarea
+// and a preview set with textContent, so nothing here is ever parsed as HTML.
+var MSG_DEFS = [
+  { key: 'approved_paid', title: 'אישור הזמנה ששולמה (Bit / PayBox)',
+    when: 'נשלחת כשאת מאשרת הזמנה אחרי שהתשלום התקבל.',
+    vars: ['שם', 'סכום', 'כתובת'],
+    def: 'היי {שם} 🙂\nקיבלתי את התשלום (₪{סכום}) וההזמנה שלך אושרה ✅\nאיסוף ביום חמישי משעה 15:00 מ-{כתובת}.\nתודה רבה! 🥖\nנוי, NUIKA' },
+  { key: 'approved_cash', title: 'אישור הזמנה, תשלום במזומן',
+    when: 'נשלחת כשאת מאשרת הזמנה שמשלמים עליה במזומן באיסוף.',
+    vars: ['שם', 'סכום', 'כתובת'],
+    def: 'היי {שם} 🙂\nההזמנה שלך אושרה ✅ (₪{סכום}, התשלום במזומן בעת האיסוף)\nאיסוף ביום חמישי משעה 15:00 מ-{כתובת}.\nתודה רבה! 🥖\nנוי, NUIKA' },
+  { key: 'ready_pickup', title: 'ההזמנה מוכנה, איסוף עצמי',
+    when: 'נשלחת בכפתור "מוכנה", ב-"📣 הודעת מוכנה" ובשליחה לכל הלקוחות. {תשלום} הוא שורת התשלום מהשתי הבאות: היא מופיעה רק כשיש מה לכתוב, ואם תמחקי אותה מכאן היא לא תישלח.',
+    vars: ['שם', 'כתובת', 'תשלום'],
+    def: 'היי {שם} 🙂\nההזמנה שלך מוכנה לאיסוף 🥖\nאפשר לבוא לאסוף מ-{כתובת}.\n{תשלום}\nנוי, NUIKA' },
+  { key: 'ready_cash_line', title: 'שורת התשלום בהודעת "מוכנה": מזומן',
+    when: 'נכנסת במקום {תשלום} כשהלקוח משלם במזומן באיסוף.',
+    vars: ['סכום'],
+    def: 'התשלום במזומן בעת האיסוף (₪{סכום}).' },
+  { key: 'ready_unpaid_line', title: 'שורת התשלום בהודעת "מוכנה": עוד לא שולם',
+    when: 'נכנסת במקום {תשלום} כשבחר Bit או PayBox ועוד לא שילם.',
+    vars: ['סכום', 'אפליקציה'],
+    def: 'התשלום (₪{סכום}) עוד לא התקבל. אפשר להעביר ב-{אפליקציה} או לשלם במזומן בעת האיסוף.' },
+  { key: 'ready_delivery', title: 'ההזמנה מוכנה, משלוח',
+    when: 'נשלחת ללקוח שהזמין משלוח.',
+    vars: ['שם'],
+    def: 'היי {שם} 🙂\nההזמנה שלך מוכנה ויוצאת אליך 🥖\nנוי, NUIKA' },
+  { key: 'pay_reminder', title: 'תזכורת תשלום',
+    when: 'נשלחת בכפתור "⏰ תזכורת תשלום" להזמנה שעוד לא שולמה ב-Bit או PayBox.',
+    vars: ['שם', 'סכום', 'אפליקציה', 'מספר'],
+    def: 'היי {שם} 🙂\nראיתי את ההזמנה שלך (₪{סכום}), ועוד לא קיבלתי את התשלום.\nאפשר להעביר ב-{אפליקציה} למספר {מספר}.\nתודה! 🙏' },
+  { key: 'refresh', title: 'חידוש לחם',
+    when: 'נשלחת בכפתור "🍞 חידוש לחם" בכל הזמנה.',
+    vars: ['שם'],
+    def: 'איזה כיף, קיבלתם את הלחמים שלכם לסופ"ש! 🥖\nמצרפת לכם כאן הוראות הפעלה, תודו לי אחר כך :)\n\n🍞 נשאר לכם לחם לאמצע השבוע, או שהקרום קצת התרכך? ככה מחזירים אותו לחיים:\nמחממים תנור ל־220 מעלות, מרטיבים קלות את הלחם (ביד או בבקבוק ריסוס) ומכניסים ל־12–20 דקות. בודקים אחרי 12 דקות.\nיש מדחום? כשמרכז הלחם מגיע ל־80 מעלות, הוא מושלם. אין מדחום? מוציאים כשהקרום פריך כמו שאתם אוהבים.\nיוצא כאילו נאפה הרגע, ואפילו טעים יותר!\n\n🥐 מאפים מתוקים: תנור 160 מעלות, כמה דקות בלבד עד שחמימים מבחוץ. רק אם בא לכם, הם מעולים גם ככה.\n\nנוי | nuika' }
+];
+var MSG_DEFAULTS = {};
+MSG_DEFS.forEach(function (d) { MSG_DEFAULTS[d.key] = d.def; });
+
+function msgTemplate(key) {
+  const saved = (_settingsCache.messages || {})[key];
+  return (typeof saved === 'string' && saved.trim()) ? saved : MSG_DEFAULTS[key];
+}
+function renderTemplate(tpl, vars) {
+  const has = k => Object.prototype.hasOwnProperty.call(vars, k);
+  return String(tpl).split('\n').map(line => {
+    // a placeholder alone on its line that came out empty takes its whole line with it
+    const alone = line.trim().match(/^\{([^{}]+)\}$/);
+    if (alone && has(alone[1]) && String(vars[alone[1]]) === '') return null;
+    return line.replace(/\{([^{}]+)\}/g, (all, k) => has(k) ? String(vars[k]) : all);
+  }).filter(l => l !== null).join('\n');
+}
+function fillMsg(key, vars) { return renderTemplate(msgTemplate(key), vars); }
+
 function approvedText(o) {
-  return PREPAID_METHODS.includes(o.paymentMethod)
-    ? 'היי ' + o.name + ' 🙂\nקיבלתי את התשלום (₪' + o.total + ') וההזמנה שלך אושרה ✅\nאיסוף ביום חמישי משעה 15:00 מ-' + PICKUP_ADDRESS + '.\nתודה רבה! 🥖\nנוי, NUIKA'
-    : 'היי ' + o.name + ' 🙂\nההזמנה שלך אושרה ✅ (₪' + o.total + ', התשלום במזומן בעת האיסוף)\nאיסוף ביום חמישי משעה 15:00 מ-' + PICKUP_ADDRESS + '.\nתודה רבה! 🥖\nנוי, NUIKA';
+  return fillMsg(PREPAID_METHODS.includes(o.paymentMethod) ? 'approved_paid' : 'approved_cash',
+    { 'שם': o.name, 'סכום': o.total, 'כתובת': PICKUP_ADDRESS });
 }
 function readyText(o) {
-  if (o.delivery === 'delivery') return 'היי ' + o.name + ' 🙂\nההזמנה שלך מוכנה ויוצאת אליך 🥖\nנוי, NUIKA';
+  const vars = { 'שם': o.name, 'סכום': o.total, 'כתובת': PICKUP_ADDRESS,
+                 'אפליקציה': PAYMENT_LABELS_HE[o.paymentMethod] || 'Bit' };
+  if (o.delivery === 'delivery') return fillMsg('ready_delivery', vars);
   // Bit / PayBox that has not arrived yet (the order is still 'new'): say so, and that cash at
   // pickup is fine, so "ready" never reads as if it were already paid.
-  const cash = awaitingPayment(o)
-    ? '\nהתשלום (₪' + o.total + ') עוד לא התקבל. אפשר להעביר ב-' + (PAYMENT_LABELS_HE[o.paymentMethod] || 'Bit') + ' או לשלם במזומן בעת האיסוף.'
-    : !PREPAID_METHODS.includes(o.paymentMethod)
-    ? '\nהתשלום במזומן בעת האיסוף (₪' + o.total + ').' : '';
-  return 'היי ' + o.name + ' 🙂\nההזמנה שלך מוכנה לאיסוף 🥖\nאפשר לבוא לאסוף מ-' + PICKUP_ADDRESS + '.' + cash + '\nנוי, NUIKA';
+  vars['תשלום'] = awaitingPayment(o) ? fillMsg('ready_unpaid_line', vars)
+    : !PREPAID_METHODS.includes(o.paymentMethod) ? fillMsg('ready_cash_line', vars) : '';
+  return fillMsg('ready_pickup', vars);
 }
-// "Bread refresh": care instructions for the loaves. Fixed text, no customer data inside it,
-// so there is nothing to escape; encodeURIComponent in customerWhatsAppUrl carries it intact.
-function refreshText() {
-  return [
-    'איזה כיף, קיבלתם את הלחמים שלכם לסופ"ש! 🥖',
-    'מצרפת לכם כאן הוראות הפעלה, תודו לי אחר כך :)',
-    '',
-    '🍞 נשאר לכם לחם לאמצע השבוע, או שהקרום קצת התרכך? ככה מחזירים אותו לחיים:',
-    'מחממים תנור ל־220 מעלות, מרטיבים קלות את הלחם (ביד או בבקבוק ריסוס) ומכניסים ל־12–20 דקות. בודקים אחרי 12 דקות.',
-    'יש מדחום? כשמרכז הלחם מגיע ל־80 מעלות, הוא מושלם. אין מדחום? מוציאים כשהקרום פריך כמו שאתם אוהבים.',
-    'יוצא כאילו נאפה הרגע, ואפילו טעים יותר!',
-    '',
-    '🥐 מאפים מתוקים: תנור 160 מעלות, כמה דקות בלבד עד שחמימים מבחוץ. רק אם בא לכם, הם מעולים גם ככה.',
-    '',
-    'נוי | nuika'
-  ].join('\n');
+// "Bread refresh": care instructions for the loaves.
+function refreshText(o) {
+  return fillMsg('refresh', { 'שם': o ? o.name : '' });
 }
 // The 🍞 button: any customer, any time, without touching the order's status.
 function sendRefreshMessage(id) {
   const o = ORDER_LOG.find(x => x.id === id);
-  if (o) openCustomerMessage(o, refreshText());
+  if (o) openCustomerMessage(o, refreshText(o));
+}
+
+// ─── THE EDITOR IN THE SETTINGS TAB ────────────────
+function msgSampleVars() {
+  const num = '0' + String(OWNER_WHATSAPP).replace(/^972/, '');
+  return { 'שם': 'דנה', 'סכום': 90, 'כתובת': PICKUP_ADDRESS, 'אפליקציה': 'Bit',
+           'מספר': num.slice(0, 3) + '-' + num.slice(3), 'תשלום': '(כאן תופיע שורת התשלום לפי ההזמנה)' };
+}
+function msgEl(tag, css, text) {
+  const e = document.createElement(tag);
+  if (css) e.style.cssText = css;
+  if (text != null) e.textContent = text;
+  return e;
+}
+function msgRow(d) {
+  const font = "font-family:'Noto Sans Hebrew',sans-serif;";
+  const row = msgEl('div', 'border-top:1px solid #EFE4D0;padding:14px 0;');
+  row.appendChild(msgEl('div', font + 'font-weight:700;color:#3B2A24;font-size:0.88rem;', d.title));
+  row.appendChild(msgEl('div', font + 'font-size:0.74rem;color:#9B8B75;margin:2px 0 8px;', d.when));
+
+  const ta = msgEl('textarea', font + 'width:100%;box-sizing:border-box;min-height:110px;padding:10px;border:1.5px solid #D5C9B5;border-radius:10px;font-size:0.85rem;line-height:1.5;background:#fff;color:#3B2A24;resize:vertical;');
+  ta.dir = 'rtl';
+  ta.maxLength = 1500;
+  ta.value = msgTemplate(d.key);
+  ta.setAttribute('aria-label', d.title);
+
+  const chips = msgEl('div', 'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;');
+  chips.appendChild(msgEl('span', font + 'font-size:0.72rem;color:#9B8B75;align-self:center;', 'להוסיף למקום הסמן:'));
+  d.vars.forEach(v => {
+    const b = msgEl('button', font + 'font-size:0.74rem;background:#F0E9D8;border:1.5px solid #D5C9B5;color:#6B2E1E;border-radius:100px;padding:3px 10px;cursor:pointer;', '{' + v + '}');
+    b.type = 'button';
+    b.onclick = function () { ta.setRangeText('{' + v + '}', ta.selectionStart, ta.selectionEnd, 'end'); ta.focus(); ta.dispatchEvent(new Event('input')); };
+    chips.appendChild(b);
+  });
+
+  const prev = msgEl('div', font + 'white-space:pre-wrap;background:#F6F0E4;border-radius:10px;padding:10px;font-size:0.8rem;line-height:1.5;color:#3B2A24;margin-top:8px;');
+  const paintPrev = function () { prev.textContent = renderTemplate(ta.value, msgSampleVars()); };
+  paintPrev();
+
+  const status = msgEl('span', font + 'font-size:0.76rem;color:#2A7A2A;');
+  ta.addEventListener('input', function () { ta.setAttribute('data-dirty', '1'); status.textContent = ''; paintPrev(); });
+
+  const save = msgEl('button', font + 'background:#6B2E1E;border:none;color:#EFE6D6;font-size:0.82rem;font-weight:600;padding:8px 16px;border-radius:10px;cursor:pointer;', 'שמרי');
+  save.type = 'button';
+  save.onclick = function () { saveMsg(d.key, ta, status, paintPrev); };
+  const reset = msgEl('button', font + 'background:transparent;border:1.5px solid #D5C9B5;color:#8B7260;font-size:0.78rem;padding:7px 12px;border-radius:10px;cursor:pointer;', 'חזרי לנוסח המקורי');
+  reset.type = 'button';
+  reset.onclick = function () { ta.value = MSG_DEFAULTS[d.key]; saveMsg(d.key, ta, status, paintPrev); };
+
+  const bar = msgEl('div', 'display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;');
+  bar.appendChild(save); bar.appendChild(reset); bar.appendChild(status);
+
+  row.appendChild(chips); row.appendChild(ta);
+  row.appendChild(msgEl('div', font + 'font-size:0.72rem;color:#9B8B75;margin-top:8px;', 'כך זה ייראה אצל הלקוח (עם שם וסכום לדוגמה):'));
+  row.appendChild(prev); row.appendChild(bar);
+  return row;
+}
+function paintMessagesEditor() {
+  const box = document.getElementById('admin-messages-editor');
+  if (!box) return;
+  // never wipe what she is in the middle of typing
+  if (box.querySelector('[data-dirty="1"]')) return;
+  if (box.contains(document.activeElement) && document.activeElement.tagName === 'TEXTAREA') return;
+  box.textContent = '';
+  MSG_DEFS.forEach(d => box.appendChild(msgRow(d)));
+}
+function saveMsg(key, ta, status, paintPrev) {
+  if (!Object.prototype.hasOwnProperty.call(MSG_DEFAULTS, key)) return;
+  const v = ta.value.replace(/\s+$/, '');
+  // Only a real difference from the default is stored; empty or identical means "use the default".
+  const store = (!v.trim() || v === MSG_DEFAULTS[key]) ? null : v;
+  if (!v.trim()) ta.value = MSG_DEFAULTS[key];
+  _settingsCache.messages = _settingsCache.messages || {};
+  if (store === null) delete _settingsCache.messages[key]; else _settingsCache.messages[key] = store;
+  ta.removeAttribute('data-dirty');
+  if (paintPrev) paintPrev();
+  status.style.color = '#9B8B75';
+  status.textContent = 'שומרת...';
+  db.ref(`${ROOT}/settings/messages/${key}`).set(store)
+    .then(() => { status.style.color = '#2A7A2A'; status.textContent = store === null ? 'חזר לנוסח המקורי ✓' : 'נשמר ✓'; })
+    .catch(fbError);
 }
 // "Your order is ready" WITHOUT approving payment or changing the status: for the customer who
 // has not paid yet and will pay cash at pickup. The status stays as it is on purpose: for
@@ -6458,7 +6593,7 @@ function remindPayment(id) {
   if (!o) return;
   const app = PAYMENT_LABELS_HE[o.paymentMethod] || 'Bit';
   const num = '0' + String(OWNER_WHATSAPP).replace(/^972/, '');
-  const text = 'היי ' + o.name + ' 🙂\nראיתי את ההזמנה שלך (₪' + o.total + '), ועוד לא קיבלתי את התשלום.\nאפשר להעביר ב-' + app + ' למספר ' + num.slice(0, 3) + '-' + num.slice(3) + '.\nתודה! 🙏';
+  const text = fillMsg('pay_reminder', { 'שם': o.name, 'סכום': o.total, 'אפליקציה': app, 'מספר': num.slice(0, 3) + '-' + num.slice(3) });
   window.open(customerWhatsAppUrl(o, text), '_blank');
 }
 
