@@ -373,13 +373,6 @@
     .add-product-btn:hover { background: #B84830; color: white; }
 
     /* ── ORDER MANAGEMENT ─────────────────────────── */
-    .order-stat-card {
-      background: #FDFAF4;
-      border: 1.5px solid #E5D9C5;
-      border-radius: 12px;
-      padding: 14px 16px;
-      text-align: center;
-    }
     .order-card {
       background: #FDFAF4;
       border: 1.5px solid #E5D9C5;
@@ -821,89 +814,9 @@
     #scroll-top-btn:hover { background: rgba(107,58,42,1); }
 
     /* ── ADMIN TABS ──────────────────────────────── */
-    .admin-top-bar {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      background: #F0E9D8;
-      border-bottom: 1.5px solid #E5D9C5;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 16px 12px;
-    }
-    body.dark .admin-top-bar { background: #1C1610; border-color: #3A2E24; }
-
-    .admin-tab-nav {
-      display: flex;
-      gap: 4px;
-      background: #EFE1C7;
-      border-radius: 12px;
-      padding: 4px;
-      overflow-x: auto;
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
-    .admin-tab-nav::-webkit-scrollbar { display: none; }
-    body.dark .admin-tab-nav { background: #2A2218; }
-
-    .admin-tab-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 3px;
-      padding: 8px 14px;
-      border-radius: 9px;
-      border: none;
-      background: transparent;
-      cursor: pointer;
-      font-family: 'Noto Sans Hebrew', sans-serif;
-      font-size: 0.72rem;
-      font-weight: 600;
-      color: #8B7260;
-      white-space: nowrap;
-      transition: background 0.18s, color 0.18s;
-      flex-shrink: 0;
-    }
-    .admin-tab-btn svg { opacity: 0.65; transition: opacity 0.18s; }
-    .admin-tab-btn:hover { background: rgba(107,58,42,0.08); color: #6B2E1E; }
-    .admin-tab-btn.active {
-      background: #FDFAF4;
-      color: #6B2E1E;
-      box-shadow: 0 1px 4px rgba(107,58,42,0.12);
-    }
-    .admin-tab-btn.active svg { opacity: 1; }
-    body.dark .admin-tab-btn { color: #7A6A58; }
-    body.dark .admin-tab-btn.active { background: #3A2E24; color: #D6A54A; }
-    body.dark .admin-tab-btn:hover { background: rgba(212,169,106,0.1); color: #D6A54A; }
 
     .admin-tab-content { display: none; padding: 20px 16px 80px; max-width: 600px; margin: 0 auto; }
     .admin-tab-content.active { display: block; }
-
-    /* Dashboard quick-action cards */
-    .dash-action-card {
-      background: #FDFAF4;
-      border: 1.5px solid #E5D9C5;
-      border-radius: 14px;
-      padding: 16px 18px;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      cursor: pointer;
-      transition: border-color 0.2s, transform 0.18s;
-      text-decoration: none;
-    }
-    .dash-action-card:hover { border-color: #B84830; transform: translateY(-1px); }
-    body.dark .dash-action-card { background: #241E18; border-color: #3A2E24; }
-    body.dark .dash-action-card:hover { border-color: #B84830; }
-
-    .dash-action-icon {
-      width: 44px; height: 44px;
-      border-radius: 11px;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-      font-size: 1.3rem;
-    }
 
     /* Badge on tab */
     .tab-badge {
@@ -2382,6 +2295,548 @@
        first paint. Placed last in the head on purpose: Tailwind's runtime <style> also landed last, and
        the cascade between these rules and the page's own depends on that order. If a new Tailwind class
        is added to this file, it must be added here too (see CLAUDE.md, "The shop's CSS"). -->
+    <style id="admin-ui">
+    /* ═══════════════════════════════════════════════════════════════════════
+       ADMIN UI — Noy's panel only. Everything is scoped to #admin-panel (and
+       the few overlays the panel opens), so the public shop is not touched.
+       Tokens first, then the shell, then components, then a "skin" that
+       re-colours the older inline-styled markup (kitchen, finance, events)
+       without editing each of those strings.
+       ═══════════════════════════════════════════════════════════════════════ */
+    #admin-panel, .ap-skin {
+      --ap-canvas: #EEE6D5;
+      --ap-surface: #FFFCF6;
+      --ap-sunken: #F6F0E2;
+      --ap-line: #E2D6C0;
+      --ap-line-2: #CDBEA3;
+      --ap-ink: #2B1F19;
+      --ap-ink-2: #5A483C;
+      --ap-mute: #74604E;
+      --ap-brand: #6B2E1E;
+      --ap-brand-2: #55231A;
+      --ap-accent: #B84830;
+      --ap-ok: #2B7239;   --ap-ok-bg: #E6F2E8;
+      --ap-warn: #8F5700; --ap-warn-bg: #FFF0D2;
+      --ap-info: #1D5A93; --ap-info-bg: #E4EEF8;
+      --ap-bad: #AE3326;  --ap-bad-bg: #FAE7E3;
+      --ap-nav: #32231C;
+      --ap-nav-ink: #F0E6D3;
+      --ap-nav-mute: #BBA98F;
+      --ap-r: 14px;
+      --ap-r-sm: 10px;
+      --ap-ease: cubic-bezier(.22, 1, .36, 1);
+    }
+    body.dark #admin-panel, body.dark .ap-skin {
+      --ap-canvas: #171210;
+      --ap-surface: #221B16;
+      --ap-sunken: #1C1612;
+      --ap-line: #3A2E24;
+      --ap-line-2: #54443A;
+      --ap-ink: #F1E7D6;
+      --ap-ink-2: #CDBDA6;
+      --ap-mute: #A6957F;
+      --ap-brand: #E3B07A;
+      --ap-brand-2: #F0C79A;
+      --ap-ok: #7FCB8C;   --ap-ok-bg: #1D2D20;
+      --ap-warn: #E8B45A; --ap-warn-bg: #33270F;
+      --ap-info: #86B7E8; --ap-info-bg: #16263A;
+      --ap-bad: #F08A7B;  --ap-bad-bg: #38201C;
+      --ap-nav: #0F0B09;
+    }
+
+    /* ── Shell ─────────────────────────────────────────────────────────── */
+    #admin-panel {
+      background: var(--ap-canvas);
+      color: var(--ap-ink);
+      direction: rtl;
+      font-family: 'Noto Sans Hebrew', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      scrollbar-width: thin;
+      scrollbar-color: var(--ap-line-2) transparent;
+      animation: none;
+    }
+    #admin-panel.open { display: block; }
+    #admin-panel ::selection { background: rgba(184, 72, 48, .22); }
+    #admin-panel :focus-visible { outline: 2.5px solid var(--ap-accent); outline-offset: 2px; border-radius: 8px; }
+    #admin-panel button, #admin-panel input, #admin-panel select, #admin-panel textarea { font-family: inherit; }
+    #admin-panel button { -webkit-tap-highlight-color: transparent; }
+
+    .ap-main { min-width: 0; padding-bottom: calc(92px + env(safe-area-inset-bottom)); }
+
+    .ap-top {
+      position: sticky; top: 0; z-index: 12;
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px;
+      background: var(--ap-canvas);   /* fallback for a browser without color-mix(): never see-through */
+      background: color-mix(in srgb, var(--ap-canvas) 90%, transparent);
+      -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--ap-line);
+    }
+    .ap-top-brand { flex: 1; min-width: 0; line-height: 1.15; }
+    .ap-top-brand b { display: block; font: 700 1.15rem 'Noto Serif Hebrew', serif; color: var(--ap-brand); }
+    .ap-top-brand span { font-size: .7rem; color: var(--ap-mute); white-space: nowrap; display: block; overflow: hidden; text-overflow: ellipsis; }
+    .ap-pill {
+      display: inline-flex; align-items: center; gap: 7px;
+      height: 32px; padding: 0 12px; border-radius: 100px;
+      font-size: .78rem; font-weight: 600; white-space: nowrap;
+      background: var(--ap-ok-bg); color: var(--ap-ok);
+    }
+    .ap-pill::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .ap-pill[data-kind="closed"], .ap-pill[data-kind="late"] { background: var(--ap-bad-bg); color: var(--ap-bad); }
+    .ap-pill[data-kind="pending"] { background: var(--ap-warn-bg); color: var(--ap-warn); }
+    .ap-icon-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      height: 40px; min-width: 40px; padding: 0 10px; border-radius: var(--ap-r-sm);
+      border: 1px solid var(--ap-line-2); background: var(--ap-surface); color: var(--ap-ink-2);
+      font-size: .8rem; font-weight: 600; cursor: pointer;
+      transition: background .15s, border-color .15s, transform .15s var(--ap-ease);
+    }
+    .ap-icon-btn:hover { background: var(--ap-sunken); border-color: var(--ap-brand); color: var(--ap-brand); }
+    .ap-icon-btn:active { transform: scale(.96); }
+    .ap-icon-btn .ap-lbl { display: none; }
+
+    /* navigation: bottom bar on a phone ... */
+    .ap-side {
+      position: fixed; inset-inline: 0; bottom: 0; z-index: 30;
+      background: var(--ap-surface);
+      border-top: 1px solid var(--ap-line);
+      padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    }
+    .ap-brand, .ap-foot { display: none; }
+    .ap-nav { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; position: relative; }
+    .ap-nav .admin-tab-btn,
+    .ap-nav .ap-more-btn {
+      position: relative;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+      min-height: 52px; padding: 6px 2px; border: 0; border-radius: 12px; background: transparent;
+      font-size: .7rem; font-weight: 600; color: var(--ap-mute); cursor: pointer; white-space: nowrap;
+      transition: color .15s, background .15s;
+    }
+    .ap-nav .admin-tab-btn svg, .ap-nav .ap-more-btn svg { width: 22px; height: 22px; opacity: 1; transition: transform .2s var(--ap-ease); }
+    .ap-nav .admin-tab-btn:hover, .ap-nav .ap-more-btn:hover { background: var(--ap-sunken); color: var(--ap-brand); }
+    .ap-nav .admin-tab-btn.active, .ap-nav .ap-more-btn.on {
+      color: var(--ap-accent); background: color-mix(in srgb, var(--ap-accent) 9%, transparent); box-shadow: none;
+    }
+    .ap-nav .admin-tab-btn.active svg { transform: translateY(-1px); }
+    .ap-nav:has(.ap-more .active) .ap-more-btn { color: var(--ap-accent); }
+    .ap-more {
+      display: none;
+      position: absolute; inset-inline: 0; bottom: calc(100% + 14px);
+      grid-template-columns: repeat(2, 1fr); gap: 4px; padding: 8px;
+      background: var(--ap-surface); border: 1px solid var(--ap-line); border-radius: 18px;
+      box-shadow: 0 -6px 14px rgba(43, 31, 25, .08), 0 14px 40px rgba(43, 31, 25, .18);
+    }
+    .ap-nav.more-open .ap-more { display: grid; animation: ap-sheet .22s var(--ap-ease); }
+    @keyframes ap-sheet { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    .ap-more .admin-tab-btn { flex-direction: row; justify-content: flex-start; gap: 10px; min-height: 48px; padding: 0 14px; font-size: .88rem; }
+    .ap-nav .tab-badge {
+      position: absolute; top: 2px; inset-inline-start: calc(50% + 6px);
+      min-width: 18px; height: 18px; padding: 0 5px; border-radius: 100px;
+      background: var(--ap-accent); color: #fff; font-size: .68rem; font-weight: 700;
+      align-items: center; justify-content: center;
+    }
+    .ap-nav { z-index: 1; }
+    .ap-scrim { display: none; position: fixed; inset: 0; z-index: 0; background: rgba(32, 22, 17, .28); }
+    .ap-nav.more-open ~ .ap-scrim { display: block; }
+
+    /* ... and a sidebar on a laptop */
+    @media (min-width: 900px) {
+      #admin-panel.open { display: grid; grid-template-columns: 268px minmax(0, 1fr); align-items: start; }
+      .ap-side {
+        position: sticky; top: 0; inset-inline: auto; bottom: auto; z-index: 14;
+        height: 100vh; height: 100dvh;
+        display: flex; flex-direction: column;
+        background: var(--ap-nav); border-top: 0; padding: 26px 16px 18px;
+      }
+      .ap-brand { display: block; padding: 4px 12px 26px; }
+      .ap-brand b { display: block; font: 700 1.55rem/1.1 'Noto Serif Hebrew', serif; color: var(--ap-nav-ink); }
+      .ap-brand span { display: block; margin-top: 5px; font-size: .8rem; color: var(--ap-nav-mute); }
+      .ap-nav { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+      .ap-more { display: contents; }
+      .ap-more-btn { display: none !important; }
+      .ap-nav .admin-tab-btn {
+        flex-direction: row; justify-content: flex-start; gap: 13px;
+        min-height: 46px; padding: 0 14px; font-size: .92rem; color: var(--ap-nav-mute);
+      }
+      .ap-nav .admin-tab-btn svg { width: 20px; height: 20px; }
+      .ap-nav .admin-tab-btn:hover { background: rgba(240, 230, 211, .08); color: var(--ap-nav-ink); }
+      .ap-nav .admin-tab-btn.active { background: #F4EBD9; color: #4A2118; }
+      .ap-nav .admin-tab-btn.active svg { transform: none; }
+      .ap-nav .tab-badge { position: static; margin-inline-start: auto; }
+      #atab-dash { order: 1; } #atab-orders { order: 2; } #atab-menu { order: 3; } #atab-customers { order: 4; }
+      #atab-events { order: 5; } #atab-kitchen { order: 6; } #atab-finance { order: 7; }
+      #atab-settings { order: 9; margin-top: auto; border-top: 1px solid rgba(240, 230, 211, .12); border-radius: 0 0 10px 10px; }
+      .ap-foot { display: block; padding: 14px 12px 0; color: var(--ap-nav-mute); font-size: .72rem; line-height: 1.7; }
+      #admin-version { font: .68rem/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--ap-nav-mute); opacity: .8; }
+      .ap-scrim { display: none !important; }
+      .ap-top { padding: 14px 40px; }
+      .ap-top-brand { display: none; }
+      .ap-top-spacer { flex: 1; }
+      .ap-icon-btn .ap-lbl { display: inline; }
+      .ap-main { padding-bottom: 60px; }
+    }
+    .ap-top-spacer { display: none; }
+    @media (min-width: 900px) { .ap-top-spacer { display: block; } }
+
+    /* ── Page containers ───────────────────────────────────────────────── */
+    .admin-tab-content { padding: 22px 16px 24px; max-width: 640px; margin: 0 auto; }
+    .admin-tab-content.active { animation: ap-tab .24s var(--ap-ease); }
+    @keyframes ap-tab { from { opacity: .45; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    @media (min-width: 900px) {
+      .admin-tab-content { padding: 34px 40px 24px; max-width: 1080px; }
+      #admin-tab-settings, #admin-tab-menu, #admin-tab-events, #admin-tab-customers { max-width: 800px; }
+      #admin-tab-dash { max-width: 880px; }
+    }
+    .admin-tab-content h2 {
+      font: 700 1.5rem/1.2 'Noto Serif Hebrew', serif !important; color: var(--ap-brand) !important; margin: 0 0 4px !important;
+      text-wrap: balance;
+    }
+    .admin-tab-content h2 + p { color: var(--ap-mute) !important; font-size: .86rem !important; }
+
+    .ap-h3 { font: 700 1rem 'Noto Serif Hebrew', serif; color: var(--ap-ink); margin: 0 0 10px; }
+    .ap-block { margin-top: 26px; }
+    .ap-card { background: var(--ap-surface); border: 1px solid var(--ap-line); border-radius: var(--ap-r); }
+
+    /* ── Buttons ───────────────────────────────────────────────────────── */
+    .ap-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      min-height: 42px; padding: 0 16px; border-radius: var(--ap-r-sm);
+      border: 1px solid var(--ap-line-2); background: var(--ap-surface); color: var(--ap-ink-2);
+      font-size: .86rem; font-weight: 600; line-height: 1; cursor: pointer; white-space: nowrap;
+      transition: background .15s, border-color .15s, color .15s, transform .15s var(--ap-ease);
+    }
+    .ap-btn svg { width: 17px; height: 17px; flex-shrink: 0; }
+    .ap-btn:hover { background: var(--ap-sunken); border-color: var(--ap-brand); color: var(--ap-brand); }
+    .ap-btn:active { transform: scale(.97); }
+    .ap-btn:disabled { opacity: .45; cursor: default; transform: none; }
+    .ap-btn--primary { background: var(--ap-brand); border-color: var(--ap-brand); color: #FBF3E4; }
+    .ap-btn--primary:hover { background: var(--ap-brand-2); border-color: var(--ap-brand-2); color: #fff; }
+    body.dark .ap-btn--primary { color: #2B1F19; }
+    .ap-btn--sm { min-height: 38px; padding: 0 12px; font-size: .8rem; }
+    .ap-btn--bare { border-color: transparent; background: transparent; }
+    .ap-btn--danger { color: var(--ap-bad); }
+    .ap-btn--danger:hover { background: var(--ap-bad-bg); border-color: var(--ap-bad); color: var(--ap-bad); }
+
+    /* the older button classes, brought in line */
+    #admin-panel .btn-status {
+      display: inline-flex; align-items: center; gap: 7px;
+      min-height: 38px; padding: 0 14px; border-radius: 100px;
+      font-size: .8rem; font-weight: 600; color: var(--ap-ink-2);
+      border: 1px solid var(--ap-line-2); background: var(--ap-surface);
+      transition: background .15s, border-color .15s, color .15s, transform .15s var(--ap-ease);
+    }
+    #admin-panel .btn-status:hover { background: var(--ap-sunken); border-color: var(--ap-brand); color: var(--ap-brand); }
+    #admin-panel .btn-status:active { transform: scale(.97); }
+    #admin-panel .btn-status.active { background: var(--ap-brand); border-color: var(--ap-brand); color: #FBF3E4; }
+    body.dark #admin-panel .btn-status.active { color: #2B1F19; }
+    .ap-n { font-weight: 700; font-size: .72rem; min-width: 20px; padding: 1px 6px; border-radius: 100px; background: var(--ap-sunken); color: var(--ap-ink-2); text-align: center; }
+    .btn-status.active .ap-n { background: rgba(255, 255, 255, .22); color: inherit; }
+    .ap-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ap-mute); flex-shrink: 0; }
+    .ap-dot[data-s="new"] { background: var(--ap-info); }
+    .ap-dot[data-s="confirmed"] { background: var(--ap-ok); }
+    .ap-dot[data-s="ready"] { background: var(--ap-warn); }
+    .ap-dot[data-s="done"] { background: var(--ap-line-2); }
+    .ap-dot[data-s="late"] { background: var(--ap-bad); }
+
+    /* ── Switches ──────────────────────────────────────────────────────── */
+    #admin-panel .admin-toggle { width: 50px; height: 30px; }
+    #admin-panel .admin-toggle-slider { background: var(--ap-line-2); transition: background .22s; }
+    #admin-panel .admin-toggle-slider::before {
+      left: 3px; top: 3px; width: 24px; height: 24px;
+      transition: transform .26s var(--ap-ease); box-shadow: 0 1px 3px rgba(0, 0, 0, .28);
+    }
+    #admin-panel .admin-toggle input:checked + .admin-toggle-slider { background: var(--ap-ok); }
+    #admin-panel .admin-toggle input:checked + .admin-toggle-slider::before { transform: translateX(20px); }
+    #admin-panel .admin-toggle input:focus-visible + .admin-toggle-slider { outline: 2.5px solid var(--ap-accent); outline-offset: 2px; }
+    #admin-panel .admin-toggle input:disabled + .admin-toggle-slider { opacity: .45; cursor: default; }
+
+    /* ── Home ──────────────────────────────────────────────────────────── */
+    .ap-hero {
+      display: flex; align-items: center; justify-content: space-between; gap: 18px;
+      padding: 22px 22px; border-radius: 18px; border: 1px solid var(--ap-line);
+      background: var(--ap-surface); transition: background .3s, border-color .3s;
+    }
+    .ap-hero[data-kind="open"] { background: var(--ap-ok-bg); border-color: color-mix(in srgb, var(--ap-ok) 28%, transparent); }
+    .ap-hero[data-kind="closed"], .ap-hero[data-kind="late"] { background: var(--ap-bad-bg); border-color: color-mix(in srgb, var(--ap-bad) 28%, transparent); }
+    .ap-hero[data-kind="pending"] { background: var(--ap-warn-bg); border-color: color-mix(in srgb, var(--ap-warn) 30%, transparent); }
+    .ap-hero h2 { font-size: 1.3rem !important; margin: 0 0 6px !important; }
+    #orders-status-text { margin: 0; font-size: .92rem; font-weight: 600; line-height: 1.5; color: var(--ap-ink-2); }
+    .ap-hero[data-kind="open"] #orders-status-text { color: var(--ap-ok); }
+    .ap-hero[data-kind="closed"] #orders-status-text, .ap-hero[data-kind="late"] #orders-status-text { color: var(--ap-bad); }
+    .ap-hero[data-kind="pending"] #orders-status-text { color: var(--ap-warn); }
+    .ap-hero .admin-toggle { width: 64px; height: 36px; }
+    .ap-hero .admin-toggle-slider::before { width: 30px; height: 30px; }
+    .ap-hero .admin-toggle input:checked + .admin-toggle-slider::before { transform: translateX(28px); }
+    .ap-week-line { margin: 5px 0 0; font-size: .8rem; color: var(--ap-mute); }
+
+    .ap-stats { display: grid; grid-template-columns: repeat(2, 1fr); margin-top: 16px; background: var(--ap-surface); border: 1px solid var(--ap-line); border-radius: var(--ap-r); overflow: hidden; }
+    .ap-stat { padding: 16px 18px; border-bottom: 1px solid var(--ap-line); }
+    .ap-stat:nth-child(odd) { border-inline-start: 1px solid var(--ap-line); }
+    .ap-stat:nth-child(odd):nth-last-child(-n+2), .ap-stat:nth-child(even):last-child { border-bottom: 0; }
+    .ap-stat:nth-last-child(-n+2) { border-bottom: 0; }
+    .ap-stat-label { font-size: .78rem; font-weight: 600; color: var(--ap-mute); }
+    .ap-stat-value { margin-top: 4px; font: 700 1.6rem/1.15 'Noto Serif Hebrew', serif; color: var(--ap-ink); font-variant-numeric: tabular-nums; }
+    .ap-stat-value[data-tone="ok"] { color: var(--ap-ok); }
+    .ap-stat-value[data-tone="warn"] { color: var(--ap-warn); }
+    @media (min-width: 700px) {
+      .ap-stats { grid-template-columns: repeat(4, 1fr); }
+      .ap-stat, .ap-stat:nth-child(odd), .ap-stat:nth-last-child(-n+2) { border-bottom: 0; border-inline-start: 0; }
+      .ap-stat + .ap-stat { border-inline-start: 1px solid var(--ap-line); }
+    }
+
+    .ap-todo { display: flex; flex-direction: column; background: var(--ap-surface); border: 1px solid var(--ap-line); border-radius: var(--ap-r); overflow: hidden; }
+    .ap-todo-row {
+      display: flex; align-items: center; gap: 14px; width: 100%; padding: 15px 18px;
+      border: 0; border-bottom: 1px solid var(--ap-line); background: transparent;
+      text-align: start; cursor: pointer; color: var(--ap-ink); font-size: .92rem;
+      transition: background .15s;
+    }
+    .ap-todo-row:last-child { border-bottom: 0; }
+    a.ap-todo-row { text-decoration: none; }
+    .ap-todo-row:hover { background: var(--ap-sunken); }
+    .ap-todo-ic { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0; background: var(--ap-sunken); color: var(--ap-ink-2); }
+    .ap-todo-ic svg { width: 19px; height: 19px; }
+    .ap-todo-ic[data-t="info"] { background: var(--ap-info-bg); color: var(--ap-info); }
+    .ap-todo-ic[data-t="warn"] { background: var(--ap-warn-bg); color: var(--ap-warn); }
+    .ap-todo-ic[data-t="ok"] { background: var(--ap-ok-bg); color: var(--ap-ok); }
+    .ap-todo-txt { flex: 1; min-width: 0; line-height: 1.4; }
+    .ap-todo-txt b { font-weight: 700; }
+    .ap-todo-txt small { display: block; font-size: .78rem; color: var(--ap-mute); margin-top: 1px; }
+    .ap-todo-go { color: var(--ap-line-2); flex-shrink: 0; }
+    .ap-todo-go svg { width: 18px; height: 18px; display: block; }
+    .ap-todo-row:hover .ap-todo-go { color: var(--ap-brand); }
+    .ap-todo-empty { padding: 22px 18px; text-align: center; color: var(--ap-mute); font-size: .9rem; line-height: 1.6; }
+
+    .ap-quick { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .ap-quick .ap-btn { justify-content: flex-start; min-height: 52px; padding: 0 16px; font-size: .88rem; }
+    @media (min-width: 700px) { .ap-quick { grid-template-columns: repeat(4, 1fr); } }
+
+    /* ── Orders ────────────────────────────────────────────────────────── */
+    .ap-pagehead { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
+    .ap-pagehead-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .ap-menu { position: relative; }
+    .ap-menu > summary { list-style: none; }
+    .ap-menu > summary::-webkit-details-marker { display: none; }
+    .ap-menu-list {
+      position: absolute; inset-inline-end: 0; top: calc(100% + 6px); z-index: 20; min-width: 220px; padding: 6px;
+      background: var(--ap-surface); border: 1px solid var(--ap-line); border-radius: 14px;
+      box-shadow: 0 4px 10px rgba(43, 31, 25, .08), 0 16px 36px rgba(43, 31, 25, .16);
+      animation: ap-sheet .18s var(--ap-ease);
+    }
+    .ap-menu-list button {
+      display: flex; align-items: center; gap: 11px; width: 100%; min-height: 44px; padding: 0 12px;
+      border: 0; border-radius: 9px; background: transparent; color: var(--ap-ink); font-size: .88rem; font-weight: 500; cursor: pointer; text-align: start;
+    }
+    .ap-menu-list button:hover { background: var(--ap-sunken); }
+    .ap-menu-list svg { width: 18px; height: 18px; color: var(--ap-mute); }
+
+    .ap-seg { display: inline-flex; gap: 4px; padding: 4px; margin-bottom: 16px; background: var(--ap-sunken); border: 1px solid var(--ap-line); border-radius: 12px; }
+    .ap-seg .btn-status { border: 0 !important; background: transparent !important; border-radius: 9px !important; min-height: 38px; color: var(--ap-ink-2) !important; }
+    .ap-seg .btn-status.active { background: var(--ap-surface) !important; color: var(--ap-brand) !important; box-shadow: 0 1px 2px rgba(43, 31, 25, .12), 0 1px 6px rgba(43, 31, 25, .06); }
+
+    .ap-chips { display: flex; gap: 8px; margin: 0 -16px 14px; padding: 2px 16px 6px; overflow-x: auto; scrollbar-width: none; }
+    .ap-chips::-webkit-scrollbar { display: none; }
+    .ap-chips .btn-status { flex-shrink: 0; }
+    @media (min-width: 900px) { .ap-chips { flex-wrap: wrap; margin: 0 0 16px; padding: 0; overflow: visible; } }
+
+    .ap-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; padding: 12px 14px; background: var(--ap-surface); border: 1px solid var(--ap-line); border-radius: var(--ap-r); }
+    .ap-switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-size: .84rem; color: var(--ap-ink-2); line-height: 1.4; }
+    .ap-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .ap-switch-ui { position: relative; flex-shrink: 0; width: 38px; height: 22px; border-radius: 100px; background: var(--ap-line-2); transition: background .2s; }
+    .ap-switch-ui::before { content: ''; position: absolute; top: 3px; inset-inline-start: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .3); transition: transform .24s var(--ap-ease); }
+    .ap-switch input:checked + .ap-switch-ui { background: var(--ap-ok); }
+    .ap-switch input:checked + .ap-switch-ui::before { transform: translateX(-16px); }
+    .ap-switch input:focus-visible + .ap-switch-ui { outline: 2.5px solid var(--ap-accent); outline-offset: 2px; }
+
+    .ap-bake { background: var(--ap-surface); border: 1px solid var(--ap-line); border-radius: var(--ap-r); overflow: hidden; margin-bottom: 18px; }
+    .ap-bake-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--ap-line); }
+    .ap-bake-head b { font: 700 1rem 'Noto Serif Hebrew', serif; color: var(--ap-brand); }
+    .ap-bake-head span { font-size: .78rem; color: var(--ap-mute); }
+    #admin-panel .baking-row { padding: 11px 18px; border-bottom: 1px solid var(--ap-line); }
+    #admin-panel .baking-row:hover { background: var(--ap-sunken); }
+    #admin-panel .baking-row svg { display: inline-block; vertical-align: -3px; margin-inline-start: 4px; color: var(--ap-mute); }
+    @media (max-width: 899px) { #admin-panel .baking-row { padding: 9px 16px; } }
+    @media (min-width: 900px) {
+      #baking-summary-list { display: grid; grid-template-columns: repeat(2, 1fr); }
+      #baking-summary-list > .baking-row:nth-child(odd) { border-inline-start: 0; }
+      #baking-summary-list > div:not(.baking-row) { grid-column: 1 / -1; }
+    }
+
+    #order-management-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: 12px; align-items: start; }
+    .ap-order { background: var(--ap-surface); border: 1px solid var(--ap-line); border-radius: var(--ap-r); transition: border-color .2s; }
+    .ap-order-act { border-radius: 0 0 var(--ap-r) var(--ap-r); }
+    .ap-order .ap-menu-list { top: auto; bottom: calc(100% + 6px); inset-inline-end: auto; inset-inline-start: 0; }
+    .ap-order-act .ap-menu { flex-shrink: 0; }
+    .ap-order:hover { border-color: var(--ap-line-2); }
+    .ap-order[data-s="done"] { background: color-mix(in srgb, var(--ap-surface) 60%, var(--ap-canvas)); }
+    .ap-order[data-s="done"] .ap-order-name { color: var(--ap-ink-2); }
+    .ap-order-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 16px 6px; }
+    .ap-order-name { font: 700 1.05rem/1.3 'Noto Serif Hebrew', serif; color: var(--ap-ink); overflow-wrap: anywhere; }
+    .ap-order-sub { margin-top: 3px; font-size: .78rem; color: var(--ap-mute); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .ap-order-sub a { color: var(--ap-ink-2); font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
+    .ap-order-sub a:hover { color: var(--ap-brand); text-decoration: underline; text-underline-offset: 3px; }
+    .ap-order-total { font: 700 1.2rem 'Noto Serif Hebrew', serif; color: var(--ap-brand); white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .ap-chips-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 6px 16px 0; }
+    .ap-chip {
+      display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 100px;
+      background: var(--ap-sunken); color: var(--ap-ink-2); font-size: .74rem; font-weight: 600; white-space: nowrap;
+    }
+    .ap-chip svg { width: 13px; height: 13px; }
+    .ap-chip[data-t="info"] { background: var(--ap-info-bg); color: var(--ap-info); }
+    .ap-chip[data-t="ok"] { background: var(--ap-ok-bg); color: var(--ap-ok); }
+    .ap-chip[data-t="warn"] { background: var(--ap-warn-bg); color: var(--ap-warn); }
+    .ap-chip[data-t="bad"] { background: var(--ap-bad-bg); color: var(--ap-bad); }
+    .ap-order-items { margin: 12px 16px 0; padding: 0; list-style: none; border-top: 1px solid var(--ap-line); }
+    .ap-order-items li { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px dashed var(--ap-line); font-size: .9rem; color: var(--ap-ink); line-height: 1.4; }
+    .ap-order-items li:last-child { border-bottom: 0; }
+    .ap-order-items .q { flex-shrink: 0; min-width: 30px; font-weight: 700; color: var(--ap-brand); font-variant-numeric: tabular-nums; }
+    .ap-order-note { margin: 4px 16px 0; padding: 9px 12px; border-radius: 10px; background: var(--ap-warn-bg); color: var(--ap-warn); font-size: .82rem; line-height: 1.5; }
+    .ap-order-addr { margin: 10px 16px 0; font-size: .82rem; color: var(--ap-ink-2); display: flex; gap: 7px; align-items: flex-start; }
+    .ap-order-addr svg { width: 15px; height: 15px; margin-top: 2px; flex-shrink: 0; color: var(--ap-mute); }
+    .ap-order-act { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 14px 16px 16px; margin-top: 10px; border-top: 1px solid var(--ap-line); background: color-mix(in srgb, var(--ap-sunken) 55%, transparent); }
+    .ap-order-act { gap: 6px; padding: 12px 14px 14px; }
+    .ap-order-act .ap-btn { padding: 0 11px; }
+    .ap-order-act .ap-btn--bare { padding: 0; min-width: 38px; }
+    .ap-order-act .ap-btn--primary { flex: 1 1 100%; min-height: 46px; margin-bottom: 4px; }
+    .ap-order-act .ap-spacer { flex: 1; }
+    .ap-empty { padding: 44px 20px; text-align: center; color: var(--ap-mute); font-size: .92rem; line-height: 1.7; background: var(--ap-surface); border: 1px dashed var(--ap-line-2); border-radius: var(--ap-r); grid-column: 1 / -1; }
+    .ap-empty b { display: block; margin-bottom: 4px; font: 700 1.05rem 'Noto Serif Hebrew', serif; color: var(--ap-ink); }
+
+    /* ── Menu ──────────────────────────────────────────────────────────── */
+    .ap-sec-head { margin: 26px 0 10px; }
+    .ap-sec-head b { display: block; font: 700 1.05rem 'Noto Serif Hebrew', serif; color: var(--ap-brand); }
+    .ap-sec-head span { font-size: .8rem; color: var(--ap-mute); }
+    #admin-products-list { gap: 10px !important; }
+    .ap-prod {
+      display: grid; grid-template-columns: auto 64px minmax(0, 1fr) auto; align-items: center; gap: 12px;
+      padding: 12px 14px; background: var(--ap-surface); border: 1px solid var(--ap-line); border-radius: var(--ap-r);
+      transition: border-color .2s;
+    }
+    .ap-prod:hover { border-color: var(--ap-line-2); }
+    .ap-prod--shelf { grid-template-columns: 64px minmax(0, 1fr) auto; }
+    .ap-prod[data-parked="1"] { background: var(--ap-sunken); }
+    .ap-prod[data-parked="1"] .ap-prod-img { opacity: .6; filter: grayscale(.4); }
+    .ap-prod-img { width: 64px; height: 64px; border-radius: 12px; object-fit: cover; background: var(--ap-sunken); }
+    .ap-prod-name { font: 700 .98rem/1.35 'Noto Serif Hebrew', serif; color: var(--ap-ink); overflow-wrap: anywhere; }
+    .ap-prod-price { margin-top: 2px; font-size: .84rem; color: var(--ap-ink-2); font-variant-numeric: tabular-nums; }
+    .ap-prod-act { display: flex; align-items: center; gap: 8px; }
+    .ap-prod-avail { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 52px; }
+    .ap-prod-avail span { font-size: .72rem; font-weight: 600; }
+    .ap-prod-move { display: flex; flex-direction: column; gap: 3px; }
+    .ap-prod-move .ord-btn, #admin-panel .ord-btn { width: 30px; height: 26px; display: grid; place-items: center; padding: 0; border: 1px solid var(--ap-line-2); border-radius: 8px; background: var(--ap-surface); color: var(--ap-ink-2); cursor: pointer; }
+    .ap-prod-move .ord-btn:hover:not(:disabled) { border-color: var(--ap-brand); color: var(--ap-brand); }
+    .ap-prod-move .ord-btn:disabled { opacity: .35; cursor: default; }
+    .ap-prod-move svg { width: 14px; height: 14px; }
+    @media (max-width: 560px) {
+      .ap-prod, .ap-prod--shelf { grid-template-columns: auto 56px minmax(0, 1fr); }
+      .ap-prod--shelf { grid-template-columns: 56px minmax(0, 1fr); }
+      .ap-prod-img { width: 56px; height: 56px; }
+      .ap-prod-act { grid-column: 1 / -1; justify-content: space-between; padding-top: 10px; border-top: 1px solid var(--ap-line); }
+    }
+
+    /* ── Skin: older inline-styled markup, re-coloured from the tokens ────
+       Applies to the panel and to every overlay it opens (.ap-skin). */
+    :is(#admin-panel, .ap-skin) [style*="color:#9B8B75"], :is(#admin-panel, .ap-skin) [style*="color: #9B8B75"] { color: var(--ap-mute) !important; }
+    :is(#admin-panel, .ap-skin) [style*="color:#8B7260"] { color: var(--ap-mute) !important; }
+    :is(#admin-panel, .ap-skin) [style*="color:#6B655C"] { color: var(--ap-ink-2) !important; }
+    :is(#admin-panel, .ap-skin) [style*="color:#3B2A24"] { color: var(--ap-ink) !important; }
+    :is(#admin-panel, .ap-skin) [style*="color:#6B2E1E"] { color: var(--ap-brand) !important; }
+    :is(#admin-panel, .ap-skin) [style*="background:#FDFAF4"] { background: var(--ap-surface) !important; }
+    :is(#admin-panel, .ap-skin) [style*="border:1.5px solid #E5D9C5"] { border: 1px solid var(--ap-line) !important; }
+    :is(#admin-panel, .ap-skin) [style*="border-radius:14px"][style*="#FDFAF4"], :is(#admin-panel, .ap-skin) [style*="border-radius:16px"][style*="#FDFAF4"] { border-radius: var(--ap-r) !important; }
+    :is(#admin-panel, .ap-skin) [style*="border:1.5px solid #D5C9B5"] { border-color: var(--ap-line-2) !important; border-width: 1px !important; }
+    :is(#admin-panel, .ap-skin) [style*="background:#F0E9D8"] { background: var(--ap-sunken) !important; }
+    :is(#admin-panel, .ap-skin) .admin-card { background: var(--ap-surface); border: 1px solid var(--ap-line); border-radius: var(--ap-r); }
+    :is(#admin-panel, .ap-skin) .admin-save-btn { font: 700 .98rem 'Noto Sans Hebrew', sans-serif; min-height: 50px; border-radius: var(--ap-r-sm); background: var(--ap-brand); color: #FBF3E4; }
+    body.dark :is(#admin-panel, .ap-skin) .admin-save-btn { color: #2B1F19; }
+    :is(#admin-panel, .ap-skin) .admin-save-btn:hover { transform: none; box-shadow: none; background: var(--ap-brand-2); }
+    :is(#admin-panel, .ap-skin) .field {
+      min-height: 46px; font-size: 1rem; border: 1px solid var(--ap-line-2); border-radius: var(--ap-r-sm);
+      background: var(--ap-surface); color: var(--ap-ink); transition: border-color .15s, box-shadow .15s;
+    }
+    :is(#admin-panel, .ap-skin) .field:hover { border-color: var(--ap-mute); }
+    :is(#admin-panel, .ap-skin) .field:focus { border-color: var(--ap-brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ap-brand) 16%, transparent); outline: 0; }
+    :is(#admin-panel, .ap-skin) .k-subnav { background: var(--ap-sunken); border: 1px solid var(--ap-line); border-radius: 12px; }
+    :is(#admin-panel, .ap-skin) .k-subnav-btn { font-weight: 600; }
+    :is(#admin-panel, .ap-skin) .k-subnav-btn.active { background: var(--ap-surface); color: var(--ap-brand); box-shadow: 0 1px 2px rgba(43, 31, 25, .12); }
+    :is(#admin-panel, .ap-skin) .k-table-wrap, :is(#admin-panel, .ap-skin) .recipe-card-k, :is(#admin-panel, .ap-skin) .fin-card, :is(#admin-panel, .ap-skin) .fin-row { background: var(--ap-surface); border: 1px solid var(--ap-line); border-radius: var(--ap-r); }
+    :is(#admin-panel, .ap-skin) .k-section-title { font: 700 1.1rem 'Noto Serif Hebrew', serif; color: var(--ap-brand); }
+    :is(#admin-panel, .ap-skin) .k-add-btn { min-height: 40px; border-radius: var(--ap-r-sm); background: var(--ap-brand); color: #FBF3E4; border: 1px solid var(--ap-brand); font-weight: 600; }
+    body.dark :is(#admin-panel, .ap-skin) .k-add-btn { color: #2B1F19; }
+    :is(#admin-panel, .ap-skin) .k-table th { color: var(--ap-mute); font-weight: 600; }
+    #fin-month { width: 176px !important; }
+
+    /* settings */
+    .ap-set-group { margin-top: 28px; }
+    .ap-set-group:first-of-type { margin-top: 24px; }
+    .ap-pad { padding: 18px; }
+    .ap-label { display: block; margin-bottom: 8px; font-weight: 700; font-size: .92rem; color: var(--ap-ink); }
+    .ap-sublabel { display: block; margin-bottom: 4px; font-weight: 600; font-size: .8rem; color: var(--ap-ink-2); }
+    .ap-hint { margin: 6px 0 0; font-size: .8rem; line-height: 1.55; color: var(--ap-mute); }
+    .ap-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .ap-details { padding: 0 18px; }
+    .ap-details > summary { cursor: pointer; padding: 16px 0; font-weight: 700; font-size: .92rem; color: var(--ap-ink); list-style: none; display: flex; align-items: center; justify-content: space-between; }
+    .ap-details > summary::-webkit-details-marker { display: none; }
+    .ap-details > summary::after { content: ''; width: 9px; height: 9px; border-inline-end: 2px solid var(--ap-mute); border-block-end: 2px solid var(--ap-mute); transform: rotate(45deg); transition: transform .2s var(--ap-ease); margin-inline-start: 12px; }
+    .ap-details[open] > summary::after { transform: rotate(-135deg); }
+
+    /* customers */
+    #customers-list { display: flex; flex-direction: column; gap: 10px; }
+    .ap-cust { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 16px; padding: 14px 16px; background: var(--ap-surface); border: 1px solid var(--ap-line); border-radius: var(--ap-r); transition: border-color .2s; }
+    .ap-cust:hover { border-color: var(--ap-line-2); }
+    .ap-cust-name { font: 700 1rem 'Noto Serif Hebrew', serif; color: var(--ap-ink); overflow-wrap: anywhere; }
+    .ap-cust-phone { margin-top: 2px; font-size: .8rem; color: var(--ap-mute); text-align: end; unicode-bidi: isolate; }
+    .ap-cust-top { margin-top: 6px; font-size: .8rem; color: var(--ap-ink-2); }
+    .ap-cust-nums { display: flex; gap: 18px; }
+    .ap-cust-nums > div { text-align: center; min-width: 52px; }
+    .ap-cust-nums b { display: block; font: 700 1.1rem 'Noto Serif Hebrew', serif; color: var(--ap-brand); font-variant-numeric: tabular-nums; }
+    .ap-cust-nums span { font-size: .72rem; color: var(--ap-mute); }
+    @media (max-width: 560px) {
+      .ap-cust { grid-template-columns: minmax(0, 1fr) auto; }
+      .ap-cust-nums { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; padding-top: 10px; border-top: 1px solid var(--ap-line); }
+    }
+
+    /* the overlays: one shape, one surface */
+    .ap-skin .edit-modal-box {
+      background: var(--ap-surface); color: var(--ap-ink);
+      border-radius: 22px 22px 0 0; padding: 24px 20px 32px;
+      box-shadow: 0 -8px 30px rgba(43, 31, 25, .22);
+    }
+    @media (min-width: 640px) { .ap-skin .edit-modal-box { border-radius: 22px; box-shadow: 0 6px 16px rgba(43, 31, 25, .12), 0 24px 60px rgba(43, 31, 25, .28); } }
+    .ap-skin .edit-modal-box h3 { font: 700 1.3rem 'Noto Serif Hebrew', serif !important; }
+    .ap-skin .mo-item-row { border-color: var(--ap-line); }
+
+    /* ── "ready" to everyone ───────────────────────────────────────────── */
+    #bulk-ready-modal { align-items: flex-end; }
+    @media (min-width: 640px) { #bulk-ready-modal { align-items: center; } }
+    .ap-sheet-panel {
+      width: 100%; max-width: 520px; max-height: 88vh; overflow: auto;
+      background: var(--ap-surface); color: var(--ap-ink); border-radius: 22px 22px 0 0; padding: 20px 20px 26px;
+      box-shadow: 0 -8px 30px rgba(43, 31, 25, .22); animation: ap-sheet .24s var(--ap-ease);
+    }
+    @media (min-width: 640px) { .ap-sheet-panel { border-radius: 22px; } }
+    .ap-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+    .ap-sheet-head h3 { margin: 0; font: 700 1.2rem 'Noto Serif Hebrew', serif; color: var(--ap-brand); }
+    .ap-sheet-note { margin: 0 0 14px; font-size: .84rem; line-height: 1.6; color: var(--ap-ink-2); }
+    .ap-btn--block { width: 100%; min-height: 50px; font-size: .95rem; }
+    .ap-link { background: transparent; border: 0; padding: 6px 0; font-size: .78rem; color: var(--ap-mute); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+    .ap-brow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--ap-line); }
+    .ap-brow b { display: block; font-size: .94rem; color: var(--ap-ink); }
+    .ap-brow small { font-size: .76rem; color: var(--ap-mute); }
+    .ap-brow small[data-t="warn"] { color: var(--ap-warn); font-weight: 600; }
+    .ap-brow small[data-t="ok"] { color: var(--ap-ok); }
+    .ap-btn[data-sent="1"] { background: var(--ap-ok-bg); border-color: transparent; color: var(--ap-ok); }
+
+    /* The finance tab's only section is a bare .k-section, and .k-section is display:none until it
+       carries .active (the kitchen switches that class between its own three sections, and would
+       strip it from this one). Without this line the finance tab opens onto a blank page. */
+    #admin-tab-finance .k-section { display: block; }
+
+    @media (prefers-reduced-motion: reduce) {
+      #admin-panel *, #admin-panel *::before, #admin-panel *::after { animation: none !important; transition: none !important; }
+    }
+  </style>
+
   <style id="tw-static">*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:IBM Plex Sans Hebrew, Noto Sans Hebrew, sans-serif;font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.\!container{width:100% !important}.container{width:100%}@media (min-width: 640px){.\!container{max-width:640px !important}.container{max-width:640px}}@media (min-width: 768px){.\!container{max-width:768px !important}.container{max-width:768px}}@media (min-width: 1024px){.\!container{max-width:1024px !important}.container{max-width:1024px}}@media (min-width: 1280px){.\!container{max-width:1280px !important}.container{max-width:1280px}}@media (min-width: 1536px){.\!container{max-width:1536px !important}.container{max-width:1536px}}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0, 0, 0, 0);white-space:nowrap;border-width:0}.visible{visibility:visible}.invisible{visibility:hidden}.collapse{visibility:collapse}.static{position:static}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.sticky{position:sticky}.-right-1\.5{right:-0.375rem}.-top-1\.5{top:-0.375rem}.top-0{top:0px}.isolate{isolation:isolate}.z-40{z-index:40}.mx-auto{margin-left:auto;margin-right:auto}.mb-2{margin-bottom:0.5rem}.mb-3{margin-bottom:0.75rem}.mb-5{margin-bottom:1.25rem}.mb-6{margin-bottom:1.5rem}.mt-4{margin-top:1rem}.mt-1{margin-top:0.25rem}.block{display:block}.inline-block{display:inline-block}.inline{display:inline}.flex{display:flex}.inline-flex{display:inline-flex}.table{display:table}.grid{display:grid}.\!grid{display:grid !important}.hidden{display:none}.h-4{height:1rem}.w-4{width:1rem}.w-full{width:100%}.max-w-5xl{max-width:64rem}.flex-1{flex:1 1 0%}.shrink{flex-shrink:1}.transform{transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.cursor-pointer{cursor:pointer}.resize-none{resize:none}.resize{resize:both}.grid-cols-2{grid-template-columns:repeat(2, minmax(0, 1fr))}.flex-col{flex-direction:column}.items-center{align-items:center}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-2{gap:0.5rem}.gap-3{gap:0.75rem}.gap-4{gap:1rem}.space-y-2 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.5rem * var(--tw-space-y-reverse))}.rounded-2xl{border-radius:1rem}.rounded-full{border-radius:9999px}.rounded-xl{border-radius:0.75rem}.rounded{border-radius:0.25rem}.border{border-width:1px}.border-2{border-width:2px}.border-t{border-top-width:1px}.border-b{border-bottom-width:1px}.border-earth{--tw-border-opacity:1;border-color:rgb(107 46 30 / var(--tw-border-opacity, 1))}.border-parchment{--tw-border-opacity:1;border-color:rgb(239 225 199 / var(--tw-border-opacity, 1))}.bg-earth{--tw-bg-opacity:1;background-color:rgb(107 46 30 / var(--tw-bg-opacity, 1))}.bg-parchment{--tw-bg-opacity:1;background-color:rgb(239 225 199 / var(--tw-bg-opacity, 1))}.bg-white\/70{background-color:rgb(255 255 255 / 0.7)}.p-2\.5{padding:0.625rem}.p-3{padding:0.75rem}.p-5{padding:1.25rem}.px-4{padding-left:1rem;padding-right:1rem}.py-3{padding-top:0.75rem;padding-bottom:0.75rem}.py-3\.5{padding-top:0.875rem;padding-bottom:0.875rem}.px-3{padding-left:0.75rem;padding-right:0.75rem}.py-2\.5{padding-top:0.625rem;padding-bottom:0.625rem}.py-1{padding-top:0.25rem;padding-bottom:0.25rem}.pb-44{padding-bottom:11rem}.pt-3{padding-top:0.75rem}.text-center{text-align:center}.text-right{text-align:right}.font-sans{font-family:IBM Plex Sans Hebrew, Noto Sans Hebrew, sans-serif}.font-serif{font-family:Noto Serif Hebrew, serif}.text-base{font-size:1rem;line-height:1.5rem}.text-sm{font-size:0.875rem;line-height:1.25rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.text-xs{font-size:0.75rem;line-height:1rem}.text-lg{font-size:1.125rem;line-height:1.75rem}.font-bold{font-weight:700}.font-semibold{font-weight:600}.font-medium{font-weight:500}.uppercase{text-transform:uppercase}.text-bark{--tw-text-opacity:1;color:rgb(126 71 40 / var(--tw-text-opacity, 1))}.text-cream{--tw-text-opacity:1;color:rgb(239 230 214 / var(--tw-text-opacity, 1))}.text-earth{--tw-text-opacity:1;color:rgb(107 46 30 / var(--tw-text-opacity, 1))}.text-ink{--tw-text-opacity:1;color:rgb(59 42 36 / var(--tw-text-opacity, 1))}.text-muted{--tw-text-opacity:1;color:rgb(107 101 92 / var(--tw-text-opacity, 1))}.underline{-webkit-text-decoration-line:underline;text-decoration-line:underline}.ring{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(3px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000)}.blur{--tw-blur:blur(8px);filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.grayscale{--tw-grayscale:grayscale(100%);filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.filter{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-colors{transition-property:color, background-color, border-color, fill, stroke, -webkit-text-decoration-color;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, -webkit-text-decoration-color;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition{transition-property:color, background-color, border-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-text-decoration-color, -webkit-backdrop-filter;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-text-decoration-color, -webkit-backdrop-filter;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.ease-in-out{transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1)}.hover\:border-earth:hover{--tw-border-opacity:1;border-color:rgb(107 46 30 / var(--tw-border-opacity, 1))}.hover\:border-terracotta:hover{--tw-border-opacity:1;border-color:rgb(184 72 48 / var(--tw-border-opacity, 1))}.hover\:bg-earth\/90:hover{background-color:rgb(107 46 30 / 0.9)}.hover\:bg-parchment:hover{--tw-bg-opacity:1;background-color:rgb(239 225 199 / var(--tw-bg-opacity, 1))}.hover\:text-earth:hover{--tw-text-opacity:1;color:rgb(107 46 30 / var(--tw-text-opacity, 1))}@media (min-width: 640px){.sm\:gap-4{gap:1rem}}@media (min-width: 768px){.md\:grid-cols-3{grid-template-columns:repeat(3, minmax(0, 1fr))}}</style>
 </head>
 <body class="font-sans text-ink">
@@ -2744,130 +3199,113 @@
 <!-- ============ ADMIN PANEL ============ -->
 <div id="admin-panel" role="main" aria-label="לוח ניהול">
 
-  <!-- ── Sticky Top Bar ── -->
-  <div class="admin-top-bar">
-    <div>
-      <div style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.25rem;font-weight:700;line-height:1.1;">לוח ניהול</div>
-      <div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.75rem;">נואיקה — מאפייה ארטיזנלית</div>
-      <!-- Filled in by stampVersion(). Noy can read this aloud over the phone,
-           which is the whole point: "which version are you on?" now has an
-           answer that does not require git. -->
-      <div id="admin-version" title="גרסת האתר שאת רואה כרגע"
-           style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#B8A990;font-size:0.65rem;letter-spacing:0.02em;margin-top:2px;"></div>
-    </div>
-    <button onclick="adminSignOut()" title="התנתקי מהחשבון" style="background:transparent;border:none;color:#9B8B75;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;cursor:pointer;padding:6px 10px;flex-shrink:0;">התנתקי</button>
-    <button onclick="closeAdminPanel()" style="background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;" aria-label="סגור">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
-  </div>
-
-  <!-- ── Tab Navigation ── -->
-  <div style="padding:10px 12px 0;background:#F0E9D8;border-bottom:1.5px solid #E5D9C5;position:sticky;top:57px;z-index:9;">
-    <div class="admin-tab-nav" role="tablist">
-      <button class="admin-tab-btn active" id="atab-dash"      onclick="switchAdminTab('dash')"      role="tab">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
-        בית
+  <!-- ── Navigation: a bottom bar on a phone (four main places and "more"), a sidebar on a laptop ── -->
+  <aside class="ap-side">
+    <div class="ap-brand"><b>נואיקה</b><span>לוח ניהול</span></div>
+    <nav class="ap-nav" id="ap-nav" role="tablist" aria-label="ניווט בלוח הניהול">
+      <button class="admin-tab-btn active" id="atab-dash" onclick="switchAdminTab('dash')" role="tab">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1V10"/></svg>
+        <span>בית</span>
       </button>
       <button class="admin-tab-btn" id="atab-orders" onclick="switchAdminTab('orders')" role="tab">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-        הזמנות
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        <span>הזמנות</span>
         <span class="tab-badge" id="orders-tab-badge" style="display:none;">0</span>
       </button>
-      <button class="admin-tab-btn" id="atab-menu"   onclick="switchAdminTab('menu')"   role="tab">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 2h18"/><path d="M3 7h18"/><rect x="3" y="11" width="18" height="10" rx="2"/></svg>
-        תפריט
+      <button class="admin-tab-btn" id="atab-menu" onclick="switchAdminTab('menu')" role="tab">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h10"/></svg>
+        <span>תפריט</span>
       </button>
-      <button class="admin-tab-btn" id="atab-customers" onclick="switchAdminTab('customers')" role="tab">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-        לקוחות
+      <button class="admin-tab-btn" id="atab-kitchen" onclick="switchAdminTab('kitchen')" role="tab">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 2h18l-2 7H5L3 2z"/><path d="M5 9l1 11h12l1-11"/><path d="M9 13h6"/></svg>
+        <span>מטבח</span>
       </button>
-      <button class="admin-tab-btn" id="atab-settings" onclick="switchAdminTab('settings')" role="tab">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-        הגדרות
+      <button class="ap-more-btn" id="ap-more-btn" onclick="toggleAdminMore(event)" aria-expanded="false" aria-controls="ap-more">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg>
+        <span>עוד</span>
       </button>
-      <button class="admin-tab-btn" id="atab-events" onclick="switchAdminTab('events')" role="tab">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        פופ-אפים
-      </button>
-      <button class="admin-tab-btn" id="atab-kitchen" onclick="switchAdminTab('kitchen')" role="tab" style="position:relative;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2h18l-2 7H5L3 2z"/><path d="M5 9l1 11h12l1-11"/><path d="M9 13h6"/></svg>
-        מטבח
-      </button>
-      <button class="admin-tab-btn" id="atab-finance" onclick="switchAdminTab('finance')" role="tab">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-        כספים
-      </button>
+      <div class="ap-more" id="ap-more">
+        <button class="admin-tab-btn" id="atab-customers" onclick="switchAdminTab('customers')" role="tab">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          <span>לקוחות</span>
+        </button>
+        <button class="admin-tab-btn" id="atab-events" onclick="switchAdminTab('events')" role="tab">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>פופ-אפים</span>
+        </button>
+        <button class="admin-tab-btn" id="atab-finance" onclick="switchAdminTab('finance')" role="tab">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          <span>כספים</span>
+        </button>
+        <button class="admin-tab-btn" id="atab-settings" onclick="switchAdminTab('settings')" role="tab">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2.2" fill="var(--ap-surface)"/><circle cx="15" cy="12" r="2.2" fill="var(--ap-surface)"/><circle cx="8" cy="18" r="2.2" fill="var(--ap-surface)"/></svg>
+          <span>הגדרות</span>
+        </button>
+      </div>
+    </nav>
+    <div class="ap-foot">
+      <!-- Filled in by stampVersion(). Noy can read this aloud over the phone, which is the whole
+           point: "which version are you on?" has an answer that does not require git. -->
+      <div data-admin-version title="גרסת האתר שאת רואה כרגע"></div>
     </div>
-  </div>
+    <div class="ap-scrim" onclick="toggleAdminMore(false)"></div>
+  </aside>
+
+  <main class="ap-main">
+    <header class="ap-top">
+      <div class="ap-top-brand">
+        <b>נואיקה</b>
+        <span id="admin-version" data-admin-version title="גרסת האתר שאת רואה כרגע"></span>
+      </div>
+      <div class="ap-top-spacer"></div>
+      <span class="ap-pill" id="ap-state-pill" data-kind="open">הזמנות פתוחות</span>
+      <button class="ap-icon-btn" onclick="closeAdminPanel()" aria-label="חזרה לאתר">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span class="ap-lbl">חזרה לאתר</span>
+      </button>
+      <button class="ap-icon-btn" onclick="adminSignOut()" aria-label="התנתקי מהחשבון">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <span class="ap-lbl">התנתקי</span>
+      </button>
+    </header>
 
   <!-- ══════════════════════════════════════════ -->
   <!-- TAB: בית (Dashboard)                      -->
   <!-- ══════════════════════════════════════════ -->
   <div id="admin-tab-dash" class="admin-tab-content active">
 
-    <!-- Orders toggle — most important control -->
-    <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:16px;padding:20px;margin-bottom:16px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-        <div>
-          <div style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-weight:700;font-size:1.05rem;margin-bottom:3px;">קבלת הזמנות</div>
-          <div id="orders-status-text" style="font-family:'Noto Sans Hebrew',sans-serif;color:#7A9A50;font-size:0.85rem;">פתוחה — לקוחות יכולים להזמין</div>
-        </div>
-        <label class="admin-toggle" aria-label="הפעלת קבלת הזמנות" style="width:56px;height:30px;">
-          <input type="checkbox" id="orders-toggle" checked onchange="toggleOrdersStatus(this)" />
-          <span class="admin-toggle-slider"></span>
-        </label>
+    <!-- Is the shop taking orders? The one control she reaches for most. -->
+    <section class="ap-hero" id="ap-hero" data-kind="open">
+      <div>
+        <h2>קבלת הזמנות</h2>
+        <p id="orders-status-text">פתוחה — לקוחות יכולים להזמין</p>
+        <p class="ap-week-line" id="ap-week-line"></p>
       </div>
-    </div>
+      <label class="admin-toggle" aria-label="הפעלת קבלת הזמנות">
+        <input type="checkbox" id="orders-toggle" checked onchange="toggleOrdersStatus(this)" />
+        <span class="admin-toggle-slider"></span>
+      </label>
+    </section>
 
-    <!-- Quick stats -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;" id="order-stats"></div>
+    <!-- This week in four numbers -->
+    <section class="ap-stats" id="order-stats" aria-label="סיכום השבוע"></section>
 
-    <!-- Quick nav cards -->
-    <div style="display:flex;flex-direction:column;gap:10px;">
-      <button onclick="switchAdminTab('orders')" class="dash-action-card" style="border:none;width:100%;text-align:right;">
-        <div class="dash-action-icon" style="background:#EDF6FF;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A6DB5" stroke-width="1.8" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-        </div>
-        <div style="flex:1;">
-          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#3B2A24;font-size:0.95rem;">ניהול הזמנות</div>
-          <div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;">רשימת אפייה, סטטוסים, ארכיון</div>
-        </div>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C4B89A" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
+    <!-- What needs her now -->
+    <section class="ap-block">
+      <h3 class="ap-h3">מה צריך טיפול</h3>
+      <div class="ap-todo" id="dash-attention"></div>
+    </section>
 
-      <button onclick="switchAdminTab('menu')" class="dash-action-card" style="border:none;width:100%;text-align:right;">
-        <div class="dash-action-icon" style="background:#FFF8E6;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A06000" stroke-width="1.8" stroke-linecap="round"><path d="M3 2h18"/><path d="M3 7h18"/><rect x="3" y="11" width="18" height="10" rx="2"/></svg>
-        </div>
-        <div style="flex:1;">
-          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#3B2A24;font-size:0.95rem;">תפריט שבועי</div>
-          <div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;">עריכת מנות, מחירים, זמינות</div>
-        </div>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C4B89A" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-
-      <button onclick="switchAdminTab('customers')" class="dash-action-card" style="border:none;width:100%;text-align:right;">
-        <div class="dash-action-icon" style="background:#EEF8EE;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2A7A2A" stroke-width="1.8" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-        </div>
-        <div style="flex:1;">
-          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#3B2A24;font-size:0.95rem;">לקוחות</div>
-          <div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;">היסטוריה, WhatsApp, CRM קטן</div>
-        </div>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C4B89A" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-
-      <button onclick="switchAdminTab('settings')" class="dash-action-card" style="border:none;width:100%;text-align:right;">
-        <div class="dash-action-icon" style="background:#F5EDE8;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-        </div>
-        <div style="flex:1;">
-          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#3B2A24;font-size:0.95rem;">הגדרות</div>
-          <div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;">Bit, מועד סגירה, סיסמה</div>
-        </div>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C4B89A" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-    </div>
+    <!-- The things she does most, one tap away -->
+    <section class="ap-block">
+      <h3 class="ap-h3">פעולות מהירות</h3>
+      <div class="ap-quick">
+        <button class="ap-btn" onclick="openManualOrderModal()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> הזמנה ידנית</button>
+        <button class="ap-btn" onclick="openBulkReady()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> "מוכנה" לכולם</button>
+        <button class="ap-btn" onclick="printBakingList()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> רשימת אפייה</button>
+        <button class="ap-btn" onclick="printOrdersList()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> רשימת הזמנות</button>
+      </div>
+    </section>
   </div>
 
   <!-- ══════════════════════════════════════════ -->
@@ -2875,69 +3313,57 @@
   <!-- ══════════════════════════════════════════ -->
   <div id="admin-tab-orders" class="admin-tab-content">
 
-    <!-- Header row -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+    <div class="ap-pagehead">
       <div>
-        <h2 style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.2rem;font-weight:700;margin:0 0 2px;">ניהול הזמנות</h2>
-        <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.75rem;margin:0;">בכל יום שישי ההזמנות עוברות לארכיון והרשימה מתחילה מחדש</p>
+        <h2>הזמנות</h2>
+        <p>בכל יום שישי ההזמנות עוברות לארכיון והרשימה מתחילה מחדש</p>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button onclick="openManualOrderModal()" style="display:flex;align-items:center;gap:5px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.76rem;font-weight:600;background:#6B2E1E;border:1.5px solid #6B2E1E;color:#EFE6D6;padding:7px 12px;border-radius:100px;cursor:pointer;">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          הזמנה ידנית
-        </button>
-        <button onclick="exportOrdersCSV()" style="display:flex;align-items:center;gap:5px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.76rem;font-weight:600;background:#EEF8EE;border:1.5px solid #B0D9B0;color:#2A7A2A;padding:7px 12px;border-radius:100px;cursor:pointer;">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          CSV
-        </button>
-        <button onclick="printBakingList()" style="display:flex;align-items:center;gap:5px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.76rem;font-weight:600;background:#F0E9D8;border:1.5px solid #D5C9B5;color:#6B2E1E;padding:7px 12px;border-radius:100px;cursor:pointer;">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-          הדפס רשימת אפייה
-        </button>
-        <button onclick="printOrdersList()" style="display:flex;align-items:center;gap:5px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.76rem;font-weight:600;background:#F0E9D8;border:1.5px solid #D5C9B5;color:#6B2E1E;padding:7px 12px;border-radius:100px;cursor:pointer;">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-          הדפס הזמנות
-        </button>
+      <div class="ap-pagehead-actions">
+        <button class="ap-btn ap-btn--primary" onclick="openManualOrderModal()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> הזמנה ידנית</button>
+        <details class="ap-menu" id="ap-orders-menu">
+          <summary class="ap-btn" aria-label="עוד פעולות"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg> עוד</summary>
+          <div class="ap-menu-list">
+            <button onclick="apMenuDo(printBakingList)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> הדפסת רשימת אפייה</button>
+            <button onclick="apMenuDo(printOrdersList)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> הדפסת רשימת הזמנות</button>
+            <button onclick="apMenuDo(exportOrdersCSV)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> ייצוא לאקסל (CSV)</button>
+          </div>
+        </details>
       </div>
     </div>
 
     <!-- This week and the past live on separate pages -->
-    <div style="display:flex;gap:6px;margin-bottom:14px;">
-      <button onclick="showOrdersView('active')"  id="ordview-active"  class="btn-status active">📋 הזמנות פעילות</button>
-      <button onclick="showOrdersView('archive')" id="ordview-archive" class="btn-status">🗂️ ארכיון <span id="ordview-archive-count" style="background:#EFE1C7;border-radius:100px;padding:1px 8px;font-size:0.72rem;margin-inline-start:4px;"></span></button>
+    <div class="ap-seg" role="group" aria-label="תצוגת הזמנות">
+      <button onclick="showOrdersView('active')"  id="ordview-active"  class="btn-status active">הזמנות פעילות</button>
+      <button onclick="showOrdersView('archive')" id="ordview-archive" class="btn-status">ארכיון <span class="ap-n" id="ordview-archive-count"></span></button>
     </div>
 
     <div id="orders-active-view">
     <!-- Baking summary -->
-    <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:14px;margin-bottom:16px;overflow:hidden;">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #EFE1C7;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:1.1rem;">🍞</span>
-          <span style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#6B2E1E;font-size:0.92rem;">רשימת אפייה שבועית</span>
-        </div>
-        <span style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#9B8B75;">סה"כ לאפות</span>
-      </div>
+    <div class="ap-bake">
+      <div class="ap-bake-head"><b>רשימת אפייה</b><span>כמה לאפות מכל דבר</span></div>
       <div id="baking-summary-list"></div>
     </div>
 
-    <!-- Filter tabs -->
-    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;">
-      <button onclick="filterOrders('all')"       id="filter-all"       class="btn-status active">הכל</button>
-      <button onclick="filterOrders('unpaid')"    id="filter-unpaid"    class="btn-status">⏳ ממתינות לתשלום</button>
-      <button onclick="filterOrders('new')"       id="filter-new"       class="btn-status">🆕 חדשות</button>
-      <button onclick="filterOrders('confirmed')" id="filter-confirmed" class="btn-status">✅ אושרו</button>
-      <button onclick="filterOrders('ready')"     id="filter-ready"     class="btn-status">🍞 מוכנות</button>
-      <button onclick="filterOrders('done')"      id="filter-done"      class="btn-status">✔️ נמסרו</button>
-      <button onclick="filterOrders('delivery')"  id="filter-delivery"  class="btn-status">📦 משלוח</button>
-      <button onclick="filterOrders('pickup')"    id="filter-pickup"    class="btn-status">🏠 איסוף</button>
+    <!-- Filters, each with the number of orders it would show -->
+    <div class="ap-chips" role="group" aria-label="סינון הזמנות">
+      <button onclick="filterOrders('all')"       id="filter-all"       class="btn-status active">הכל <span class="ap-n"></span></button>
+      <button onclick="filterOrders('unpaid')"    id="filter-unpaid"    class="btn-status"><i class="ap-dot" data-s="late"></i>ממתינות לתשלום <span class="ap-n"></span></button>
+      <button onclick="filterOrders('new')"       id="filter-new"       class="btn-status"><i class="ap-dot" data-s="new"></i>חדשות <span class="ap-n"></span></button>
+      <button onclick="filterOrders('confirmed')" id="filter-confirmed" class="btn-status"><i class="ap-dot" data-s="confirmed"></i>אושרו <span class="ap-n"></span></button>
+      <button onclick="filterOrders('ready')"     id="filter-ready"     class="btn-status"><i class="ap-dot" data-s="ready"></i>מוכנות <span class="ap-n"></span></button>
+      <button onclick="filterOrders('done')"      id="filter-done"      class="btn-status"><i class="ap-dot" data-s="done"></i>נמסרו <span class="ap-n"></span></button>
+      <button onclick="filterOrders('delivery')"  id="filter-delivery"  class="btn-status">משלוח <span class="ap-n"></span></button>
+      <button onclick="filterOrders('pickup')"    id="filter-pickup"    class="btn-status">איסוף <span class="ap-n"></span></button>
     </div>
 
-    <button onclick="openBulkReady()" style="width:100%;margin:0 0 12px;background:#2A7A2A;border:none;color:#fff;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.9rem;font-weight:600;padding:11px;border-radius:12px;cursor:pointer;">📣 שלחי "ההזמנה מוכנה" לכל הלקוחות</button>
-
-    <label style="display:flex;align-items:center;gap:8px;margin:0 0 12px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#6B655C;cursor:pointer;">
-      <input type="checkbox" id="notify-toggle" onchange="setNotify(this.checked)">
-      <span>לפתוח וואטסאפ עם הודעה מוכנה ללקוח כשאני מעדכנת סטטוס (כבוי כברירת מחדל)</span>
-    </label>
+    <div class="ap-tools">
+      <button class="ap-btn ap-btn--sm" onclick="openBulkReady()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> שליחת "ההזמנה מוכנה" לכולם</button>
+      <label class="ap-switch">
+        <input type="checkbox" id="notify-toggle" onchange="setNotify(this.checked)">
+        <span class="ap-switch-ui"></span>
+        <span>לפתוח וואטסאפ עם הודעה ללקוח כשאני מעדכנת סטטוס</span>
+      </label>
+    </div>
 
     <!-- Orders list -->
     <div id="order-management-list"></div>
@@ -2951,15 +3377,12 @@
   <!-- TAB: תפריט (Menu / Products)              -->
   <!-- ══════════════════════════════════════════ -->
   <div id="admin-tab-menu" class="admin-tab-content">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+    <div class="ap-pagehead">
       <div>
-        <h2 style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.2rem;font-weight:700;margin:0 0 2px;">תפריט שבועי</h2>
-        <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.75rem;margin:0;">עריכה, הוספה וזמינות מנות</p>
+        <h2>תפריט שבועי</h2>
+        <p>עריכה, הוספה וזמינות מנות</p>
       </div>
-      <button onclick="openAddProduct()" style="display:flex;align-items:center;gap:6px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;font-weight:600;background:#6B2E1E;color:#EFE6D6;border:none;padding:9px 16px;border-radius:100px;cursor:pointer;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        הוסף מנה
-      </button>
+      <button class="ap-btn ap-btn--primary" onclick="openAddProduct()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> הוספת מנה</button>
     </div>
 
     <div id="admin-products-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;"></div>
@@ -2976,12 +3399,12 @@
   <!-- TAB: לקוחות (Customers)                   -->
   <!-- ══════════════════════════════════════════ -->
   <div id="admin-tab-customers" class="admin-tab-content">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+    <div class="ap-pagehead">
       <div>
-        <h2 style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.2rem;font-weight:700;margin:0 0 2px;">לקוחות</h2>
-        <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.75rem;margin:0;">מבוסס על כל ההזמנות הקיימות</p>
+        <h2>לקוחות</h2>
+        <p>מבוסס על כל ההזמנות הקיימות</p>
       </div>
-      <button onclick="renderCustomers()" style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.78rem;font-weight:600;background:#F0E9D8;border:1.5px solid #D5C9B5;color:#6B2E1E;padding:7px 14px;border-radius:100px;cursor:pointer;">רענן</button>
+      <button class="ap-btn" onclick="renderCustomers()">רענון</button>
     </div>
     <div id="customers-list"></div>
   </div>
@@ -2990,80 +3413,82 @@
   <!-- TAB: הגדרות (Settings)                    -->
   <!-- ══════════════════════════════════════════ -->
   <div id="admin-tab-settings" class="admin-tab-content">
-    <h2 style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.2rem;font-weight:700;margin:0 0 18px;">הגדרות</h2>
+    <h2>הגדרות</h2>
+    <p>תשלום, פתיחה וסגירה של ההזמנות, והנוסח של ההודעות ללקוחות</p>
 
-    <!-- Bit link -->
-    <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:14px;padding:18px;margin-bottom:14px;">
-      <label style="display:block;font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-weight:700;font-size:0.95rem;margin-bottom:8px;">
-        🔗 קישור Bit לתשלום
-      </label>
-      <input id="admin-bit-link" type="url" class="field" placeholder="https://bit.ly/..." dir="ltr" style="font-size:0.88rem;" />
-      <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;margin-top:6px;">אפליקציית Bit ← "קבלת כסף" ← "שלח קישור"</p>
-    </div>
-
-    <!-- PayBox link -->
-    <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:14px;padding:18px;margin-bottom:14px;">
-      <label style="display:block;font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-weight:700;font-size:0.95rem;margin-bottom:8px;">
-        🔗 קישור PayBox לתשלום
-      </label>
-      <input id="admin-paybox-link" type="url" class="field" placeholder="https://paybox.money/..." dir="ltr" style="font-size:0.88rem;" />
-      <p style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;margin-top:6px;">אם משאירים ריק, כפתור PayBox לא יופיע ללקוח בדף התודה.</p>
-    </div>
-
-    <!-- The texts Noy sends to customers -->
-    <details ontoggle="if (this.open) paintMessagesEditor()" style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:14px;padding:0 18px;margin-bottom:14px;">
-      <summary style="cursor:pointer;padding:16px 0;font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-weight:700;font-size:0.95rem;">✉️ ההודעות ללקוחות (לערוך את הנוסח)</summary>
-      <p style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#6B655C;margin:0 0 6px;">כאן אפשר לשנות כל הודעה שנשלחת ללקוחות בוואטסאפ. המילים בסוגריים מסולסלים, כמו {שם} ו-{סכום}, מתחלפות בפרטי ההזמנה של הלקוח. אפשר להוסיף אותן בלחיצה על הכפתורים מעל כל הודעה. "שמרי" שומר, ו-"חזרי לנוסח המקורי" מחזיר את מה שהיה.</p>
-      <div id="admin-messages-editor"></div>
-    </details>
-
-    <!-- Opening: right now, or by itself at a chosen time -->
-    <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:14px;padding:18px;margin-bottom:14px;">
-      <label style="display:block;font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-weight:700;font-size:0.95rem;margin-bottom:10px;">
-        🗓️ פתיחת הזמנות
-      </label>
-      <button onclick="openOrdersNow()" style="width:100%;background:#2A7A2A;border:none;color:#fff;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.9rem;font-weight:600;padding:11px;border-radius:10px;cursor:pointer;margin-bottom:14px;">🟢 פתחי הזמנות עכשיו</button>
-      <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#9B8B75;margin-bottom:8px;">או קבעי מועד, וההזמנות ייפתחו לבד:</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-        <div>
-          <label for="admin-opens-date" style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#9B8B75;display:block;margin-bottom:4px;">תאריך</label>
-          <input id="admin-opens-date" type="date" class="field" style="font-size:0.88rem;" dir="ltr" />
-        </div>
-        <div>
-          <label for="admin-opens-time" style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#9B8B75;display:block;margin-bottom:4px;">שעה</label>
-          <input id="admin-opens-time" type="time" class="field" style="font-size:0.88rem;" dir="ltr" value="09:00" />
-        </div>
+    <!-- ── Payment ── -->
+    <section class="ap-set-group">
+      <h3 class="ap-h3">תשלום</h3>
+      <div class="ap-card ap-pad">
+        <label class="ap-label" for="admin-bit-link">קישור Bit לתשלום</label>
+        <input id="admin-bit-link" type="url" class="field" placeholder="https://bit.ly/..." dir="ltr" />
+        <p class="ap-hint">אפליקציית Bit ← "קבלת כסף" ← "שלח קישור"</p>
       </div>
-      <button onclick="scheduleOpening()" style="width:100%;background:#6B2E1E;border:none;color:#EFE6D6;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.88rem;font-weight:600;padding:10px;border-radius:10px;cursor:pointer;">קבעי פתיחה</button>
-      <button id="admin-opens-cancel" onclick="cancelScheduledOpening()" style="display:none;width:100%;margin-top:8px;background:transparent;border:1.5px solid #D5C9B5;color:#8B7260;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;padding:8px;border-radius:8px;cursor:pointer;">בטלי את התזמון (ההזמנות יישארו סגורות)</button>
-      <p id="admin-opens-status" style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;margin:10px 0 0;"></p>
-    </div>
-
-    <!-- Deadline -->
-    <div style="background:#FDFAF4;border:1.5px solid #E5D9C5;border-radius:14px;padding:18px;margin-bottom:14px;">
-      <label style="display:block;font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-weight:700;font-size:0.95rem;margin-bottom:10px;">
-        ⏰ מועד סגירת הזמנות
-      </label>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-        <div>
-          <label style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#9B8B75;display:block;margin-bottom:4px;">תאריך</label>
-          <input id="admin-deadline-date" type="date" class="field" style="font-size:0.88rem;" dir="ltr" />
-        </div>
-        <div>
-          <label style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#9B8B75;display:block;margin-bottom:4px;">שעה</label>
-          <input id="admin-deadline-time" type="time" class="field" style="font-size:0.88rem;" dir="ltr" value="17:00" />
-        </div>
+      <div class="ap-card ap-pad" style="margin-top:12px;">
+        <label class="ap-label" for="admin-paybox-link">קישור PayBox לתשלום</label>
+        <input id="admin-paybox-link" type="url" class="field" placeholder="https://paybox.money/..." dir="ltr" />
+        <p class="ap-hint">אם משאירים ריק, כפתור PayBox לא יופיע ללקוח בדף התודה.</p>
       </div>
-      <button onclick="clearDeadline()" style="width:100%;background:transparent;border:1.5px solid #D5C9B5;color:#9B8B75;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;padding:8px;border-radius:8px;cursor:pointer;">חזור לברירת מחדל (שלישי 17:00)</button>
-      <p id="admin-deadline-preview" style="font-family:'Noto Sans Hebrew',sans-serif;color:#7A9A50;font-size:0.78rem;margin-top:8px;"></p>
-    </div>
+    </section>
+
+    <!-- ── Opening and closing ── -->
+    <section class="ap-set-group">
+      <h3 class="ap-h3">פתיחה וסגירה של ההזמנות</h3>
+
+      <!-- Opening: right now, or by itself at a chosen time -->
+      <div class="ap-card ap-pad">
+        <div class="ap-label">פתיחת הזמנות</div>
+        <button class="ap-btn ap-btn--primary ap-btn--block" onclick="openOrdersNow()">פתחי הזמנות עכשיו</button>
+        <p class="ap-hint" style="margin:14px 0 8px;">או קבעי מועד, וההזמנות ייפתחו לבד:</p>
+        <div class="ap-grid2">
+          <div>
+            <label class="ap-sublabel" for="admin-opens-date">תאריך</label>
+            <input id="admin-opens-date" type="date" class="field" dir="ltr" />
+          </div>
+          <div>
+            <label class="ap-sublabel" for="admin-opens-time">שעה</label>
+            <input id="admin-opens-time" type="time" class="field" dir="ltr" value="09:00" />
+          </div>
+        </div>
+        <button class="ap-btn ap-btn--block" onclick="scheduleOpening()">קבעי פתיחה</button>
+        <button class="ap-btn ap-btn--block ap-btn--bare" id="admin-opens-cancel" onclick="cancelScheduledOpening()" style="display:none;margin-top:6px;">בטלי את התזמון (ההזמנות יישארו סגורות)</button>
+        <p id="admin-opens-status" class="ap-hint" style="margin-top:12px;"></p>
+      </div>
+
+      <!-- Deadline -->
+      <div class="ap-card ap-pad" style="margin-top:12px;">
+        <div class="ap-label">מועד סגירת הזמנות</div>
+        <div class="ap-grid2">
+          <div>
+            <label class="ap-sublabel" for="admin-deadline-date">תאריך</label>
+            <input id="admin-deadline-date" type="date" class="field" dir="ltr" />
+          </div>
+          <div>
+            <label class="ap-sublabel" for="admin-deadline-time">שעה</label>
+            <input id="admin-deadline-time" type="time" class="field" dir="ltr" value="17:00" />
+          </div>
+        </div>
+        <button class="ap-btn ap-btn--block ap-btn--bare" onclick="clearDeadline()">חזרי לברירת מחדל (שלישי 17:00)</button>
+        <p id="admin-deadline-preview" class="ap-hint" style="margin-top:10px;"></p>
+      </div>
+    </section>
+
+    <!-- ── The texts Noy sends to customers ── -->
+    <section class="ap-set-group">
+      <h3 class="ap-h3">הודעות ללקוחות</h3>
+      <details class="ap-card ap-details" ontoggle="if (this.open) paintMessagesEditor()">
+        <summary>עריכת הנוסח של ההודעות</summary>
+        <p class="ap-hint" style="margin:0 0 6px;">כאן אפשר לשנות כל הודעה שנשלחת ללקוחות בוואטסאפ. המילים בסוגריים מסולסלים, כמו {שם} ו-{סכום}, מתחלפות בפרטי ההזמנה של הלקוח. אפשר להוסיף אותן בלחיצה על הכפתורים מעל כל הודעה. "שמרי" שומר, ו-"חזרי לנוסח המקורי" מחזיר את מה שהיה.</p>
+        <div id="admin-messages-editor"></div>
+      </details>
+    </section>
 
     <!-- Save settings -->
-    <button onclick="saveAdminSettings()" class="admin-save-btn" style="width:100%;font-size:1rem;padding:14px;">
-      שמור הגדרות ✓
-    </button>
-    <div id="admin-settings-saved-msg" style="text-align:center;font-family:'Noto Sans Hebrew',sans-serif;color:#6B2E1E;font-size:0.88rem;margin-top:10px;opacity:0;transition:opacity 0.3s;">
-      ✓ ההגדרות נשמרו!
+    <div style="margin-top:28px;">
+      <button onclick="saveAdminSettings()" class="admin-save-btn" style="width:100%;">שמירת הגדרות</button>
+      <div id="admin-settings-saved-msg" style="text-align:center;color:var(--ap-ok);font-weight:600;font-size:0.9rem;margin-top:10px;opacity:0;transition:opacity 0.3s;">
+        ההגדרות נשמרו
+      </div>
     </div>
   </div>
 
@@ -3268,12 +3693,13 @@
     </div>
   </div>
 
+  </main>
 </div>
 
 <!-- ════════════════════════════════════════════════════════
      RECIPE EDITOR MODAL
 ════════════════════════════════════════════════════════ -->
-<div id="recipe-editor-modal">
+<div class="ap-skin" id="recipe-editor-modal">
   <!-- No onclick on purpose. A tap beside the panel used to close the editor and
        throw away the whole recipe; only the X button, and only after a question,
        leaves now. -->
@@ -3432,7 +3858,7 @@
      reliable in a browser, and a bookkeeping total built on a misread number is
      worse than no total at all. The photo is kept as the record; the amount is
      typed once, which takes seconds and is exact. -->
-<div id="expense-modal" onclick="if(event.target===this)closeExpense()">
+<div class="ap-skin" id="expense-modal" onclick="if(event.target===this)closeExpense()">
   <div class="k-modal-card" style="max-width:440px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
       <h3 id="exp-title" style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.25rem;font-weight:700;margin:0;">הוצאה חדשה</h3>
@@ -3495,7 +3921,7 @@
      Hebrew handwriting and phone photos of recipe sheets do not read reliably,
      and a costing built on a misread number is worse than no costing. Copying
      the cells is two seconds and is exact. -->
-<div id="import-undo-modal" onclick="if(event.target===this)closeImportUndo()">
+<div class="ap-skin" id="import-undo-modal" onclick="if(event.target===this)closeImportUndo()">
   <div class="k-modal-card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
       <h3 style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.25rem;font-weight:700;margin:0;">ביטול ייבוא מאקסל</h3>
@@ -3510,7 +3936,7 @@
   </div>
 </div>
 
-<div id="recipe-import-modal" onclick="if(event.target===this)closeRecipeImport()">
+<div class="ap-skin" id="recipe-import-modal" onclick="if(event.target===this)closeRecipeImport()">
   <div class="k-modal-card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
       <h3 style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.25rem;font-weight:700;margin:0;">ייבוא מתכון מאקסל</h3>
@@ -3574,7 +4000,7 @@
   </div>
 </div>
 
-<div id="pantry-edit-modal">
+<div class="ap-skin" id="pantry-edit-modal">
   <div class="pe-backdrop" onclick="closePantryEditor()"></div>
   <div class="pe-box">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
@@ -3631,7 +4057,7 @@
 </div>
 
 <!-- ============ EDIT PRODUCT MODAL ============ -->
-<div id="edit-product-modal" onclick="handleEditBackdrop(event)">
+<div class="ap-skin" id="edit-product-modal" onclick="handleEditBackdrop(event)">
   <div class="edit-modal-box">
 
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
@@ -3737,7 +4163,7 @@
 </div>
 
 <!-- ============ MANUAL ORDER MODAL ============ -->
-<div id="manual-order-modal" onclick="handleManualOrderBackdrop(event)">
+<div class="ap-skin" id="manual-order-modal" onclick="handleManualOrderBackdrop(event)">
   <div class="edit-modal-box">
 
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
@@ -5381,15 +5807,20 @@ const NUIKA_VERSION = readSiteVersion();
 window.NUIKA_VERSION = NUIKA_VERSION;
 
 function stampVersion() {
-  const el = document.getElementById('admin-version');
-  if (!el) return;
+  // Two places show it: the top bar on a phone and the sidebar on a laptop.
+  const els = document.querySelectorAll('[data-admin-version]');
+  if (!els.length) return;
   const v = NUIKA_VERSION;
-  if (v.stamp === 'dev') { el.textContent = 'גרסה: מקומית, טרם פורסמה'; return; }
-  // Show the date in a form Noy can read out loud, and keep the commit for us.
-  const d = new Date(v.stamp);
-  const when = isNaN(d) ? v.stamp
-    : `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-  el.textContent = `גרסה ${when} · ${v.commit}`;
+  let text;
+  if (v.stamp === 'dev') text = 'גרסה: מקומית, טרם פורסמה';
+  else {
+    // Show the date in a form Noy can read out loud, and keep the commit for us.
+    const d = new Date(v.stamp);
+    const when = isNaN(d) ? v.stamp
+      : `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    text = `גרסה ${when} · ${v.commit}`;
+  }
+  els.forEach(el => { el.textContent = text; });
 }
 
 function openAdminPanel() {
@@ -5422,66 +5853,55 @@ function renderAdminProducts() {
   const parked = PRODUCTS.filter(p => p.inMenu === false);
 
   const heading = (text, note) => `
-    <div style="margin:18px 0 8px;">
-      <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#6B2E1E;font-size:0.95rem;">${text}</div>
-      <div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.75rem;">${note}</div>
-    </div>`;
+    <div class="ap-sec-head"><b>${text}</b><span>${note}</span></div>`;
+  const none = text => `<div class="ap-empty" style="padding:24px 16px;">${text}</div>`;
 
   list.innerHTML =
     heading('בתפריט השבוע', 'המנות שהלקוחות רואים עכשיו')
     + (onMenu.length ? onMenu.map(productRow).join('')
-       : `<div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.82rem;padding:10px 0;">אין מנות בתפריט — הלקוחות רואים חנות ריקה</div>`)
+       : none('אין מנות בתפריט, הלקוחות רואים חנות ריקה'))
     + heading('בנק המנות', 'שמורות אצלך, לא מוצגות ללקוחות')
-    + (parked.length ? parked.map(productRow).join('')
-       : `<div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.82rem;padding:10px 0;">ריק כרגע</div>`);
+    + (parked.length ? parked.map(productRow).join('') : none('ריק כרגע'));
 }
 
+// One dish. The photo keeps its data-photo marker: the photo loader finds the <img> by it.
 function productRow(p, i, arr) {
   const parked = p.inMenu === false;
+  const id = +p.id || 0;
   // Only the menu has an order worth arranging. The bank is a shelf.
   // .map() hands in the index and the array, so first/last need no bookkeeping.
   const last = arr ? arr.length - 1 : 0;
   const arrows = parked ? '' : `
-      <div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0;">
-        <button class="ord-btn" onclick="moveProduct(${+p.id || 0}, -1)" ${i === 0 ? 'disabled' : ''}
-          title="להזיז למעלה" aria-label="להזיז את ${esc(p.nameHe)} למעלה בתפריט">▲</button>
-        <button class="ord-btn" onclick="moveProduct(${+p.id || 0}, 1)" ${i === last ? 'disabled' : ''}
-          title="להזיז למטה" aria-label="להזיז את ${esc(p.nameHe)} למטה בתפריט">▼</button>
+      <div class="ap-prod-move">
+        <button class="ord-btn" onclick="moveProduct(${id}, -1)" ${i === 0 ? 'disabled' : ''}
+          title="להזיז למעלה" aria-label="להזיז את ${esc(p.nameHe)} למעלה בתפריט">${ico('up', 14)}</button>
+        <button class="ord-btn" onclick="moveProduct(${id}, 1)" ${i === last ? 'disabled' : ''}
+          title="להזיז למטה" aria-label="להזיז את ${esc(p.nameHe)} למטה בתפריט">${ico('down', 14)}</button>
       </div>`;
   return `
-    <div class="admin-card" style="${parked ? 'opacity:0.6;' : ''}">
+    <div class="ap-prod${parked ? ' ap-prod--shelf' : ''}" data-parked="${parked ? 1 : 0}">
       ${arrows}
-      <img src="${esc(photoSrc(p) || BLANK_GIF)}" data-photo="${esc(p.illustration || '')}" alt="${esc(p.nameHe)}"
-        onerror="this.style.display='none'"
-        style="width:56px;height:56px;object-fit:cover;border-radius:8px;flex-shrink:0;" />
-      <div style="flex:1;min-width:0;">
-        <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#3B2A24;font-size:0.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.nameHe)}</div>
-        <div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.78rem;">₪${p.price}</div>
+      <img class="ap-prod-img" src="${esc(photoSrc(p) || BLANK_GIF)}" data-photo="${esc(p.illustration || '')}" alt="${esc(p.nameHe)}"
+        onerror="this.style.visibility='hidden'" />
+      <div style="min-width:0;">
+        <div class="ap-prod-name">${esc(p.nameHe)}</div>
+        <div class="ap-prod-price">₪${+p.price || 0}</div>
       </div>
-      <!-- Edit button -->
-      <button onclick="openEditProduct(${p.id})"
-        style="background:#F0E9D8;border:1.5px solid #D5C9B5;border-radius:8px;padding:6px 10px;cursor:pointer;flex-shrink:0;"
-        aria-label="ערוך ${esc(p.nameHe)}">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B2E1E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-      </button>
-      <!-- Move between this week's menu and the bank -->
-      <button onclick="toggleInMenu(${+p.id || 0}, this)"
-        title="${parked ? 'הוסיפי לתפריט השבוע' : 'הורידי לבנק המנות'}"
-        style="background:${parked ? '#EDF6E8' : '#F0E9D8'};border:1.5px solid ${parked ? '#A8C89A' : '#D5C9B5'};border-radius:8px;padding:6px 9px;cursor:pointer;flex-shrink:0;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#6B2E1E;white-space:nowrap;">
-        ${parked ? '→ לתפריט' : '↓ לבנק'}
-      </button>
-
-      <!-- Sold out for this week -->
-      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;">
-        <label class="admin-toggle" aria-label="זמינות ${esc(p.nameHe)}">
-          <input type="checkbox" id="admin-toggle-${+p.id || 0}" ${p.soldOut ? '' : 'checked'}
-            ${parked ? 'disabled' : ''}
-            onchange="liveToggleSoldOut(${+p.id || 0}, this)" />
-          <span class="admin-toggle-slider"></span>
-        </label>
-        <span id="admin-status-${+p.id || 0}" style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.7rem;color:${p.soldOut ? '#B45032' : '#7A9A50'};">
-          ${p.soldOut ? 'אזל' : 'זמין'}
-        </span>
+      <div class="ap-prod-act">
+        <!-- Sold out for this week -->
+        <div class="ap-prod-avail">
+          <label class="admin-toggle" aria-label="זמינות ${esc(p.nameHe)}">
+            <input type="checkbox" id="admin-toggle-${id}" ${p.soldOut ? '' : 'checked'}
+              ${parked ? 'disabled' : ''}
+              onchange="liveToggleSoldOut(${id}, this)" />
+            <span class="admin-toggle-slider"></span>
+          </label>
+          <span id="admin-status-${id}" style="color:${p.soldOut ? 'var(--ap-bad)' : 'var(--ap-ok)'};">${p.soldOut ? 'אזל' : 'זמין'}</span>
+        </div>
+        <button class="ap-btn ap-btn--sm" onclick="openEditProduct(${id})" aria-label="עריכת ${esc(p.nameHe)}">${ico('pencil', 16)}עריכה</button>
+        <!-- Move between this week's menu and the bank -->
+        <button class="ap-btn ap-btn--sm" onclick="toggleInMenu(${id}, this)"
+          title="${parked ? 'הוסיפי לתפריט השבוע' : 'הורידי לבנק המנות'}">${parked ? ico('plus', 16) + 'לתפריט' : ico('down', 16) + 'לבנק'}</button>
       </div>
     </div>
   `;
@@ -5544,7 +5964,7 @@ function liveToggleSoldOut(id, checkbox) {
   const statusEl = document.getElementById(`admin-status-${id}`);
   if (statusEl) {
     statusEl.textContent = p.soldOut ? 'אזל' : 'זמין';
-    statusEl.style.color = p.soldOut ? '#B45032' : '#7A9A50';
+    statusEl.style.color = p.soldOut ? 'var(--ap-bad)' : 'var(--ap-ok)';
   }
   // Write per-key so this cannot clobber a concurrent edit on another device.
   db.ref(`${ROOT}/products/${id}/soldOut`).set(p.soldOut).catch(fbError);
@@ -5576,7 +5996,19 @@ function saveAdminSettings() {
   updateOrdersTabBadge();
 }
 
+// The "more" sheet of the phone navigation. Closes on its own whenever a place is chosen.
+function toggleAdminMore(ev) {
+  const nav = document.getElementById('ap-nav');
+  const btn = document.getElementById('ap-more-btn');
+  if (!nav) return;
+  if (ev && ev.stopPropagation) ev.stopPropagation();
+  const open = typeof ev === 'boolean' ? ev : !nav.classList.contains('more-open');
+  nav.classList.toggle('more-open', open);
+  if (btn) { btn.setAttribute('aria-expanded', String(open)); btn.classList.toggle('on', open); }
+}
+
 function closeAdminPanel() {
+  toggleAdminMore(false);
   document.getElementById('admin-panel').classList.remove('open');
   document.body.style.overflow = '';
   // Clean URL
@@ -5600,27 +6032,32 @@ updateOrdersOpenBanner();
 // an alert saying the opposite. She had no way to see it from here.
 function describeOrdersState() {
   if (_settingsCache.ordersOpen === false)
-    return { text: 'סגורה — לקוחות לא יוכלו להזמין', color: '#B45032' };
+    return { kind: 'closed', pill: 'הזמנות סגורות', text: 'סגורה — לקוחות לא יוכלו להזמין', color: '#AE3326' };
 
   if (openingIsPending())
-    return { text: 'מתוזמנת — ההזמנות ייפתחו ' + openingLabel('he') + '. עד אז סגורות.', color: '#A06000' };
+    return { kind: 'pending', pill: 'פתיחה מתוזמנת', text: 'מתוזמנת — ההזמנות ייפתחו ' + openingLabel('he') + '. עד אז סגורות.', color: '#8F5700' };
 
   const dl = getNextTuesdayDeadline();
   if (dl && dl.getTime() <= Date.now())
     return {
+      kind: 'late', pill: 'הזמנות סגורות',
       text: 'מועד הסגירה כבר עבר — לקוחות לא יכולים להזמין. קבעי מועד חדש בשדה שלמטה.',
-      color: '#B45032'
+      color: '#AE3326'
     };
 
-  return { text: 'פתוחה — לקוחות יכולים להזמין', color: '#7A9A50' };
+  return { kind: 'open', pill: 'הזמנות פתוחות', text: 'פתוחה — לקוחות יכולים להזמין', color: '#2B7239' };
 }
 
+// The state is shown in three places: the line under the switch, the card around it
+// (its colour follows the state) and the pill in the top bar that is visible on every tab.
 function paintOrdersState() {
-  const statusText = document.getElementById('orders-status-text');
-  if (!statusText) return;
   const state = describeOrdersState();
-  statusText.textContent  = state.text;
-  statusText.style.color  = state.color;
+  const statusText = document.getElementById('orders-status-text');
+  if (statusText) statusText.textContent = state.text;
+  const hero = document.getElementById('ap-hero');
+  if (hero) hero.dataset.kind = state.kind;
+  const pill = document.getElementById('ap-state-pill');
+  if (pill) { pill.dataset.kind = state.kind; pill.textContent = state.pill; }
 }
 
 // The toggle means "open now" / "closed". Either one also cancels a scheduled opening: a
@@ -5682,11 +6119,11 @@ function paintOpeningCard() {
   }
   if (openingIsPending()) {
     st.textContent = '⏳ מתוזמן: ההזמנות ייפתחו ' + openingLabel('he') + '. עד אז לקוחות לא יכולים להזמין.';
-    st.style.color = '#A06000';
+    st.style.color = 'var(--ap-warn)';
     if (cancel) cancel.style.display = '';
   } else {
     st.textContent = ordersAreOpen() ? 'ההזמנות פתוחות עכשיו.' : 'ההזמנות סגורות עכשיו.';
-    st.style.color = ordersAreOpen() ? '#2A7A2A' : '#9B8B75';
+    st.style.color = ordersAreOpen() ? 'var(--ap-ok)' : 'var(--ap-mute)';
     if (cancel) cancel.style.display = 'none';
   }
 }
@@ -6473,15 +6910,15 @@ function saveMsg(key, ta, status, paintPrev) {
   if (store === null) delete _msgCache[key]; else _msgCache[key] = store;
   ta.removeAttribute('data-dirty');
   if (paintPrev) paintPrev();
-  status.style.color = '#9B8B75';
+  status.style.color = 'var(--ap-mute)';
   status.textContent = 'שומרת...';
   db.ref(`${ROOT}/adminMessages/${key}`).set(store)
-    .then(() => { status.style.color = '#2A7A2A'; status.textContent = store === null ? 'חזר לנוסח המקורי ✓' : 'נשמר ✓'; })
+    .then(() => { status.style.color = 'var(--ap-ok)'; status.textContent = store === null ? 'חזר לנוסח המקורי' : 'נשמר'; })
     .catch(err => {
       // Not saved: do not keep pretending it was, or the next message goes out with a text that
       // vanishes on reload.
       if (before === null) delete _msgCache[key]; else _msgCache[key] = before;
-      status.style.color = '#B45032';
+      status.style.color = 'var(--ap-bad)';
       status.textContent = 'לא נשמר';
       if (err && err.code === 'PERMISSION_DENIED') {
         console.error('Firebase write failed: adminMessages', err);
@@ -6533,10 +6970,13 @@ function openBulkReady() {
   if (!box) {
     box = document.createElement('div');
     box.id = 'bulk-ready-modal';
+    box.className = 'ap-skin';
     box.setAttribute('role', 'dialog');
     box.setAttribute('aria-modal', 'true');
     box.setAttribute('aria-label', 'שליחת הודעת מוכנה לכל הלקוחות');
-    box.style.cssText = 'position:fixed;inset:0;z-index:5000;background:rgba(40,26,20,0.55);display:flex;align-items:flex-end;justify-content:center;';
+    box.style.cssText = 'position:fixed;inset:0;z-index:5000;background:rgba(40,26,20,0.55);display:flex;justify-content:center;';
+    // a tap on the dark area closes it, a tap on the sheet does not
+    box.addEventListener('click', e => { if (e.target === box) closeBulkReady(); });
     document.body.appendChild(box);
   }
   box.style.display = 'flex';
@@ -6552,29 +6992,30 @@ function renderBulkReady() {
   const list = bulkRecipients();
   const left = list.filter(r => !_bulkSent[r.key]);
   const noPhone = getOrders().filter(o => !o.archived && o.status !== 'done' && !String(o.phone || '').replace(/\D/g, ''));
-  const font = "font-family:'Noto Sans Hebrew',sans-serif;";
   const rows = list.map(r => {
     const sent = !!_bulkSent[r.key];
-    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid #EFE4D0;">
+    return `<div class="ap-brow">
       <div style="min-width:0;">
-        <div style="${font}font-weight:600;color:#3B2A24;font-size:0.9rem;">${esc(r.name)}${r.n > 1 ? ' <span style="font-weight:400;color:#9B8B75;font-size:0.75rem;">(' + r.n + ' הזמנות)</span>' : ''}</div>
-        <div style="${font}font-size:0.72rem;color:${r.unpaid ? '#A06000' : '#9B8B75'};">${r.unpaid ? 'עוד לא שולם' : 'שולם'}</div>
+        <b>${esc(r.name)}${r.n > 1 ? ' <small>(' + r.n + ' הזמנות)</small>' : ''}</b>
+        <small data-t="${r.unpaid ? 'warn' : 'ok'}">${r.unpaid ? 'עוד לא שולם' : 'שולם'}</small>
       </div>
-      <button onclick="sendBulkOne('${r.key}')" class="btn-status" style="${sent ? 'background:#EEF8EE;border-color:#B0D9B0;color:#2A7A2A;' : ''}">${sent ? '✓ נפתח' : 'פתחי'}</button>
+      <button class="ap-btn ap-btn--sm" ${sent ? 'data-sent="1"' : ''} onclick="sendBulkOne('${r.key}')">${sent ? ico('check', 16) + 'נפתח' : ico('send', 16) + 'פתחי'}</button>
     </div>`;
   }).join('');
   box.innerHTML = `
-    <div style="background:#FDFAF4;width:100%;max-width:520px;max-height:88vh;overflow:auto;border-radius:18px 18px 0 0;padding:18px 18px 22px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-        <h3 style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.05rem;margin:0;">📣 "ההזמנה מוכנה" לכל הלקוחות</h3>
-        <button onclick="closeBulkReady()" aria-label="סגירה" style="background:transparent;border:0;font-size:1.4rem;line-height:1;cursor:pointer;color:#6B2E1E;">×</button>
+    <div class="ap-sheet-panel">
+      <div class="ap-sheet-head">
+        <h3>"ההזמנה מוכנה" לכל הלקוחות</h3>
+        <button class="ap-icon-btn" onclick="closeBulkReady()" aria-label="סגירה"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
-      <p style="${font}font-size:0.8rem;color:#6B655C;margin:0 0 12px;">וואטסאפ לא מאפשר לשלוח לכולם ביחד, אז כל לחיצה פותחת את ההודעה ללקוח הבא, כבר כתובה. נשאר רק ללחוץ "שלח" בוואטסאפ ולחזור לכאן. ההזמנות עצמן לא משתנות, גם לא סטטוס התשלום.</p>
+      <p class="ap-sheet-note">וואטסאפ לא מאפשר לשלוח לכולם ביחד, אז כל לחיצה פותחת את ההודעה ללקוח הבא, כבר כתובה. נשאר רק ללחוץ "שלח" בוואטסאפ ולחזור לכאן. ההזמנות עצמן לא משתנות, גם לא סטטוס התשלום.</p>
       ${list.length ? `
-      <button onclick="sendBulkNext()" ${left.length ? '' : 'disabled'} style="width:100%;background:${left.length ? '#2A7A2A' : '#B9B3A6'};border:none;color:#fff;${font}font-size:0.95rem;font-weight:600;padding:13px;border-radius:12px;cursor:${left.length ? 'pointer' : 'default'};margin-bottom:6px;">${left.length ? 'פתחי את ההודעה הבאה (נשארו ' + left.length + ' מתוך ' + list.length + ')' : '✓ נפתחו הודעות לכולם'}</button>
-      <div style="text-align:end;margin-bottom:4px;"><button onclick="resetBulkSent()" style="background:transparent;border:0;${font}font-size:0.75rem;color:#8B7260;text-decoration:underline;cursor:pointer;">נקי את הסימונים</button></div>
-      ${rows}` : `<p style="${font}font-size:0.9rem;color:#9B8B75;text-align:center;padding:18px 0;">אין הזמנות פעילות עם מספר טלפון.</p>`}
-      ${noPhone.length ? `<p style="${font}font-size:0.78rem;color:#A06000;margin:12px 0 0;">בלי מספר טלפון, לא נשלח להם: ${noPhone.map(o => esc(o.name)).join(', ')}</p>` : ''}
+      <button class="ap-btn ap-btn--primary ap-btn--block" onclick="sendBulkNext()" ${left.length ? '' : 'disabled'}>${left.length
+        ? ico('send', 18) + 'פתחי את ההודעה הבאה (נשארו ' + left.length + ' מתוך ' + list.length + ')'
+        : ico('check', 18) + 'נפתחו הודעות לכולם'}</button>
+      <div style="text-align:end;margin:4px 0 2px;"><button class="ap-link" onclick="resetBulkSent()">נקי את הסימונים</button></div>
+      ${rows}` : `<div class="ap-empty" style="padding:28px 16px;">אין הזמנות פעילות עם מספר טלפון.</div>`}
+      ${noPhone.length ? `<p class="ap-sheet-note" style="margin:14px 0 0;color:var(--ap-warn);">בלי מספר טלפון, לא נשלח להם: ${noPhone.map(o => esc(o.name)).join(', ')}</p>` : ''}
     </div>`;
 }
 function sendBulkOne(key) {
@@ -6659,17 +7100,92 @@ function renderOrderStats() {
   const el = document.getElementById('order-stats');
   if (!el) return;
   el.innerHTML = [
-    { label:'הזמנות', value: total,        icon:'📋', color:'#1A6DB5' },
-    { label:'שולם',   value:'₪'+paid,      icon:'💰', color:'#2A7A2A' },
-    { label:'עוד לא שולם', value:'₪'+owed,  icon:'⏳', color:'#A06000' },
-    { label:'סה״כ הזמנות', value:'₪'+revenue, icon:'🧾', color:'#6B2E1E' },
+    { label:'הזמנות השבוע', value: total },
+    { label:'שולם',         value:'₪'+paid,    tone:'ok' },
+    { label:'עוד לא שולם',  value:'₪'+owed,    tone: owed ? 'warn' : '' },
+    { label:'סה״כ',         value:'₪'+revenue },
   ].map(s => `
-    <div class="order-stat-card">
-      <div style="font-size:1.3rem;margin-bottom:4px;">${s.icon}</div>
-      <div style="font-family:'Noto Serif Hebrew',serif;font-size:1.3rem;font-weight:700;color:${s.color};">${s.value}</div>
-      <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#9B8B75;">${s.label}</div>
+    <div class="ap-stat">
+      <div class="ap-stat-label">${s.label}</div>
+      <div class="ap-stat-value" data-tone="${s.tone || ''}">${s.value}</div>
     </div>
   `).join('');
+  const wk = document.getElementById('ap-week-line');
+  if (wk) wk.innerHTML = 'השבוע: <bdi dir="ltr">' + weekLabel(currentCycle().start) + '</bdi> · בכל יום שישי ההזמנות עוברות לארכיון';
+  renderAttention(orders);
+}
+
+// One small icon set for the whole panel: same 24px grid, same 1.8 stroke, drawn as lines.
+// (Emoji used to stand in for icons here; they look different on every phone.)
+var AP_ICONS = {
+  plus:    '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+  check:   '<polyline points="20 6 9 17 4 12"/>',
+  checkc:  '<path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+  msg:     '<path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>',
+  bell:    '<path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/>',
+  send:    '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>',
+  pencil:  '<path d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>',
+  trash:   '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>',
+  printer: '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
+  download:'<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+  left:    '<polyline points="15 18 9 12 15 6"/>',
+  up:      '<polyline points="18 15 12 9 6 15"/>',
+  down:    '<polyline points="6 9 12 15 18 9"/>',
+  truck:   '<rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',
+  home:    '<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+  card:    '<rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>',
+  refresh: '<polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>',
+  box:     '<path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>',
+  clock:   '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  inbox:   '<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/>',
+  list:    '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
+  more:    '<circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/>',
+  pin:     '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>'
+};
+function ico(name, size) {
+  const s = size || 18;
+  return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (AP_ICONS[name] || '') + '</svg>';
+}
+
+// Jump from the home page straight to the orders that need her.
+function goOrders(filter) {
+  showOrdersView('active');
+  switchAdminTab('orders');
+  filterOrders(filter || 'all');
+}
+
+// "What needs me now": built from the same orders as everything else. Nothing here is typed by a
+// customer, only counts and fixed words, so there is nothing to escape.
+function renderAttention(orders) {
+  const box = document.getElementById('dash-attention');
+  if (!box) return;
+  const nNew   = orders.filter(o => o.status === 'new').length;
+  const nAwait = orders.filter(awaitingPayment).length;
+  const nReady = orders.filter(o => o.status === 'ready').length;
+  const units  = orders.filter(o => o.status !== 'done')
+    .reduce((s, o) => s + (o.itemsArr || []).reduce((a, it) => a + (+it.qty || 0), 0), 0);
+  const rows = [];
+  if (nNew)   rows.push({ t: 'info', ic: 'inbox', f: 'new',
+    html: nNew === 1 ? '<b>1</b> הזמנה חדשה מחכה לאישור' : '<b>' + nNew + '</b> הזמנות חדשות מחכות לאישור' });
+  if (nAwait) rows.push({ t: 'warn', ic: 'clock', f: 'unpaid',
+    html: nAwait === 1 ? '<b>1</b> הזמנה מחכה לתשלום ב-Bit או PayBox' : '<b>' + nAwait + '</b> הזמנות מחכות לתשלום ב-Bit או PayBox',
+    sub: 'אפשר לשלוח תזכורת מכרטיס ההזמנה' });
+  if (nReady) rows.push({ t: 'ok', ic: 'box', f: 'ready',
+    html: nReady === 1 ? '<b>1</b> הזמנה מוכנה, עוד לא נמסרה' : '<b>' + nReady + '</b> הזמנות מוכנות, עוד לא נמסרו' });
+  if (units)  rows.push({ t: '', ic: 'list', f: 'all',
+    html: 'יש <b>' + units + '</b> יחידות לאפות', sub: 'הרשימה המלאה בלשונית ההזמנות' });
+  if (!rows.length) {
+    box.innerHTML = '<div class="ap-todo-empty">' + (orders.length
+      ? '<b>הכל מטופל.</b><br>אין הזמנות שמחכות לך כרגע.'
+      : '<b>עדיין אין הזמנות השבוע.</b><br>כשלקוחות יזמינו, זה יופיע כאן.') + '</div>';
+    return;
+  }
+  box.innerHTML = rows.map(r => `
+    <button class="ap-todo-row" onclick="goOrders('${r.f}')">
+      <span class="ap-todo-ic" data-t="${r.t}">${ico(r.ic, 19)}</span>
+      <span class="ap-todo-txt">${r.html}${r.sub ? '<small>' + r.sub + '</small>' : ''}</span>
+      <span class="ap-todo-go">${ico('left', 18)}</span>
+    </button>`).join('');
 }
 
 function renderBakingSummary() {
@@ -6712,7 +7228,7 @@ function renderBakingSummary() {
     return `
     <div class="baking-row" role="button" tabindex="0" aria-expanded="${open}" style="cursor:pointer;"
          onclick="toggleBakeItem(${idx})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleBakeItem(${idx});}">
-      <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.88rem;color:#3B2A24;font-weight:600;">${esc(name)} <span aria-hidden="true" style="color:#9B8B75;font-size:0.7rem;">${open ? '▴' : '▾'}</span></div>
+      <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.88rem;color:#3B2A24;font-weight:600;">${esc(name)} <span aria-hidden="true">${ico(open ? 'up' : 'down', 14)}</span></div>
       <div style="font-family:'Noto Serif Hebrew',serif;font-size:1.1rem;font-weight:700;color:#6B2E1E;">${+qty || 0} <span style="font-size:0.75rem;font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-weight:400;">יח'</span></div>
     </div>
     ${open ? `<div style="background:#FDFAF4;border:1px solid #E5D9C5;border-radius:10px;padding:2px 12px 4px;margin:-2px 0 8px;">${who}</div>` : ''}`;
@@ -6730,48 +7246,75 @@ function toggleBakeItem(i) {
 // The buttons on one order. Every status change is silent unless the switch above the list is on.
 // "נמסרה" is there from the moment an order exists: an order handed over on the spot needs no
 // approve / ready steps first.
+//
+// One primary button moves the order forward. Everything that talks to the customer lives in one
+// "הודעה" menu, so the card does not carry six buttons of equal weight.
 function actionButtons(o) {
   const id = +o.id || 0;
   const note = notifyOn() ? ' + הודעה' : '';
-  const green = 'style="background:#2A7A2A;color:#fff;border-color:#2A7A2A;"';
-  let html = '';
-  if (o.status === 'new') {
-    html += `<button onclick="approveOrder(${id})" class="btn-status" ${green}>${awaitingPayment(o) ? '💰 התקבל תשלום, אשרי' : '✅ אשרי'}${note} ←</button>`;
-  } else if (o.status === 'confirmed') {
-    html += `<button onclick="markReady(${id})" class="btn-status" ${green}>🍞 מוכנה${note} ←</button>`;
-  } else if (o.status === 'ready') {
-    html += `<button onclick="updateOrderStatus(${id},'done')" class="btn-status" ${green}>✔️ נמסרה ←</button>`;
+  const btn = (cls, fn, icon, label, aria) =>
+    `<button class="ap-btn ${cls}" onclick="${fn}"${aria ? ` aria-label="${aria}" title="${aria}"` : ''}>${ico(icon, 17)}${label}</button>`;
+  let primary = '';
+  if (o.status === 'new')            primary = btn('ap-btn--primary', `approveOrder(${id})`, 'check', (awaitingPayment(o) ? 'התקבל תשלום, אשרי' : 'אשרי הזמנה') + note);
+  else if (o.status === 'confirmed') primary = btn('ap-btn--primary', `markReady(${id})`, 'box', 'סמני כמוכנה' + note);
+  else if (o.status === 'ready')     primary = btn('ap-btn--primary', `updateOrderStatus(${id},'done')`, 'checkc', 'נמסרה ללקוח');
+
+  let html = primary;
+  if (o.status === 'new' || o.status === 'confirmed') html += btn('', `updateOrderStatus(${id},'done')`, 'checkc', 'נמסרה');
+
+  // The messages. The menu opens upward from the button, so the last card on the screen is not cut off.
+  const items = [];
+  const item = (fn, icon, label) => items.push(`<button onclick="apMenuDo(()=>${fn})">${ico(icon, 18)}${label}</button>`);
+  if (o.status === 'confirmed') item(`sendOrderMessage(${id})`, 'msg', 'הודעת אישור');
+  if (o.status === 'ready')     item(`sendOrderMessage(${id})`, 'msg', 'הודעת "ההזמנה מוכנה"');
+  if (o.status === 'new' || o.status === 'confirmed') item(`sendReadyNow(${id})`, 'send', 'הודעת "מוכנה", בלי לשנות סטטוס');
+  if (awaitingPayment(o)) item(`remindPayment(${id})`, 'bell', 'תזכורת תשלום');
+  if (o.status !== 'new') item(`sendRefreshMessage(${id})`, 'refresh', 'חידוש לחם');
+  if (items.length) {
+    html += `<details class="ap-menu"><summary class="ap-btn" aria-label="שליחת הודעה ללקוח">${ico('msg', 17)}הודעה ${ico('down', 14)}</summary><div class="ap-menu-list">${items.join('')}</div></details>`;
   }
-  if (o.status === 'new' || o.status === 'confirmed') {
-    html += `<button onclick="updateOrderStatus(${id},'done')" class="btn-status">✔️ נמסרה</button>`;
-  }
-  if (o.status === 'confirmed' || o.status === 'ready') {
-    html += `<button onclick="sendOrderMessage(${id})" class="btn-status" aria-label="שליחת הודעה ללקוח">💬 הודעה</button>`;
-  }
-  if (o.status === 'new' || o.status === 'confirmed') {
-    html += `<button onclick="sendReadyNow(${id})" class="btn-status" aria-label="שליחת הודעה שההזמנה מוכנה, בלי לשנות סטטוס">📣 הודעת מוכנה</button>`;
-  }
-  if (awaitingPayment(o)) {
-    html += `<button onclick="remindPayment(${id})" class="btn-status">⏰ תזכורת תשלום</button>`;
-  }
-  if (o.status !== 'new') {
-    html += `<button onclick="sendRefreshMessage(${id})" class="btn-status" aria-label="שליחת הוראות חידוש לחם ללקוח">🍞 חידוש לחם</button>`;
-  }
+  html += `<span class="ap-spacer"></span>`;
+  html += `<button class="ap-btn ap-btn--bare" onclick="openEditOrderModal(${id})" aria-label="עריכת הזמנה" title="עריכת הזמנה">${ico('pencil', 17)}</button>`;
+  html += `<button class="ap-btn ap-btn--bare ap-btn--danger" onclick="deleteOrder(${id})" aria-label="מחיקת הזמנה" title="מחיקת הזמנה">${ico('trash', 17)}</button>`;
   return html;
 }
 
+// A menu inside a card closes itself after a choice, and when anything else is tapped.
+function apMenuDo(fn) {
+  document.querySelectorAll('details.ap-menu[open]').forEach(d => d.removeAttribute('open'));
+  fn();
+}
+document.addEventListener('click', e => {
+  document.querySelectorAll('details.ap-menu[open]').forEach(d => { if (!d.contains(e.target)) d.removeAttribute('open'); });
+});
+
 // The orders the list shows right now: this week's, narrowed by the filter chip that is lit.
 // The printed order list uses the same function, so paper and screen can never disagree.
+const ORDER_FILTERS = {
+  all:       () => true,
+  unpaid:    o => !isPaid(o),
+  new:       o => o.status === 'new',
+  confirmed: o => o.status === 'confirmed',
+  ready:     o => o.status === 'ready',
+  done:      o => o.status === 'done',
+  delivery:  o => o.delivery === 'delivery',
+  pickup:    o => o.delivery === 'pickup'
+};
 function visibleOrders() {
   const all = getOrders().filter(o => !o.archived);
-  if (currentFilter === 'delivery') return all.filter(o => o.delivery === 'delivery');
-  if (currentFilter === 'pickup') return all.filter(o => o.delivery === 'pickup');
-  if (currentFilter === 'unpaid') return all.filter(o => !isPaid(o));
-  if (['new','confirmed','ready','done'].includes(currentFilter)) return all.filter(o => o.status === currentFilter);
-  return all;
+  return all.filter(ORDER_FILTERS[currentFilter] || ORDER_FILTERS.all);
+}
+// How many orders each chip would show, written on the chip.
+function paintFilterCounts(all) {
+  Object.keys(ORDER_FILTERS).forEach(f => {
+    const n = document.querySelector('#filter-' + f + ' .ap-n');
+    if (n) n.textContent = all.filter(ORDER_FILTERS[f]).length;
+  });
 }
 
 function renderOrderList() {
+  const all = getOrders().filter(o => !o.archived);
+  paintFilterCounts(all);
   const orders = visibleOrders();
 
   const tg = document.getElementById('notify-toggle');
@@ -6781,53 +7324,55 @@ function renderOrderList() {
   if (!el) return;
 
   if (orders.length === 0) {
-    el.innerHTML = `<div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.85rem;text-align:center;padding:24px 0;">אין הזמנות להצגה</div>`;
+    el.innerHTML = `<div class="ap-empty"><b>אין הזמנות להצגה</b>${all.length
+      ? 'בסינון הזה אין כלום. אפשר לחזור ל"הכל".'
+      : 'כשלקוחות יזמינו, ההזמנות יופיעו כאן.'}</div>`;
     return;
   }
 
-  const statusLabels = { new:'🆕 חדשה', confirmed:'✅ אושרה', ready:'🍞 מוכנה', done:'✔️ נמסרה' };
-  const statusClasses = { new:'status-new', confirmed:'status-confirmed', ready:'status-ready', done:'status-done' };
-  const nextStatus = { new:'confirmed', confirmed:'ready', ready:'done' };
-  const nextLabel  = { new:'אשרי', confirmed:'מוכנה', ready:'נמסרה' };
+  const stLabel = { new: 'חדשה', confirmed: 'אושרה', ready: 'מוכנה', done: 'נמסרה', wait: 'ממתינה לתשלום' };
+  const stTone  = { new: 'info', confirmed: 'ok', ready: 'warn', done: '', wait: 'warn' };
+  const stDot   = { new: 'new', confirmed: 'confirmed', ready: 'ready', done: 'done', wait: 'ready' };
 
-  const orderCard = o => `
-    <div class="order-card" id="ocard-${+o.id || 0}">
-      <div class="order-card-header">
-        <div>
-          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#3B2A24;font-size:0.95rem;">${esc(o.name)}</div>
-          <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.72rem;color:#9B8B75;">${esc(o.date)}</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span class="status-badge ${awaitingPayment(o) ? 'status-ready' : (statusClasses[o.status]||'status-new')}">${awaitingPayment(o) ? '⏳ ממתינה לתשלום' : (statusLabels[o.status]||'חדשה')}</span>
-          ${isPaid(o) ? '<span class="status-badge status-confirmed">💰 שולם</span>' : ''}
-          <span style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#6B2E1E;font-size:1rem;">₪${o.total}</span>
-        </div>
-      </div>
+  // Order lines: the structured items when the order has them, the typed text for older orders.
+  // Every value is escaped; the quantity is forced to a number.
+  const lineHtml = o => {
+    if (Array.isArray(o.itemsArr) && o.itemsArr.length) {
+      return o.itemsArr.map(it => `<li><span class="q">${+it.qty || 0}×</span><span>${esc(it.name)}</span></li>`).join('');
+    }
+    return String(o.items || '').split('|').map(s => s.trim().replace(/^•\s*/, '')).filter(Boolean)
+      .map(s => `<li><span>${esc(s)}</span></li>`).join('');
+  };
 
-      <div class="order-items-row">
-        ${esc(o.items || '').replace(/\|/g, '<br>')}
-        <div style="margin-top:4px;color:#8B7260;">
-          ${o.delivery === 'delivery' ? `📦 משלוח — ${esc(o.address||'')}` : '🏠 איסוף עצמי'}
-          ${o.paymentMethod ? ` · 💳 ${esc(PAYMENT_LABELS_HE[o.paymentMethod] || o.paymentMethod)}` : ''}
-          ${o.notes ? ` · הערה: ${esc(o.notes)}` : ''}
+  const orderCard = o => {
+    const id = +o.id || 0;
+    const key = awaitingPayment(o) ? 'wait' : (stLabel[o.status] ? o.status : 'new');
+    const phoneDigits = String(o.phone || '').replace(/\D/g, '').replace(/^0/, '972');
+    const delivery = o.delivery === 'delivery';
+    return `
+    <article class="ap-order" id="ocard-${id}" data-s="${esc(o.status || 'new')}">
+      <div class="ap-order-top">
+        <div style="min-width:0;">
+          <div class="ap-order-name">${esc(o.name)}</div>
+          <div class="ap-order-sub">
+            <span>${esc(o.date)}</span>
+            ${phoneDigits ? `<a href="https://wa.me/${phoneDigits}" target="_blank" rel="noopener" aria-label="שיחה בוואטסאפ עם ${esc(o.name)}">${ico('msg', 14)}<bdi dir="ltr">${esc(o.phone)}</bdi></a>` : ''}
+          </div>
         </div>
+        <div class="ap-order-total">₪${+o.total || 0}</div>
       </div>
-
-      <div class="order-actions">
-        <a href="https://wa.me/${(o.phone||'').replace(/\D/g,'').replace(/^0/,'972')}" target="_blank" class="btn-wa">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.096.547 4.142 1.588 5.945L0 24l6.305-1.654A11.882 11.882 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.013-1.375l-.36-.213-3.732.979.997-3.636-.235-.373A9.818 9.818 0 1112 21.818z"/></svg>
-          ${esc(o.phone)}
-        </a>
-        ${actionButtons(o)}
-        <button onclick="openEditOrderModal(${+o.id || 0})" class="btn-status" aria-label="עריכת הזמנה">
-          ✏️ עריכה
-        </button>
-        <button onclick="deleteOrder(${+o.id || 0})" class="btn-delete-order" aria-label="מחק הזמנה">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-        </button>
+      <div class="ap-chips-row">
+        <span class="ap-chip" data-t="${stTone[key]}"><i class="ap-dot" data-s="${stDot[key]}"></i>${stLabel[key]}</span>
+        ${isPaid(o) ? `<span class="ap-chip" data-t="ok">${ico('check', 13)}שולם</span>` : ''}
+        <span class="ap-chip">${ico(delivery ? 'truck' : 'home', 13)}${delivery ? 'משלוח' : 'איסוף עצמי'}</span>
+        ${o.paymentMethod ? `<span class="ap-chip">${ico('card', 13)}${esc(PAYMENT_LABELS_HE[o.paymentMethod] || o.paymentMethod)}</span>` : ''}
       </div>
-    </div>
-  `;
+      ${delivery && o.address ? `<div class="ap-order-addr">${ico('pin', 15)}<span>${esc(o.address)}</span></div>` : ''}
+      <ul class="ap-order-items">${lineHtml(o)}</ul>
+      ${o.notes ? `<div class="ap-order-note"><b>הערה:</b> ${esc(o.notes)}</div>` : ''}
+      <div class="ap-order-act">${actionButtons(o)}</div>
+    </article>`;
+  };
 
   el.innerHTML = orders.map(orderCard).join('');
 }
@@ -7715,12 +8260,15 @@ applyTooltipLang();
 let currentAdminTab = 'dash';
 
 function switchAdminTab(tab) {
+  toggleAdminMore(false);
   // Deactivate all
   document.querySelectorAll('.admin-tab-content').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.admin-tab-btn').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.admin-tab-btn').forEach(el => { el.classList.remove('active'); el.setAttribute('aria-selected', 'false'); });
   // Activate chosen
   document.getElementById('admin-tab-' + tab).classList.add('active');
-  document.getElementById('atab-' + tab).classList.add('active');
+  const tabBtn = document.getElementById('atab-' + tab);
+  tabBtn.classList.add('active');
+  tabBtn.setAttribute('aria-selected', 'true');
   currentAdminTab = tab;
   // Scroll to top of panel
   document.getElementById('admin-panel').scrollTop = 0;
@@ -7876,12 +8424,12 @@ function updateDeadlinePreview() {
     const d = new Date(dateEl.value + 'T' + (timeEl.value || '17:00'));
     const formatted = d.toLocaleDateString('he-IL', { weekday:'long', day:'numeric', month:'long' });
     preview.textContent = `✓ ייסגר: ${formatted} בשעה ${timeEl.value || '17:00'}`;
-    preview.style.color = '#2A7A2A';
+    preview.style.color = 'var(--ap-ok)';
   } else {
     const def = getNextTuesdayDeadline();
     const formatted = def.toLocaleDateString('he-IL', { weekday:'long', day:'numeric', month:'long' });
     preview.textContent = `ברירת מחדל: ${formatted} בשעה 17:00`;
-    preview.style.color = '#9B8B75';
+    preview.style.color = 'var(--ap-mute)';
   }
 }
 
@@ -7969,7 +8517,7 @@ function renderCustomers() {
 
   const allOrders = ORDER_LOG;
   if (allOrders.length === 0) {
-    el.innerHTML = `<div style="font-family:'Noto Sans Hebrew',sans-serif;color:#9B8B75;font-size:0.85rem;text-align:center;padding:24px 0;">אין נתוני לקוחות עדיין</div>`;
+    el.innerHTML = `<div class="ap-empty"><b>אין נתוני לקוחות עדיין</b>לקוחות יופיעו כאן אחרי ההזמנה הראשונה.</div>`;
     return;
   }
 
@@ -8002,29 +8550,18 @@ function renderCustomers() {
     const topItem = Object.entries(c.items).sort((a,b)=>b[1]-a[1])[0];
     const intl = c.phone.replace(/\D/g,'').replace(/^0/,'972');
     return `
-    <div class="order-card" style="margin-bottom:10px;">
-      <div class="order-card-header">
-        <div style="flex:1;min-width:0;">
-          <div style="font-family:'Noto Serif Hebrew',serif;font-weight:700;color:#3B2A24;font-size:0.95rem;">${esc(c.name || 'לקוח')}</div>
-          <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.78rem;color:#9B8B75;" dir="ltr">${esc(c.phone)}</div>
-        </div>
-        <div style="text-align:center;padding:4px 10px;background:#EDF6FF;border-radius:8px;flex-shrink:0;">
-          <div style="font-family:'Noto Serif Hebrew',serif;font-size:1.1rem;font-weight:700;color:#1A6DB5;">${c.count}</div>
-          <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.68rem;color:#5A8AB5;">הזמנות</div>
-        </div>
-        <div style="text-align:center;padding:4px 10px;background:#EEF8EE;border-radius:8px;flex-shrink:0;">
-          <div style="font-family:'Noto Serif Hebrew',serif;font-size:1.1rem;font-weight:700;color:#2A7A2A;">₪${c.total}</div>
-          <div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.68rem;color:#5A8A5A;">סה"כ</div>
-        </div>
+    <article class="ap-cust">
+      <div class="ap-cust-main">
+        <div class="ap-cust-name">${esc(c.name || 'לקוח')}</div>
+        <div class="ap-cust-phone" dir="ltr">${esc(c.phone)}</div>
+        ${topItem ? `<div class="ap-cust-top">הכי מזמין: ${esc(topItem[0])} (${+topItem[1] || 0} יח')</div>` : ''}
       </div>
-      ${topItem ? `<div class="order-items-row">הכי מזמין: ${esc(topItem[0])} (${+topItem[1] || 0} יח')</div>` : ''}
-      <div class="order-actions">
-        <button class="btn-wa" onclick="window.open('https://wa.me/${intl}','_blank')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-          שלח הודעה
-        </button>
+      <div class="ap-cust-nums">
+        <div><b>${+c.count || 0}</b><span>הזמנות</span></div>
+        <div><b>₪${+c.total || 0}</b><span>סה"כ</span></div>
       </div>
-    </div>`;
+      <button class="ap-btn ap-btn--sm" onclick="window.open('https://wa.me/${intl}','_blank')" aria-label="שליחת הודעה ל${esc(c.name || 'לקוח')}">${ico('msg', 16)}הודעה</button>
+    </article>`;
   }).join('');
 }
 
@@ -8341,12 +8878,12 @@ function renderPantry() {
   }
   tbody.innerHTML = filtered.map(p => `
     <tr>
-      <td style="font-weight:600;color:#3B2A24;">${p.name}</td>
+      <td style="font-weight:600;color:#3B2A24;">${esc(p.name)}</td>
       <td dir="ltr" style="color:#6B2E1E;font-weight:700;">₪${Number(p.pricePerKg || 0).toFixed(1)}</td>
       <td><span class="k-cat-badge">${esc(p.cat || '')}</span></td>
-      <td style="color:#9B8B75;font-size:0.75rem;">${p.supplier||'—'}</td>
+      <td style="color:#9B8B75;font-size:0.75rem;">${esc(p.supplier||'—')}</td>
       <td style="white-space:nowrap;">
-        <button class="k-icon-btn" onclick="openPantryEditor('${p.id}')" title="ערוך">
+        <button class="k-icon-btn" onclick="openPantryEditor('${esc(p.id)}')" title="ערוך">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
       </td>
@@ -8386,18 +8923,18 @@ function renderRecipeGrid() {
     const warn = cost.unknownCount > 0
       ? `<div style="font-family:'Noto Sans Hebrew',sans-serif;font-size:0.68rem;color:#9B8B75;margin-top:2px;">${cost.unknownCount} מרכיב ללא מחיר</div>` : '';
     return `
-    <div class="recipe-card-k" onclick="openRecipeEditor('${r.id}')">
+    <div class="recipe-card-k" onclick="openRecipeEditor('${esc(r.id)}')">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:4px;margin-bottom:5px;">
-        <div class="r-name">${catEmoji(r.category)} ${r.name}</div>
-        <span class="k-cat-badge ${catClass(r.category)}" style="flex-shrink:0;margin-top:1px;">${r.category}</span>
+        <div class="r-name">${catEmoji(r.category)} ${esc(r.name)}</div>
+        <span class="k-cat-badge ${catClass(r.category)}" style="flex-shrink:0;margin-top:1px;">${esc(r.category)}</span>
       </div>
       <div class="r-meta">${r.yieldCount} יח' · ${r.yieldWeightG}ג' · ₪${r.sellingPrice}/יח'</div>
       <div class="r-cost">₪${cost.costPerUnit.toFixed(2)} עלות ליחידה</div>
       ${warn}
       ${fcBadgeHtml(cost.fc)}
       <div class="r-actions" onclick="event.stopPropagation()">
-        <button class="r-action-btn" onclick="addToPlan('${r.id}')">+ לתכנון</button>
-        <button class="r-action-btn primary" onclick="openRecipeEditor('${r.id}')">ערוך</button>
+        <button class="r-action-btn" onclick="addToPlan('${esc(r.id)}')">+ לתכנון</button>
+        <button class="r-action-btn primary" onclick="openRecipeEditor('${esc(r.id)}')">ערוך</button>
       </div>
     </div>`;
   }).join('');
@@ -8426,7 +8963,7 @@ function renderPlan() {
     return `
     <div class="plan-row">
       <div>
-        <div class="plan-name">${catEmoji(r.category)} ${r.name}</div>
+        <div class="plan-name">${catEmoji(r.category)} ${esc(r.name)}</div>
         <div class="plan-meta">₪${r.sellingPrice} ליח' · FC ${cost.fc !== null ? (cost.fc*100).toFixed(0)+'%' : '?'}</div>
       </div>
       <input class="plan-qty-input" type="number" min="0" value="${qty || ''}" placeholder="0"

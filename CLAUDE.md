@@ -127,6 +127,19 @@ silently drops a customer out of the menu. The stray check recognises four
 spellings (`./index.html`, `index.html`, `/index.html`, `/`); an absolute
 `https://nuika.co.il/` would still slip past it.
 
+**Noy's admin panel has its own design system, in `<style id="admin-ui">`.** Rebuilt on 19 Nov
+2026. Everything in it is scoped to `#admin-panel` or to `.ap-skin` (the class every admin
+overlay carries: manual order, product edit, expense, pantry, recipe, imports), so the public shop
+is not touched. Tokens (`--ap-*`) live on those two selectors and flip for `body.dark`. The shell
+is one `<aside class="ap-side">` that CSS turns into a sidebar on a laptop and a bottom bar with a
+"עוד" sheet on a phone; the tab buttons keep their `atab-*` ids and `switchAdminTab()`. The older
+inline-styled markup (kitchen, finance, events) is re-coloured by the attribute-selector "skin" at
+the end of that block instead of being rewritten string by string, so a hex colour used in a
+`style="…"` attribute inside the admin is matched by that skin: change the token, not the string.
+Icons come from one set, `AP_ICONS` / `ico(name)`; do not put emoji back in as icons. The finance
+tab was blank until that rewrite: its one `.k-section` has no `.active` (and the kitchen strips the
+class from every `.k-section`), so `#admin-tab-finance .k-section { display:block }` is load-bearing.
+
 **One gate decides whether the shop is open.** `ordersAreOpen()` is the flag
 `nuika/settings/ordersOpen` **and** the deadline. Anything that *tells* anyone
 the shop's state — the notice above the menu, the line under Noy's toggle —
