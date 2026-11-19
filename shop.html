@@ -2892,7 +2892,11 @@
         </button>
         <button onclick="printBakingList()" style="display:flex;align-items:center;gap:5px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.76rem;font-weight:600;background:#F0E9D8;border:1.5px solid #D5C9B5;color:#6B2E1E;padding:7px 12px;border-radius:100px;cursor:pointer;">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-          הדפס
+          הדפס רשימת אפייה
+        </button>
+        <button onclick="printOrdersList()" style="display:flex;align-items:center;gap:5px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.76rem;font-weight:600;background:#F0E9D8;border:1.5px solid #D5C9B5;color:#6B2E1E;padding:7px 12px;border-radius:100px;cursor:pointer;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          הדפס הזמנות
         </button>
       </div>
     </div>
@@ -6490,13 +6494,19 @@ function actionButtons(o) {
   return html;
 }
 
-function renderOrderList() {
+// The orders the list shows right now: this week's, narrowed by the filter chip that is lit.
+// The printed order list uses the same function, so paper and screen can never disagree.
+function visibleOrders() {
   const all = getOrders().filter(o => !o.archived);
-  let orders = all;
-  if (currentFilter === 'delivery') orders = all.filter(o => o.delivery === 'delivery');
-  else if (currentFilter === 'pickup') orders = all.filter(o => o.delivery === 'pickup');
-  else if (currentFilter === 'unpaid') orders = all.filter(o => !isPaid(o));
-  else if (['new','confirmed','ready','done'].includes(currentFilter)) orders = all.filter(o => o.status === currentFilter);
+  if (currentFilter === 'delivery') return all.filter(o => o.delivery === 'delivery');
+  if (currentFilter === 'pickup') return all.filter(o => o.delivery === 'pickup');
+  if (currentFilter === 'unpaid') return all.filter(o => !isPaid(o));
+  if (['new','confirmed','ready','done'].includes(currentFilter)) return all.filter(o => o.status === currentFilter);
+  return all;
+}
+
+function renderOrderList() {
+  const orders = visibleOrders();
 
   const tg = document.getElementById('notify-toggle');
   if (tg) tg.checked = notifyOn();
@@ -6663,6 +6673,49 @@ function printBakingList() {
       </div>
     </div>`;
 
+  window.print();
+}
+
+// The order list on paper: one block per order with who ordered what. Prints what the screen
+// shows (the lit filter chip applies), and says which filter that was at the top. Every
+// customer-typed value goes through esc(): this is HTML built from strings.
+function printOrdersList() {
+  const orders = visibleOrders().slice().sort((a, b) => (+a.id || 0) - (+b.id || 0));
+  if (!orders.length) { alert('אין הזמנות להדפסה.'); return; }
+  const filterNames = { all:'כל ההזמנות', unpaid:'ממתינות לתשלום', new:'חדשות', confirmed:'שאושרו', ready:'מוכנות', done:'שנמסרו', delivery:'משלוחים', pickup:'איסופים' };
+  const stLabel = { new:'חדשה', confirmed:'אושרה', ready:'מוכנה', done:'נמסרה' };
+  const date = new Date().toLocaleDateString('he-IL');
+  const total = orders.reduce((s, o) => s + (+o.total || 0), 0);
+
+  const block = o => {
+    const lines = String(o.items || '').split('|').map(s => s.trim()).filter(Boolean);
+    const how = o.delivery === 'delivery' ? 'משלוח' + (o.address ? ': ' + o.address : '') : 'איסוף עצמי';
+    const pay = (o.paymentMethod ? (PAYMENT_LABELS_HE[o.paymentMethod] || o.paymentMethod) : '') + (isPaid(o) ? ' (שולם)' : ' (לא שולם)');
+    return `
+      <div style="break-inside:avoid;page-break-inside:avoid;border:1.5px solid #6B2E1E;border-radius:6px;padding:10px 14px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:baseline;">
+          <span style="font-size:1.05rem;font-weight:700;color:#3B2A24;">${esc(o.name)}${o.phone ? ' <span dir="ltr" style="font-weight:400;font-size:0.85rem;color:#6B5A4E;">' + esc(o.phone) + '</span>' : ''}</span>
+          <span style="font-size:1.05rem;font-weight:700;color:#6B2E1E;">₪${+o.total || 0}</span>
+        </div>
+        <ul style="margin:6px 0 4px;padding:0 18px 0 0;font-size:0.95rem;color:#3B2A24;">
+          ${lines.map(l => '<li>' + esc(l) + '</li>').join('')}
+        </ul>
+        <div style="font-size:0.78rem;color:#6B5A4E;">${esc(how)} · ${esc(pay)} · ${esc(stLabel[o.status] || 'חדשה')} · ${esc(o.date || '')}</div>
+        ${o.notes ? '<div style="font-size:0.82rem;margin-top:3px;color:#3B2A24;">הערה: ' + esc(o.notes) + '</div>' : ''}
+      </div>`;
+  };
+
+  let area = document.getElementById('print-area');
+  if (!area) { area = document.createElement('div'); area.id = 'print-area'; document.body.appendChild(area); }
+  area.innerHTML = `
+    <div style="font-family:'Noto Serif Hebrew',serif;max-width:720px;margin:0 auto;padding:20px;direction:rtl;">
+      <div style="text-align:center;margin-bottom:16px;">
+        <img src="images/logo.png" style="height:50px;mix-blend-mode:multiply;" alt="נואיקה" />
+        <h1 style="font-size:1.35rem;color:#6B2E1E;margin:6px 0 2px;">רשימת הזמנות</h1>
+        <p style="font-size:0.85rem;color:#6B5A4E;margin:0;">${date} · ${filterNames[currentFilter] || ''} · ${orders.length} הזמנות · ₪${total}</p>
+      </div>
+      ${orders.map(block).join('')}
+    </div>`;
   window.print();
 }
 
