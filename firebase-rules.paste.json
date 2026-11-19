@@ -17,6 +17,13 @@
         ".read": true,
         ".write": "auth != null && root.child('nuika/admins').child(auth.uid).val() === true"
       },
+      "adminMessages": {
+        ".read": "auth != null && root.child('nuika/admins').child(auth.uid).val() === true",
+        ".write": "auth != null && root.child('nuika/admins').child(auth.uid).val() === true",
+        "$key": {
+          ".validate": "$key.matches(/^(approved_paid|approved_cash|ready_pickup|ready_cash_line|ready_unpaid_line|ready_delivery|pay_reminder|refresh)$/) && newData.isString() && newData.val().length <= 1500"
+        }
+      },
       "productPhotos": {
         ".read": true,
         ".write": "auth != null && root.child('nuika/admins').child(auth.uid).val() === true",

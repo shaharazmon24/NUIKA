@@ -4161,6 +4161,12 @@ function attachAdminListeners() {
   });
   attachKitchenListener();
   attachFinanceListener();
+  // The customer messages Noy has rewritten. Admin-only node; a denial just means the rules
+  // have not been published yet, and the default texts keep working.
+  db.ref(`${ROOT}/adminMessages`).on('value', snap => {
+    _msgCache = snap.val() || {};
+    try { paintMessagesEditor(); } catch (e) { /* editor not on screen */ }
+  }, err => console.warn('adminMessages not readable yet:', err && err.code));
 }
 
 function ordersSnapshot(snap) {
@@ -6349,8 +6355,13 @@ var MSG_DEFS = [
 var MSG_DEFAULTS = {};
 MSG_DEFS.forEach(function (d) { MSG_DEFAULTS[d.key] = d.def; });
 
+// The saved texts live in nuika/adminMessages, a node only an admin can read or write (see
+// firebase-rules.json). They are NOT kept under nuika/settings: that node is public so customers
+// can see the closing time and the payment links, and the behind-the-scenes texts do not belong
+// next to it. The listener that fills this cache is attached in attachAdminListeners().
+var _msgCache = {};
 function msgTemplate(key) {
-  const saved = (_settingsCache.messages || {})[key];
+  const saved = (_msgCache || {})[key];
   return (typeof saved === 'string' && saved.trim()) ? saved : MSG_DEFAULTS[key];
 }
 function renderTemplate(tpl, vars) {
@@ -6458,15 +6469,25 @@ function saveMsg(key, ta, status, paintPrev) {
   // Only a real difference from the default is stored; empty or identical means "use the default".
   const store = (!v.trim() || v === MSG_DEFAULTS[key]) ? null : v;
   if (!v.trim()) ta.value = MSG_DEFAULTS[key];
-  _settingsCache.messages = _settingsCache.messages || {};
-  if (store === null) delete _settingsCache.messages[key]; else _settingsCache.messages[key] = store;
+  const before = Object.prototype.hasOwnProperty.call(_msgCache, key) ? _msgCache[key] : null;
+  if (store === null) delete _msgCache[key]; else _msgCache[key] = store;
   ta.removeAttribute('data-dirty');
   if (paintPrev) paintPrev();
   status.style.color = '#9B8B75';
   status.textContent = 'שומרת...';
-  db.ref(`${ROOT}/settings/messages/${key}`).set(store)
+  db.ref(`${ROOT}/adminMessages/${key}`).set(store)
     .then(() => { status.style.color = '#2A7A2A'; status.textContent = store === null ? 'חזר לנוסח המקורי ✓' : 'נשמר ✓'; })
-    .catch(fbError);
+    .catch(err => {
+      // Not saved: do not keep pretending it was, or the next message goes out with a text that
+      // vanishes on reload.
+      if (before === null) delete _msgCache[key]; else _msgCache[key] = before;
+      status.style.color = '#B45032';
+      status.textContent = 'לא נשמר';
+      if (err && err.code === 'PERMISSION_DENIED') {
+        console.error('Firebase write failed: adminMessages', err);
+        alert('הנוסח לא נשמר. שחר צריך לעדכן את ההרשאות של בסיס הנתונים כדי שהאפשרות הזו תעבוד.');
+      } else fbError(err);
+    });
 }
 // "Your order is ready" WITHOUT approving payment or changing the status: for the customer who
 // has not paid yet and will pay cash at pickup. The status stays as it is on purpose: for

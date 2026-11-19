@@ -29,6 +29,15 @@
         ".write": "auth != null && root.child('nuika/admins').child(auth.uid).val() === true"
       },
 
+      "adminMessages": {
+        "//": "The texts of the WhatsApp messages Noy sends to customers, as she has rewritten them in the settings tab. Behind the scenes, so NOT public: readable and writable by an admin only. They used to be planned under nuika/settings, which is public because customers need the closing time and payment links from it. Only the eight known keys are accepted, each a plain string of at most 1500 characters.",
+        ".read": "auth != null && root.child('nuika/admins').child(auth.uid).val() === true",
+        ".write": "auth != null && root.child('nuika/admins').child(auth.uid).val() === true",
+        "$key": {
+          ".validate": "$key.matches(/^(approved_paid|approved_cash|ready_pickup|ready_cash_line|ready_unpaid_line|ready_delivery|pay_reminder|refresh)$/) && newData.isString() && newData.val().length <= 1500"
+        }
+      },
+
       "productPhotos": {
         "//": "One photo per dish, kept OUT of nuika/products on purpose. Every visitor downloads the whole products node before seeing a single dish; with the photos inside it that was 929KB. Public read (customers see the photos), admin write only, and every value must be an image data URI of a sane size.",
         ".read": true,

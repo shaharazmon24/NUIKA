@@ -149,6 +149,7 @@ manifest — see the comment in the file.
 | `nuika/productPhotos/{id}` | One photo per dish, as an image data URI. **Public read, admin write. Requires the rules to be published** (see below). A dish's `illustration` is then a marker `photo:<id>@<time>`; the marker is why `nuika/products` is small. Without the rules the code falls back to storing the photo inline, as before. |
 | `nuika/settings` | `ordersOpen`, `bitLink`, `payboxLink`, `deadline` |
 | `nuika/events` | Noy's events board — one record per event, each with `date` (`YYYY-MM-DD`), `title`, and optionally `place`, `time`, `body`, `ctaLabel`, `ctaText`, `created`. Public read (`events.html` shows it with no sign-in), admin write only. **Requires the rules to be published — see below.** |
+| `nuika/adminMessages/{key}` | The WhatsApp texts Noy has rewritten in the settings tab (eight fixed keys, see `MSG_DEFS` in `shop.html`). **Admin read and write only — deliberately not under `settings`, which is public.** Needs the rules published; until then saving shows an error and the built-in default texts keep working. |
 | `nuika/kitchen/pantry` | ingredients and prices |
 | `nuika/kitchen/recipes` | recipes with ingredient weights |
 | `nuika/kitchen/weeklyPlan` | `{recipeId: quantity}` |
