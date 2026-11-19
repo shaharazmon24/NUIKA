@@ -2932,6 +2932,8 @@
       <button onclick="filterOrders('pickup')"    id="filter-pickup"    class="btn-status">🏠 איסוף</button>
     </div>
 
+    <button onclick="openBulkReady()" style="width:100%;margin:0 0 12px;background:#2A7A2A;border:none;color:#fff;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.9rem;font-weight:600;padding:11px;border-radius:12px;cursor:pointer;">📣 שלחי "ההזמנה מוכנה" לכל הלקוחות</button>
+
     <label style="display:flex;align-items:center;gap:8px;margin:0 0 12px;font-family:'Noto Sans Hebrew',sans-serif;font-size:0.8rem;color:#6B655C;cursor:pointer;">
       <input type="checkbox" id="notify-toggle" onchange="setNotify(this.checked)">
       <span>לפתוח וואטסאפ עם הודעה מוכנה ללקוח כשאני מעדכנת סטטוס (כבוי כברירת מחדל)</span>
@@ -6301,7 +6303,11 @@ function approvedText(o) {
 }
 function readyText(o) {
   if (o.delivery === 'delivery') return 'היי ' + o.name + ' 🙂\nההזמנה שלך מוכנה ויוצאת אליך 🥖\nנוי, NUIKA';
-  const cash = !PREPAID_METHODS.includes(o.paymentMethod)
+  // Bit / PayBox that has not arrived yet (the order is still 'new'): say so, and that cash at
+  // pickup is fine, so "ready" never reads as if it were already paid.
+  const cash = awaitingPayment(o)
+    ? '\nהתשלום (₪' + o.total + ') עוד לא התקבל. אפשר להעביר ב-' + (PAYMENT_LABELS_HE[o.paymentMethod] || 'Bit') + ' או לשלם במזומן בעת האיסוף.'
+    : !PREPAID_METHODS.includes(o.paymentMethod)
     ? '\nהתשלום במזומן בעת האיסוף (₪' + o.total + ').' : '';
   return 'היי ' + o.name + ' 🙂\nההזמנה שלך מוכנה לאיסוף 🥖\nאפשר לבוא לאסוף מ-' + PICKUP_ADDRESS + '.' + cash + '\nנוי, NUIKA';
 }
@@ -6327,6 +6333,107 @@ function sendRefreshMessage(id) {
   const o = ORDER_LOG.find(x => x.id === id);
   if (o) openCustomerMessage(o, refreshText());
 }
+// "Your order is ready" WITHOUT approving payment or changing the status: for the customer who
+// has not paid yet and will pay cash at pickup. The status stays as it is on purpose: for
+// Bit / PayBox, "confirmed" and later mean "money seen", and marking an unpaid order ready would
+// show it as paid.
+function sendReadyNow(id) {
+  const o = ORDER_LOG.find(x => x.id === id);
+  if (o) openCustomerMessage(o, readyText(o));
+}
+
+// ─── "READY" TO EVERYONE AT ONCE ───────────────────
+// WhatsApp cannot be sent from a web page, and a browser only lets a click open one tab, so
+// "everyone" is a list: the big button opens the next customer's message already written, she
+// presses send in WhatsApp, comes back and presses it again. Ticks are kept for this visit so
+// a second pass never messages the same person twice. One message per phone number, even when
+// that customer has two orders. Nothing here changes any order.
+var _bulkSent = {};            // digits of the phone -> true
+function bulkRecipients() {
+  const by = {};
+  getOrders().filter(o => !o.archived && o.status !== 'done').forEach(o => {
+    const key = String(o.phone || '').replace(/\D/g, '');
+    if (!key) return;
+    const g = by[key] || (by[key] = { key, o, total: 0, n: 0, unpaid: false });
+    g.n++;
+    // The message talks about money only for what is still owed: the first unpaid order is
+    // the one the text is built from, and the amount is what all unpaid orders add up to.
+    if (!isPaid(o)) {
+      if (!g.unpaid) g.o = o;
+      g.unpaid = true;
+      g.total += +o.total || 0;
+    }
+  });
+  Object.values(by).forEach(g => { if (!g.unpaid) g.total = +g.o.total || 0; });
+  return Object.values(by).map(g => ({
+    key: g.key, n: g.n, unpaid: g.unpaid,
+    name: g.o.name,
+    // the text is built from a copy of the first order, with the customer's orders added up
+    order: Object.assign({}, g.o, { total: g.total })
+  }));
+}
+function openBulkReady() {
+  let box = document.getElementById('bulk-ready-modal');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'bulk-ready-modal';
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-modal', 'true');
+    box.setAttribute('aria-label', 'שליחת הודעת מוכנה לכל הלקוחות');
+    box.style.cssText = 'position:fixed;inset:0;z-index:5000;background:rgba(40,26,20,0.55);display:flex;align-items:flex-end;justify-content:center;';
+    document.body.appendChild(box);
+  }
+  box.style.display = 'flex';
+  renderBulkReady();
+}
+function closeBulkReady() {
+  const box = document.getElementById('bulk-ready-modal');
+  if (box) box.style.display = 'none';
+}
+function renderBulkReady() {
+  const box = document.getElementById('bulk-ready-modal');
+  if (!box) return;
+  const list = bulkRecipients();
+  const left = list.filter(r => !_bulkSent[r.key]);
+  const noPhone = getOrders().filter(o => !o.archived && o.status !== 'done' && !String(o.phone || '').replace(/\D/g, ''));
+  const font = "font-family:'Noto Sans Hebrew',sans-serif;";
+  const rows = list.map(r => {
+    const sent = !!_bulkSent[r.key];
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid #EFE4D0;">
+      <div style="min-width:0;">
+        <div style="${font}font-weight:600;color:#3B2A24;font-size:0.9rem;">${esc(r.name)}${r.n > 1 ? ' <span style="font-weight:400;color:#9B8B75;font-size:0.75rem;">(' + r.n + ' הזמנות)</span>' : ''}</div>
+        <div style="${font}font-size:0.72rem;color:${r.unpaid ? '#A06000' : '#9B8B75'};">${r.unpaid ? 'עוד לא שולם' : 'שולם'}</div>
+      </div>
+      <button onclick="sendBulkOne('${r.key}')" class="btn-status" style="${sent ? 'background:#EEF8EE;border-color:#B0D9B0;color:#2A7A2A;' : ''}">${sent ? '✓ נפתח' : 'פתחי'}</button>
+    </div>`;
+  }).join('');
+  box.innerHTML = `
+    <div style="background:#FDFAF4;width:100%;max-width:520px;max-height:88vh;overflow:auto;border-radius:18px 18px 0 0;padding:18px 18px 22px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <h3 style="font-family:'Noto Serif Hebrew',serif;color:#6B2E1E;font-size:1.05rem;margin:0;">📣 "ההזמנה מוכנה" לכל הלקוחות</h3>
+        <button onclick="closeBulkReady()" aria-label="סגירה" style="background:transparent;border:0;font-size:1.4rem;line-height:1;cursor:pointer;color:#6B2E1E;">×</button>
+      </div>
+      <p style="${font}font-size:0.8rem;color:#6B655C;margin:0 0 12px;">וואטסאפ לא מאפשר לשלוח לכולם ביחד, אז כל לחיצה פותחת את ההודעה ללקוח הבא, כבר כתובה. נשאר רק ללחוץ "שלח" בוואטסאפ ולחזור לכאן. ההזמנות עצמן לא משתנות, גם לא סטטוס התשלום.</p>
+      ${list.length ? `
+      <button onclick="sendBulkNext()" ${left.length ? '' : 'disabled'} style="width:100%;background:${left.length ? '#2A7A2A' : '#B9B3A6'};border:none;color:#fff;${font}font-size:0.95rem;font-weight:600;padding:13px;border-radius:12px;cursor:${left.length ? 'pointer' : 'default'};margin-bottom:6px;">${left.length ? 'פתחי את ההודעה הבאה (נשארו ' + left.length + ' מתוך ' + list.length + ')' : '✓ נפתחו הודעות לכולם'}</button>
+      <div style="text-align:end;margin-bottom:4px;"><button onclick="resetBulkSent()" style="background:transparent;border:0;${font}font-size:0.75rem;color:#8B7260;text-decoration:underline;cursor:pointer;">נקי את הסימונים</button></div>
+      ${rows}` : `<p style="${font}font-size:0.9rem;color:#9B8B75;text-align:center;padding:18px 0;">אין הזמנות פעילות עם מספר טלפון.</p>`}
+      ${noPhone.length ? `<p style="${font}font-size:0.78rem;color:#A06000;margin:12px 0 0;">בלי מספר טלפון, לא נשלח להם: ${noPhone.map(o => esc(o.name)).join(', ')}</p>` : ''}
+    </div>`;
+}
+function sendBulkOne(key) {
+  const r = bulkRecipients().find(x => x.key === key);
+  if (!r) return;
+  openCustomerMessage(r.order, readyText(r.order));   // inside the click, or the browser blocks the tab
+  _bulkSent[key] = true;
+  renderBulkReady();
+}
+function sendBulkNext() {
+  const r = bulkRecipients().find(x => !_bulkSent[x.key]);
+  if (r) sendBulkOne(r.key);
+}
+function resetBulkSent() { _bulkSent = {}; renderBulkReady(); }
+
 function approveOrder(id) {
   const o = ORDER_LOG.find(x => x.id === id);
   if (!o) return;
@@ -6484,6 +6591,9 @@ function actionButtons(o) {
   }
   if (o.status === 'confirmed' || o.status === 'ready') {
     html += `<button onclick="sendOrderMessage(${id})" class="btn-status" aria-label="שליחת הודעה ללקוח">💬 הודעה</button>`;
+  }
+  if (o.status === 'new' || o.status === 'confirmed') {
+    html += `<button onclick="sendReadyNow(${id})" class="btn-status" aria-label="שליחת הודעה שההזמנה מוכנה, בלי לשנות סטטוס">📣 הודעת מוכנה</button>`;
   }
   if (awaitingPayment(o)) {
     html += `<button onclick="remindPayment(${id})" class="btn-status">⏰ תזכורת תשלום</button>`;
