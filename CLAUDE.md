@@ -326,6 +326,20 @@ cache-first: that version pinned every visitor to a stale copy forever.
 `const orig = fn; function fn() { orig(); }` — it recurses infinitely. Edit the
 body directly.
 
+**Only an allowlist is published, not the repo.** Since 21 Nov 2026 the deploy
+(`.github/workflows/deploy.yml`) runs `scripts/build-site.mjs`, which copies the
+pages (`*.html`), the files named in `ROOT_FILES`, and the folders `images/` and
+`media/` into `_site/`, and uploads only that. Before it, the whole repository was
+served: `nuika.co.il/CLAUDE.md`, `/SECURITY.md`, `/firebase-rules.json`,
+`/scripts/*.mjs` and `/.claude/settings.local.json` all answered 200. **Adding a
+new top-level file that the site needs (a new script, a new icon) means adding it
+to `ROOT_FILES` in `build-site.mjs`**; a new page or an image in `images/` needs
+nothing. The build fails — and the live site stays as it was — if any page, the
+service worker's precache list, the manifest or `gallery.json` points at a file
+that is not in `_site`, or if `CNAME` is missing. `_site/` is git-ignored; never
+commit it. The repo itself is still public, so the history and the committed
+docs are readable on GitHub; making it private needs a paid GitHub plan for Pages.
+
 **The site serves from the domain root** (nuika.co.il), fronted by Cloudflare.
 Keep asset paths relative so they stay correct on either host. Never delete or
 edit `CNAME` — doing so unsets the GitHub Pages custom domain and takes the shop
