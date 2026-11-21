@@ -25,3 +25,6 @@ INSTAGRAM/
 # Isolated worktrees. ship.mjs stages with `git add -A`, so an unignored one
 # would commit an entire second copy of the repo into the repo.
 .claude/worktrees/
+
+# Output of scripts/build-site.mjs: the folder GitHub Pages publishes. Rebuilt on every deploy.
+_site/

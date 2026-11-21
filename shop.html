@@ -9118,7 +9118,7 @@ function generateShoppingList() {
       html += `
         <div class="shop-item">
           <input type="checkbox" />
-          <span class="si-name">${item.name}</span>
+          <span class="si-name">${esc(item.name)}</span>
           <span class="si-amount">${display}</span>
           <span class="si-cost">${costStr}</span>
         </div>`;

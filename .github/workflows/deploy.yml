@@ -51,12 +51,20 @@ jobs:
 
       - uses: actions/configure-pages@v5
 
-      # Uploads the repo root, which is what the branch deployment served.
-      # CNAME travels with it, so the custom domain is unaffected — deleting
-      # or dropping that file unsets the domain and takes the shop offline.
+      # Builds _site/ from an explicit allowlist (scripts/build-site.mjs).
+      # This used to upload the whole repository, which put CLAUDE.md, the
+      # security notes, the database rules and the scripts on the open web.
+      # The build also fails if the site points at a file that did not make it
+      # in, or if CNAME is missing — in which case nothing below runs and the
+      # live site stays as it was.
+      - name: Build the public site folder
+        run: node scripts/build-site.mjs
+
+      # CNAME is inside _site, so the custom domain is unaffected — deleting or
+      # dropping that file unsets the domain and takes the shop offline.
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
 
       - id: deployment
         uses: actions/deploy-pages@v4
